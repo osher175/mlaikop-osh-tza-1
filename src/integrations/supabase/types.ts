@@ -9,6 +9,202 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      businesses: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      inventory_actions: {
+        Row: {
+          action_type: string
+          business_id: string
+          id: string
+          notes: string | null
+          product_id: string
+          quantity_changed: number
+          timestamp: string | null
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          business_id: string
+          id?: string
+          notes?: string | null
+          product_id: string
+          quantity_changed: number
+          timestamp?: string | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          business_id?: string
+          id?: string
+          notes?: string | null
+          product_id?: string
+          quantity_changed?: number
+          timestamp?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_actions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_actions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permissions: {
+        Row: {
+          access_scope: string
+          created_at: string | null
+          description: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Insert: {
+          access_scope: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Update: {
+          access_scope?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          barcode: string | null
+          business_id: string
+          category_id: string | null
+          cost: number | null
+          created_at: string | null
+          created_by: string
+          expiration_date: string | null
+          id: string
+          image: string | null
+          location: string | null
+          name: string
+          price: number | null
+          quantity: number
+          supplier_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          barcode?: string | null
+          business_id: string
+          category_id?: string | null
+          cost?: number | null
+          created_at?: string | null
+          created_by: string
+          expiration_date?: string | null
+          id?: string
+          image?: string | null
+          location?: string | null
+          name: string
+          price?: number | null
+          quantity?: number
+          supplier_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          barcode?: string | null
+          business_id?: string
+          category_id?: string | null
+          cost?: number | null
+          created_at?: string | null
+          created_by?: string
+          expiration_date?: string | null
+          id?: string
+          image?: string | null
+          location?: string | null
+          name?: string
+          price?: number | null
+          quantity?: number
+          supplier_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -32,6 +228,50 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      sales_cycles: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          id: string
+          period_end: string
+          period_start: string
+          profit: number | null
+          total_cost: number | null
+          total_revenue: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          id?: string
+          period_end: string
+          period_start: string
+          profit?: number | null
+          total_cost?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          profit?: number | null
+          total_cost?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_cycles_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscription_plans: {
         Row: {
@@ -78,8 +318,36 @@ export type Database = {
         }
         Relationships: []
       }
+      suppliers: {
+        Row: {
+          contact_email: string | null
+          created_at: string | null
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
+          business_id: string | null
           created_at: string | null
           id: string
           role: Database["public"]["Enums"]["user_role"]
@@ -87,6 +355,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          business_id?: string | null
           created_at?: string | null
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
@@ -94,13 +363,22 @@ export type Database = {
           user_id: string
         }
         Update: {
+          business_id?: string | null
           created_at?: string | null
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_subscriptions: {
         Row: {
