@@ -15,6 +15,7 @@ import { BusinessSettings } from "./pages/BusinessSettings";
 import { UserProfile } from "./pages/UserProfile";
 import { AdminPanel } from "./pages/AdminPanel";
 import { AdminDashboard } from "./pages/AdminDashboard";
+import { AdminSettings } from "./pages/AdminSettings";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -105,6 +106,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/settings" 
+            element={
+              <ProtectedRoute>
+                <AdminSettings />
               </ProtectedRoute>
             } 
           />

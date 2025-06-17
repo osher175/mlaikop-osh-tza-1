@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Search, User, LogOut, Crown } from 'lucide-react';
+import { Search, User, LogOut, Crown, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +18,7 @@ import {
 
 export const Header: React.FC = () => {
   const { signOut, user } = useAuth();
-  const { userRole, getRoleDisplayName } = useUserRole();
+  const { userRole, getRoleDisplayName, permissions } = useUserRole();
 
   const handleSignOut = async () => {
     await signOut();
@@ -57,6 +57,19 @@ export const Header: React.FC = () => {
         {/* Actions */}
         <div className="flex items-center gap-3">
           <NotificationDropdown />
+          
+          {/* Admin Settings Button - Only for admins */}
+          {permissions.isPlatformAdmin && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.location.href = '/admin/settings'}
+              className="flex items-center gap-2 text-red-600 hover:text-red-800"
+            >
+              <Settings className="w-4 h-4" />
+              <span>הגדרות מערכת</span>
+            </Button>
+          )}
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
