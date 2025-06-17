@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -18,19 +19,49 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['Rubik', 'system-ui', 'sans-serif'],
+			},
 			colors: {
+				// Mlaiko brand colors
+				turquoise: {
+					DEFAULT: '#00BFBF',
+					50: '#E6FFFE',
+					100: '#CCFFFE', 
+					200: '#99FFFD',
+					300: '#66FFFC',
+					400: '#33FFFB',
+					500: '#00BFBF',
+					600: '#009999',
+					700: '#007373',
+					800: '#004D4D',
+					900: '#002626'
+				},
+				mango: {
+					DEFAULT: '#FFA940',
+					50: '#FFF4E6',
+					100: '#FFEACC',
+					200: '#FFD499',
+					300: '#FFBF66',
+					400: '#FFA940',
+					500: '#FF9500',
+					600: '#CC7700',
+					700: '#995900',
+					800: '#663B00',
+					900: '#331D00'
+				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				primary: {
-					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
+					DEFAULT: '#00BFBF',
+					foreground: '#FFFFFF'
 				},
 				secondary: {
-					DEFAULT: 'hsl(var(--secondary))',
-					foreground: 'hsl(var(--secondary-foreground))'
+					DEFAULT: '#FFA940',
+					foreground: '#FFFFFF'
 				},
 				destructive: {
 					DEFAULT: 'hsl(var(--destructive))',
@@ -41,8 +72,8 @@ export default {
 					foreground: 'hsl(var(--muted-foreground))'
 				},
 				accent: {
-					DEFAULT: 'hsl(var(--accent))',
-					foreground: 'hsl(var(--accent-foreground))'
+					DEFAULT: '#F5F5F5',
+					foreground: '#4A4A4A'
 				},
 				popover: {
 					DEFAULT: 'hsl(var(--popover))',
