@@ -20,12 +20,12 @@ interface ReportsFilters {
 
 export const useReports = (filters: ReportsFilters) => {
   const { user } = useAuth();
-  const { currentBusiness } = useBusiness();
+  const { business } = useBusiness();
 
   const { data: reportsData, isLoading } = useQuery({
-    queryKey: ['reports', user?.id, currentBusiness?.id, filters],
+    queryKey: ['reports', user?.id, business?.id, filters],
     queryFn: async () => {
-      if (!user?.id || !currentBusiness?.id) return null;
+      if (!user?.id || !business?.id) return null;
 
       // Get products with categories and suppliers
       let query = supabase
@@ -35,7 +35,7 @@ export const useReports = (filters: ReportsFilters) => {
           categories:category_id(name),
           suppliers:supplier_id(name)
         `)
-        .eq('business_id', currentBusiness.id);
+        .eq('business_id', business.id);
 
       // Apply filters
       if (filters.categoryId) {
@@ -118,7 +118,7 @@ export const useReports = (filters: ReportsFilters) => {
         products: mockSalesData,
       };
     },
-    enabled: !!user?.id && !!currentBusiness?.id,
+    enabled: !!user?.id && !!business?.id,
   });
 
   return {
