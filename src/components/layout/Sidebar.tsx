@@ -1,151 +1,165 @@
 
-import React, { useState } from 'react';
-import { Home, Package, Plus, BarChart3, Users, Settings, Menu, X, User, Shield } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { 
+  Home, 
+  Package, 
+  PlusCircle, 
+  BarChart3, 
+  Users, 
+  Settings,
+  Shield,
+  Crown
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
 
-const menuItems = [
-  { 
-    icon: Home, 
-    label: 'דשבורד', 
-    href: '/dashboard', 
-    active: true,
-    requiredPermission: 'canAccessBusinessData' as const
-  },
-  { 
-    icon: Package, 
-    label: 'ניהול מלאי', 
-    href: '/inventory',
-    requiredPermission: 'canViewProducts' as const
-  },
-  { 
-    icon: Plus, 
-    label: 'הוספת מוצר', 
-    href: '/add-product',
-    requiredPermission: 'canEditProducts' as const
-  },
-  { 
-    icon: BarChart3, 
-    label: 'דוחות וגרפים', 
-    href: '/reports',
-    requiredPermission: 'canViewReports' as const
-  },
-  { 
-    icon: Users, 
-    label: 'ניהול משתמשים', 
-    href: '/users',
-    requiredPermission: 'canManageUsers' as const
-  },
-  { 
-    icon: Settings, 
-    label: 'הגדרות עסק', 
-    href: '/settings',
-    requiredPermission: 'canManageSettings' as const
-  },
-  { 
-    icon: User, 
-    label: 'פרופיל משתמש', 
-    href: '/profile'
-  },
-  { 
-    icon: Shield, 
-    label: 'פאנל מערכת', 
-    href: '/admin',
-    requiredPermission: 'isPlatformAdmin' as const
-  },
-];
+interface SidebarItemProps {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  isActive?: boolean;
+  badge?: React.ReactNode;
+}
+
+const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, label, isActive, badge }) => (
+  <Link
+    to={to}
+    className={cn(
+      "flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors rounded-lg",
+      isActive && "bg-primary/10 text-primary border-l-4 border-primary"
+    )}
+  >
+    {icon}
+    <span className="font-medium">{label}</span>
+    {badge && <span className="mr-auto">{badge}</span>}
+  </Link>
+);
 
 export const Sidebar: React.FC = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const { permissions } = useUserRole();
+  const location = useLocation();
+  const { userRole, permissions } = useUserRole();
 
-  const filteredMenuItems = menuItems.filter(item => {
-    if (!item.requiredPermission) return true;
-    return permissions[item.requiredPermission];
-  });
+  console.log('Sidebar - Current user role:', userRole);
+  console.log('Sidebar - Permissions:', permissions);
+
+  const menuItems = [
+    {
+      to: '/',
+      icon: <Home className="w-5 h-5" />,
+      label: 'לוח הבקרה',
+      show: true
+    },
+    {
+      to: '/inventory',
+      icon: <Package className="w-5 h-5" />,
+      label: 'מלאי',
+      show: permissions.canViewProducts
+    },
+    {
+      to: '/add-product',
+      icon: <PlusCircle className="w-5 h-5" />,
+      label: 'הוספת מוצר',
+      show: permissions.canEditProducts
+    },
+    {
+      to: '/reports',
+      icon: <BarChart3 className="w-5 h-5" />,
+      label: 'דוחות',
+      show: permissions.canViewReports
+    },
+    {
+      to: '/users',
+      icon: <Users className="w-5 h-5" />,
+      label: 'ניהול משתמשים',
+      show: permissions.canManageUsers && !permissions.isPlatformAdmin
+    },
+    {
+      to: '/settings',
+      icon: <Settings className="w-5 h-5" />,
+      label: 'הגדרות',
+      show: permissions.canManageSettings && !permissions.isPlatformAdmin
+    }
+  ];
+
+  // Admin-specific menu items
+  const adminMenuItems = [
+    {
+      to: '/admin',
+      icon: <Shield className="w-5 h-5" />,
+      label: 'פאנל מנהל',
+      show: permissions.isPlatformAdmin
+    },
+    {
+      to: '/admin-dashboard',
+      icon: <BarChart3 className="w-5 h-5" />,
+      label: 'דשבורד מנהל',
+      show: permissions.isPlatformAdmin
+    },
+    {
+      to: '/admin/settings',
+      icon: <Settings className="w-5 h-5" />,
+      label: 'הגדרות מערכת',
+      show: permissions.isPlatformAdmin
+    }
+  ];
 
   return (
-    <>
-      {/* Mobile Menu Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-4 right-4 z-50 md:hidden"
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-      >
-        {isMobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-      </Button>
-
-      {/* Mobile Overlay */}
-      {isMobileOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setIsMobileOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={cn(
-        "fixed right-0 top-0 z-40 h-screen bg-white border-l border-gray-200 transition-all duration-300 md:relative md:translate-x-0",
-        isCollapsed ? "w-16" : "w-64",
-        isMobileOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"
-      )}>
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 mlaiko-gradient rounded-lg flex items-center justify-center">
-                <Package className="w-5 h-5 text-white" />
-              </div>
-              {!isCollapsed && (
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900">Mlaiko</h1>
-                  <p className="text-sm text-gray-500">ניהול מלאי</p>
-                </div>
-              )}
-            </div>
+    <div className="w-64 bg-white border-l border-gray-200 h-full">
+      <div className="p-6">
+        <div className="flex items-center gap-2 mb-8">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <Package className="w-5 h-5 text-white" />
           </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 p-4">
-            <ul className="space-y-2">
-              {filteredMenuItems.map((item) => (
-                <li key={item.href}>
-                  <a
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
-                      item.active 
-                        ? "bg-turquoise text-white" 
-                        : "text-gray-700 hover:bg-gray-100"
-                    )}
-                  >
-                    <item.icon className="w-5 h-5 flex-shrink-0" />
-                    {!isCollapsed && (
-                      <span className="font-medium">{item.label}</span>
-                    )}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          {/* Collapse Button */}
-          <div className="p-4 border-t border-gray-200 hidden md:block">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="w-full justify-start"
-            >
-              <Menu className="w-4 h-4" />
-              {!isCollapsed && <span className="mr-2">כווץ תפריט</span>}
-            </Button>
-          </div>
+          <span className="text-xl font-bold text-gray-900">Mlaiko</span>
         </div>
-      </aside>
-    </>
+
+        <nav className="space-y-2">
+          {/* Regular menu items */}
+          {menuItems.filter(item => item.show).map((item) => (
+            <SidebarItem
+              key={item.to}
+              to={item.to}
+              icon={item.icon}
+              label={item.label}
+              isActive={location.pathname === item.to}
+            />
+          ))}
+
+          {/* Admin section */}
+          {permissions.isPlatformAdmin && (
+            <>
+              <div className="border-t border-gray-200 my-4"></div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-2">
+                ניהול מערכת
+              </div>
+              {adminMenuItems.filter(item => item.show).map((item) => (
+                <SidebarItem
+                  key={item.to}
+                  to={item.to}
+                  icon={item.icon}
+                  label={item.label}
+                  isActive={location.pathname === item.to}
+                  badge={<Crown className="w-4 h-4 text-red-500" />}
+                />
+              ))}
+            </>
+          )}
+
+          {/* Subscription link for non-admin users */}
+          {!permissions.isPlatformAdmin && (
+            <>
+              <div className="border-t border-gray-200 my-4"></div>
+              <SidebarItem
+                to="/subscriptions"
+                icon={<Crown className="w-5 h-5" />}
+                label="ניהול מנוי"
+                isActive={location.pathname === '/subscriptions'}
+              />
+            </>
+          )}
+        </nav>
+      </div>
+    </div>
   );
 };

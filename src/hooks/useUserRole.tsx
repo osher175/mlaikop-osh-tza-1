@@ -27,6 +27,8 @@ export const useUserRole = () => {
     queryFn: async () => {
       if (!user?.id) return null;
       
+      console.log('Fetching role for user:', user.email);
+      
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
@@ -34,10 +36,11 @@ export const useUserRole = () => {
         .single();
       
       if (error) {
-        console.log('No role found, using default free_user');
+        console.log('No role found for user:', user.email, 'using default free_user');
         return { role: 'free_user' as UserRole };
       }
       
+      console.log('User role found:', data.role, 'for user:', user.email);
       return data;
     },
     enabled: !!user?.id,
@@ -45,6 +48,7 @@ export const useUserRole = () => {
 
   useEffect(() => {
     if (roleData?.role) {
+      console.log('Setting user role to:', roleData.role);
       setUserRole(roleData.role);
     }
   }, [roleData]);
@@ -58,7 +62,9 @@ export const useUserRole = () => {
       'admin': 5,             // Admin - Platform settings only
     };
 
-    return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
+    const hasPermission = roleHierarchy[userRole] >= roleHierarchy[requiredRole];
+    console.log(`Role check: ${userRole} >= ${requiredRole}? ${hasPermission}`);
+    return hasPermission;
   };
 
   const getRoleDisplayName = (role: UserRole): string => {
@@ -107,7 +113,7 @@ export const useUserRole = () => {
           canAccessBusinessData: true,    // Limited business access
           canManageUsers: false,          // No user management
           canViewReports: false,          // No reports
-          canManageSettings: true,        // Basic settings access (CHANGED)
+          canManageSettings: true,        // Basic settings access
           canEditProducts: false,         // No product editing
           canViewProducts: true,          // View products only
           isPlatformAdmin: false,         // No platform access
