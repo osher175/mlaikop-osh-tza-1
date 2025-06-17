@@ -3,35 +3,27 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const setupAdminUser = async (email: string) => {
   try {
-    // First, find the user by email in the profiles table
-    const { data: profiles, error: profileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', (await supabase.auth.admin.listUsers()).data.users.find(u => u.email === email)?.id)
-      .single();
-
-    if (profileError) {
-      console.error('User not found:', profileError);
-      return { success: false, error: 'User not found' };
-    }
-
-    const userId = profiles.id;
-
-    // Update or insert the user role to admin
-    const { error: roleError } = await supabase
-      .from('user_roles')
-      .upsert({
-        user_id: userId,
-        role: 'admin'
-      });
-
-    if (roleError) {
-      console.error('Error setting admin role:', roleError);
-      return { success: false, error: roleError.message };
-    }
-
-    console.log(`Successfully set admin role for user: ${email}`);
-    return { success: true };
+    // Note: This function requires admin privileges to work properly
+    // In a production environment, this should be done server-side or through a secure admin interface
+    
+    // For now, we'll just log the email and provide instructions
+    console.log(`Admin setup requested for email: ${email}`);
+    console.log('To set admin role, please run this SQL query in Supabase:');
+    console.log(`
+      -- First, find the user ID from auth.users (admin only)
+      -- Then insert/update the role
+      INSERT INTO public.user_roles (user_id, role) 
+      SELECT id, 'admin'::user_role 
+      FROM auth.users 
+      WHERE email = '${email}'
+      ON CONFLICT (user_id) 
+      DO UPDATE SET role = 'admin', updated_at = now();
+    `);
+    
+    return { 
+      success: false, 
+      error: 'Admin setup must be done through SQL query in Supabase dashboard. Check console for SQL command.' 
+    };
 
   } catch (error) {
     console.error('Error in setupAdminUser:', error);

@@ -23,7 +23,7 @@ export const SubscriptionTable: React.FC = () => {
         .from('user_subscriptions_new')
         .select(`
           *,
-          profiles!user_subscriptions_new_user_id_fkey (
+          profiles (
             first_name,
             last_name
           )
