@@ -23,11 +23,12 @@ export const SubscriptionTable: React.FC = () => {
         .from('user_subscriptions_new')
         .select(`
           *,
-          profiles (
+          profiles!inner(
             first_name,
             last_name
           )
         `)
+        .eq('profiles.id', supabase.raw('user_subscriptions_new.user_id'))
         .order('created_at', { ascending: false });
 
       if (error) throw error;
