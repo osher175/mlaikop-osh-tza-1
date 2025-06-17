@@ -107,7 +107,7 @@ export const useUserRole = () => {
           canAccessBusinessData: true,    // Limited business access
           canManageUsers: false,          // No user management
           canViewReports: false,          // No reports
-          canManageSettings: false,       // No settings
+          canManageSettings: true,        // Basic settings access (CHANGED)
           canEditProducts: false,         // No product editing
           canViewProducts: true,          // View products only
           isPlatformAdmin: false,         // No platform access
