@@ -7,6 +7,13 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Dashboard } from "./pages/Dashboard";
 import { Auth } from "./pages/Auth";
 import { Subscriptions } from "./pages/Subscriptions";
+import { Inventory } from "./pages/Inventory";
+import { AddProduct } from "./pages/AddProduct";
+import { Reports } from "./pages/Reports";
+import { UserManagement } from "./pages/UserManagement";
+import { BusinessSettings } from "./pages/BusinessSettings";
+import { UserProfile } from "./pages/UserProfile";
+import { AdminPanel } from "./pages/AdminPanel";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -33,6 +40,62 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/inventory" 
+            element={
+              <ProtectedRoute>
+                <Inventory />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/add-product" 
+            element={
+              <ProtectedRoute>
+                <AddProduct />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/reports" 
+            element={
+              <ProtectedRoute>
+                <Reports />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/users" 
+            element={
+              <ProtectedRoute>
+                <UserManagement />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              <ProtectedRoute>
+                <BusinessSettings />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute>
+                <UserProfile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute>
+                <AdminPanel />
               </ProtectedRoute>
             } 
           />

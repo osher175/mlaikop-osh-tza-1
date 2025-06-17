@@ -1,21 +1,29 @@
 
 import React, { useState } from 'react';
-import { Home, Package, Plus, BarChart3, Users, Settings, Menu, X } from 'lucide-react';
+import { Home, Package, Plus, BarChart3, Users, Settings, Menu, X, User, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useUserRole } from '@/hooks/useUserRole';
 
 const menuItems = [
   { icon: Home, label: 'דשבורד', href: '/dashboard', active: true },
-  { icon: Package, label: 'מלאי', href: '/inventory' },
+  { icon: Package, label: 'ניהול מלאי', href: '/inventory' },
   { icon: Plus, label: 'הוספת מוצר', href: '/add-product' },
-  { icon: BarChart3, label: 'דוחות', href: '/reports' },
-  { icon: Users, label: 'משתמשים', href: '/users' },
-  { icon: Settings, label: 'הגדרות', href: '/settings' },
+  { icon: BarChart3, label: 'דוחות וגרפים', href: '/reports', requiredRole: 'pro_starter_user' },
+  { icon: Users, label: 'ניהול משתמשים', href: '/users', requiredRole: 'elite_pilot_user' },
+  { icon: Settings, label: 'הגדרות עסק', href: '/settings' },
+  { icon: User, label: 'פרופיל משתמש', href: '/profile' },
+  { icon: Shield, label: 'פאנל אדמין', href: '/admin', requiredRole: 'admin' },
 ];
 
 export const Sidebar: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { hasRole } = useUserRole();
+
+  const filteredMenuItems = menuItems.filter(item => 
+    !item.requiredRole || hasRole(item.requiredRole as any)
+  );
 
   return (
     <>
@@ -62,7 +70,7 @@ export const Sidebar: React.FC = () => {
           {/* Navigation */}
           <nav className="flex-1 p-4">
             <ul className="space-y-2">
-              {menuItems.map((item) => (
+              {filteredMenuItems.map((item) => (
                 <li key={item.href}>
                   <a
                     href={item.href}
