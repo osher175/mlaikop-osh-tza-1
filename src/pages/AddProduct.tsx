@@ -5,47 +5,42 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Camera, Barcode, Calendar, MapPin, DollarSign } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Package, Save, ArrowRight } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useBusiness } from '@/hooks/useBusiness';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { CreateBusinessDialog } from '@/components/CreateBusinessDialog';
 
 export const AddProduct: React.FC = () => {
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { business } = useBusiness();
+  const { categories } = useCategories();
+  const { suppliers } = useSuppliers();
+  const { createProduct } = useProducts();
+  const [showCreateBusiness, setShowCreateBusiness] = useState(false);
+
   const [formData, setFormData] = useState({
     name: '',
     barcode: '',
     category_id: '',
     supplier_id: '',
     quantity: 0,
+    expiration_date: '',
+    location: '',
     cost: 0,
     price: 0,
-    location: '',
-    expiration_date: '',
     image: '',
   });
-
-  const { createProduct } = useProducts();
-  const { categories } = useCategories();
-  const { suppliers } = useSuppliers();
-  const { business } = useBusiness();
-
-  const handleInputChange = (field: string, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!business?.id) {
-      console.error('No business found');
+    if (!business?.id || !user?.id) {
+      console.error('Business ID or User ID not found');
       return;
     }
 
@@ -53,40 +48,83 @@ export const AddProduct: React.FC = () => {
       await createProduct.mutateAsync({
         ...formData,
         business_id: business.id,
+        created_by: user.id,
         category_id: formData.category_id || null,
         supplier_id: formData.supplier_id || null,
         expiration_date: formData.expiration_date || null,
-        cost: formData.cost || null,
-        price: formData.price || null,
-        location: formData.location || null,
-        image: formData.image || null,
-        barcode: formData.barcode || null,
       });
       
-      navigate('/inventory');
+      // Reset form
+      setFormData({
+        name: '',
+        barcode: '',
+        category_id: '',
+        supplier_id: '',
+        quantity: 0,
+        expiration_date: '',
+        location: '',
+        cost: 0,
+        price: 0,
+        image: '',
+      });
     } catch (error) {
       console.error('Error creating product:', error);
     }
   };
 
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  if (!business) {
+    return (
+      <MainLayout>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir="rtl">
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <Package className="w-12 h-12 text-primary mx-auto mb-4" />
+              <CardTitle>צור עסק חדש</CardTitle>
+              <p className="text-gray-600">כדי להוסיף מוצרים, תחילה עליך ליצור עסק</p>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                onClick={() => setShowCreateBusiness(true)}
+                className="w-full bg-primary hover:bg-primary-600"
+              >
+                צור עסק חדש
+              </Button>
+            </CardContent>
+          </Card>
+          <CreateBusinessDialog
+            open={showCreateBusiness}
+            onClose={() => setShowCreateBusiness(false)}
+          />
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="space-y-6" dir="rtl">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">הוספת מוצר חדש</h1>
-          <p className="text-gray-600">הוסף מוצר חדש למלאי שלך</p>
+        <div className="flex items-center gap-4">
+          <Package className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">הוספת מוצר חדש</h1>
+            <p className="text-gray-600">הוסף מוצר חדש למערכת הניהול</p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Basic Information */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Main Product Info */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-5 h-5" />
-                  מידע בסיסי
-                </CardTitle>
+                <CardTitle>פרטי מוצר בסיסיים</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -102,184 +140,157 @@ export const AddProduct: React.FC = () => {
 
                 <div>
                   <Label htmlFor="barcode">ברקוד</Label>
-                  <div className="relative">
-                    <Barcode className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      id="barcode"
-                      value={formData.barcode}
-                      onChange={(e) => handleInputChange('barcode', e.target.value)}
-                      placeholder="סרוק או הכנס ברקוד..."
-                      className="pr-10"
-                    />
+                  <Input
+                    id="barcode"
+                    value={formData.barcode}
+                    onChange={(e) => handleInputChange('barcode', e.target.value)}
+                    placeholder="הכנס ברקוד..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="category">קטגוריה</Label>
+                    <Select
+                      value={formData.category_id}
+                      onValueChange={(value) => handleInputChange('category_id', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="בחר קטגוריה" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="supplier">ספק</Label>
+                    <Select
+                      value={formData.supplier_id}
+                      onValueChange={(value) => handleInputChange('supplier_id', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="בחר ספק" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {suppliers.map((supplier) => (
+                          <SelectItem key={supplier.id} value={supplier.id}>
+                            {supplier.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="category">קטגוריה</Label>
-                  <Select onValueChange={(value) => handleInputChange('category_id', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="בחר קטגוריה..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="supplier">ספק</Label>
-                  <Select onValueChange={(value) => handleInputChange('supplier_id', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="בחר ספק..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.id}>
-                          {supplier.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="image">תמונת מוצר (URL)</Label>
+                  <Input
+                    id="image"
+                    value={formData.image}
+                    onChange={(e) => handleInputChange('image', e.target.value)}
+                    placeholder="הכנס קישור לתמונה..."
+                  />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Inventory Details */}
+            {/* Inventory & Pricing */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-5 h-5" />
-                  פרטי מלאי
-                </CardTitle>
+                <CardTitle>מלאי ותמחור</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="quantity">כמות *</Label>
+                  <Label htmlFor="quantity">כמות במלאי *</Label>
                   <Input
                     id="quantity"
                     type="number"
-                    min="0"
                     value={formData.quantity}
                     onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 0)}
-                    placeholder="0"
+                    min="0"
                     required
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="location">מיקום</Label>
-                  <div className="relative">
-                    <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      id="location"
-                      value={formData.location}
-                      onChange={(e) => handleInputChange('location', e.target.value)}
-                      placeholder="מדף A1, אזור ב..."
-                      className="pr-10"
-                    />
-                  </div>
+                  <Label htmlFor="location">מיקום במחסן</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => handleInputChange('location', e.target.value)}
+                    placeholder="מדף A, תא 5..."
+                  />
                 </div>
 
                 <div>
                   <Label htmlFor="expiration_date">תאריך תפוגה</Label>
-                  <div className="relative">
-                    <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    id="expiration_date"
+                    type="date"
+                    value={formData.expiration_date}
+                    onChange={(e) => handleInputChange('expiration_date', e.target.value)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="cost">מחיר עלות (₪)</Label>
                     <Input
-                      id="expiration_date"
-                      type="date"
-                      value={formData.expiration_date}
-                      onChange={(e) => handleInputChange('expiration_date', e.target.value)}
-                      className="pr-10"
+                      id="cost"
+                      type="number"
+                      step="0.01"
+                      value={formData.cost}
+                      onChange={(e) => handleInputChange('cost', parseFloat(e.target.value) || 0)}
+                      min="0"
                     />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Pricing */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="w-5 h-5" />
-                  תמחור
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="cost">מחיר עלות (₪)</Label>
-                  <Input
-                    id="cost"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.cost}
-                    onChange={(e) => handleInputChange('cost', parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="price">מחיר מכירה (₪)</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
-                  />
+                  <div>
+                    <Label htmlFor="price">מחיר מכירה (₪)</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
+                      min="0"
+                    />
+                  </div>
                 </div>
 
                 {formData.cost > 0 && formData.price > 0 && (
                   <div className="p-3 bg-green-50 rounded-lg">
                     <p className="text-sm text-green-700">
-                      רווח: ₪{(formData.price - formData.cost).toFixed(2)} 
+                      רווח צפוי: ₪{(formData.price - formData.cost).toFixed(2)} 
                       ({(((formData.price - formData.cost) / formData.cost) * 100).toFixed(1)}%)
                     </p>
                   </div>
                 )}
               </CardContent>
             </Card>
-
-            {/* Image Upload */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Camera className="w-5 h-5" />
-                  תמונת מוצר
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <Camera className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 mb-2">גרור תמונה או לחץ לבחירה</p>
-                  <Button type="button" variant="outline">
-                    בחר תמונה
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
           {/* Action Buttons */}
           <div className="flex gap-4 justify-end">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => navigate('/inventory')}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => window.history.back()}
             >
               ביטול
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="bg-primary hover:bg-primary-600"
               disabled={createProduct.isPending}
             >
+              <Save className="w-4 h-4 ml-2" />
               {createProduct.isPending ? 'שומר...' : 'שמור מוצר'}
             </Button>
           </div>

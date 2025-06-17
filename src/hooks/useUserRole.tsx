@@ -7,6 +7,17 @@ import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
 
+interface RolePermissions {
+  canAccessBusinessData: boolean;
+  canManageUsers: boolean;
+  canViewReports: boolean;
+  canManageSettings: boolean;
+  canEditProducts: boolean;
+  canViewProducts: boolean;
+  isPlatformAdmin: boolean;
+  canManageInventory: boolean;
+}
+
 export const useUserRole = () => {
   const { user } = useAuth();
   const [userRole, setUserRole] = useState<UserRole>('free_user');
@@ -40,11 +51,11 @@ export const useUserRole = () => {
 
   const hasRole = (requiredRole: UserRole): boolean => {
     const roleHierarchy: Record<UserRole, number> = {
-      'free_user': 1,
-      'pro_starter_user': 2,
-      'smart_master_user': 3,
-      'elite_pilot_user': 4,
-      'admin': 5,
+      'free_user': 1,        // User - Product list only
+      'pro_starter_user': 2, // User - Product list only  
+      'smart_master_user': 3, // Super User - Full business control
+      'elite_pilot_user': 4,  // Super User - Full business control
+      'admin': 5,             // Admin - Platform settings only
     };
 
     return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
@@ -52,20 +63,67 @@ export const useUserRole = () => {
 
   const getRoleDisplayName = (role: UserRole): string => {
     const roleNames: Record<UserRole, string> = {
-      'free_user': 'משתמש חינם',
-      'pro_starter_user': 'פרו התחלתי',
-      'smart_master_user': 'מאסטר חכם',
-      'elite_pilot_user': 'פיילוט עילית',
-      'admin': 'מנהל',
+      'free_user': 'משתמש',
+      'pro_starter_user': 'משתמש',
+      'smart_master_user': 'משתמש על',
+      'elite_pilot_user': 'משתמש על',
+      'admin': 'מנהל מערכת',
     };
 
     return roleNames[role] || role;
   };
 
+  const getRolePermissions = (role: UserRole = userRole): RolePermissions => {
+    switch (role) {
+      case 'admin':
+        return {
+          canAccessBusinessData: false,    // No access to business data
+          canManageUsers: true,           // Platform-level user management
+          canViewReports: false,          // No business reports
+          canManageSettings: true,        // Platform settings only
+          canEditProducts: false,         // No product editing
+          canViewProducts: false,         // No product viewing
+          isPlatformAdmin: true,          // Full platform access
+          canManageInventory: false,      // No inventory management
+        };
+      
+      case 'smart_master_user':
+      case 'elite_pilot_user':
+        return {
+          canAccessBusinessData: true,    // Full business access
+          canManageUsers: true,           // Business user management
+          canViewReports: true,           // All reports
+          canManageSettings: true,        // Business settings
+          canEditProducts: true,          // Full product management
+          canViewProducts: true,          // View products
+          isPlatformAdmin: false,         // No platform access
+          canManageInventory: true,       // Full inventory control
+        };
+      
+      case 'free_user':
+      case 'pro_starter_user':
+      default:
+        return {
+          canAccessBusinessData: true,    // Limited business access
+          canManageUsers: false,          // No user management
+          canViewReports: false,          // No reports
+          canManageSettings: false,       // No settings
+          canEditProducts: false,         // No product editing
+          canViewProducts: true,          // View products only
+          isPlatformAdmin: false,         // No platform access
+          canManageInventory: false,      // No inventory management
+        };
+    }
+  };
+
+  const permissions = getRolePermissions();
+
   return {
     userRole,
     hasRole,
     getRoleDisplayName,
+    getRolePermissions,
+    permissions,
     isLoading,
   };
 };

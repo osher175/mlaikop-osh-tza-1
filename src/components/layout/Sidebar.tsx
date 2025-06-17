@@ -6,24 +6,65 @@ import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
 
 const menuItems = [
-  { icon: Home, label: 'דשבורד', href: '/dashboard', active: true },
-  { icon: Package, label: 'ניהול מלאי', href: '/inventory' },
-  { icon: Plus, label: 'הוספת מוצר', href: '/add-product' },
-  { icon: BarChart3, label: 'דוחות וגרפים', href: '/reports', requiredRole: 'pro_starter_user' },
-  { icon: Users, label: 'ניהול משתמשים', href: '/users', requiredRole: 'elite_pilot_user' },
-  { icon: Settings, label: 'הגדרות עסק', href: '/settings' },
-  { icon: User, label: 'פרופיל משתמש', href: '/profile' },
-  { icon: Shield, label: 'פאנל אדמין', href: '/admin', requiredRole: 'admin' },
+  { 
+    icon: Home, 
+    label: 'דשבורד', 
+    href: '/dashboard', 
+    active: true,
+    requiredPermission: 'canAccessBusinessData' as const
+  },
+  { 
+    icon: Package, 
+    label: 'ניהול מלאי', 
+    href: '/inventory',
+    requiredPermission: 'canViewProducts' as const
+  },
+  { 
+    icon: Plus, 
+    label: 'הוספת מוצר', 
+    href: '/add-product',
+    requiredPermission: 'canEditProducts' as const
+  },
+  { 
+    icon: BarChart3, 
+    label: 'דוחות וגרפים', 
+    href: '/reports',
+    requiredPermission: 'canViewReports' as const
+  },
+  { 
+    icon: Users, 
+    label: 'ניהול משתמשים', 
+    href: '/users',
+    requiredPermission: 'canManageUsers' as const
+  },
+  { 
+    icon: Settings, 
+    label: 'הגדרות עסק', 
+    href: '/settings',
+    requiredPermission: 'canManageSettings' as const
+  },
+  { 
+    icon: User, 
+    label: 'פרופיל משתמש', 
+    href: '/profile'
+  },
+  { 
+    icon: Shield, 
+    label: 'פאנל מערכת', 
+    href: '/admin',
+    requiredPermission: 'isPlatformAdmin' as const
+  },
 ];
 
 export const Sidebar: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const { hasRole } = useUserRole();
+  const { permissions } = useUserRole();
 
-  const filteredMenuItems = menuItems.filter(item => 
-    !item.requiredRole || hasRole(item.requiredRole as any)
-  );
+  const filteredMenuItems = menuItems.filter(item => {
+    if (!item.requiredPermission) return true;
+    return permissions[item.requiredPermission];
+  });
 
   return (
     <>
