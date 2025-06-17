@@ -1,5 +1,7 @@
 
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -11,57 +13,65 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
-
-// Dummy subscription data
-const subscriptions = [
-  {
-    id: 1,
-    userName: 'יוסי כהן',
-    email: 'yossi@example.com',
-    plan: 'Premium 2',
-    startDate: '2024-01-15',
-    renewalDate: '2024-07-15',
-    status: 'active',
-    autoRenewal: true,
-  },
-  {
-    id: 2,
-    userName: 'מרים לוי',
-    email: 'miriam@example.com',
-    plan: 'Premium 1',
-    startDate: '2024-02-01',
-    renewalDate: '2024-08-01',
-    status: 'active',
-    autoRenewal: true,
-  },
-  {
-    id: 3,
-    userName: 'דוד ישראלי',
-    email: 'david@example.com',
-    plan: 'Premium 3',
-    startDate: '2024-03-10',
-    renewalDate: '2024-09-10',
-    status: 'expired',
-    autoRenewal: false,
-  },
-  {
-    id: 4,
-    userName: 'שרה אברהם',
-    email: 'sarah@example.com',
-    plan: 'Premium 1',
-    startDate: '2024-04-05',
-    renewalDate: '2024-10-05',
-    status: 'active',
-    autoRenewal: true,
-  },
-];
+import { X, Loader2 } from 'lucide-react';
 
 export const SubscriptionTable: React.FC = () => {
-  const handleCancelAutoRenewal = (subscriptionId: number) => {
-    console.log('Cancelling auto renewal for subscription:', subscriptionId);
-    // TODO: Implement cancel auto renewal logic
+  const { data: subscriptions, isLoading, error } = useQuery({
+    queryKey: ['user-subscriptions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_subscriptions_new')
+        .select(`
+          *,
+          profiles:user_id (
+            first_name,
+            last_name
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const handleCancelAutoRenewal = async (subscriptionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_subscriptions_new')
+        .update({ auto_renew: false })
+        .eq('id', subscriptionId);
+
+      if (error) throw error;
+      
+      console.log('Auto renewal cancelled for subscription:', subscriptionId);
+      // TODO: Show success toast and refetch data
+    } catch (error) {
+      console.error('Error cancelling auto renewal:', error);
+      // TODO: Show error toast
+    }
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex justify-center items-center p-8">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span className="mr-2 font-rubik">טוען...</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-8">
+          <p className="text-red-500 text-center font-rubik">שגיאה בטעינת המנויים</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -78,39 +88,49 @@ export const SubscriptionTable: React.FC = () => {
                 <TableHead className="text-right font-rubik">משתמש</TableHead>
                 <TableHead className="text-right font-rubik">תוכנית</TableHead>
                 <TableHead className="text-right font-rubik">תאריך התחלה</TableHead>
-                <TableHead className="text-right font-rubik">תאריך חידוש</TableHead>
+                <TableHead className="text-right font-rubik">תאריך פגיעה</TableHead>
                 <TableHead className="text-right font-rubik">סטטוס</TableHead>
                 <TableHead className="text-right font-rubik">פעולות</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {subscriptions.map((subscription) => (
+              {subscriptions?.map((subscription) => (
                 <TableRow key={subscription.id}>
                   <TableCell className="font-rubik">
                     <div>
-                      <div className="font-medium">{subscription.userName}</div>
-                      <div className="text-sm text-gray-500">{subscription.email}</div>
+                      <div className="font-medium">
+                        {subscription.profiles?.first_name} {subscription.profiles?.last_name}
+                      </div>
+                      <div className="text-sm text-gray-500">{subscription.user_id}</div>
                     </div>
                   </TableCell>
                   <TableCell className="font-rubik">
                     <Badge variant="outline">{subscription.plan}</Badge>
                   </TableCell>
                   <TableCell className="font-rubik text-sm">
-                    {new Date(subscription.startDate).toLocaleDateString('he-IL')}
+                    {subscription.started_at ? 
+                      new Date(subscription.started_at).toLocaleDateString('he-IL') : 
+                      '-'
+                    }
                   </TableCell>
                   <TableCell className="font-rubik text-sm">
-                    {new Date(subscription.renewalDate).toLocaleDateString('he-IL')}
+                    {subscription.expires_at ? 
+                      new Date(subscription.expires_at).toLocaleDateString('he-IL') : 
+                      'ללא הגבלה'
+                    }
                   </TableCell>
                   <TableCell>
                     <Badge 
                       variant={subscription.status === 'active' ? 'default' : 'destructive'}
                       className="font-rubik"
                     >
-                      {subscription.status === 'active' ? 'פעיל' : 'פג תוקף'}
+                      {subscription.status === 'active' ? 'פעיל' : 
+                       subscription.status === 'expired' ? 'פג תוקף' :
+                       subscription.status === 'cancelled' ? 'בוטל' : 'ממתין'}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {subscription.autoRenewal && subscription.status === 'active' && (
+                    {subscription.auto_renew && subscription.status === 'active' && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -126,6 +146,11 @@ export const SubscriptionTable: React.FC = () => {
               ))}
             </TableBody>
           </Table>
+          {subscriptions?.length === 0 && (
+            <div className="text-center py-8 text-gray-500 font-rubik">
+              אין מנויים במערכת
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

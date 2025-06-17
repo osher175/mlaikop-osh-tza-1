@@ -1,5 +1,7 @@
 
 import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -19,13 +21,6 @@ interface SubscriptionEditorProps {
   onCancel: () => void;
 }
 
-const availablePlans = [
-  { id: 'freemium', name: 'Freemium', price: 0 },
-  { id: 'premium1', name: 'Premium 1', price: 399.90 },
-  { id: 'premium2', name: 'Premium 2', price: 799.90 },
-  { id: 'premium3', name: 'Premium 3', price: 1199.90 },
-];
-
 export const SubscriptionEditor: React.FC<SubscriptionEditorProps> = ({
   userId,
   currentPlan,
@@ -36,15 +31,64 @@ export const SubscriptionEditor: React.FC<SubscriptionEditorProps> = ({
   const [selectedPlan, setSelectedPlan] = useState(currentPlan);
   const [selectedExpiryDate, setSelectedExpiryDate] = useState<Date>(expiryDate || new Date());
   const [isOpen, setIsOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: availablePlans } = useQuery({
+    queryKey: ['subscription-plans'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subscription_plans_new')
+        .select('*')
+        .order('storage_limit', { ascending: true });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const updateSubscriptionMutation = useMutation({
+    mutationFn: async ({ plan, expiryDate }: { plan: string; expiryDate: Date }) => {
+      // First, mark current subscription as expired
+      const { error: updateError } = await supabase
+        .from('user_subscriptions_new')
+        .update({ status: 'expired' })
+        .eq('user_id', userId)
+        .eq('status', 'active');
+
+      if (updateError) throw updateError;
+
+      // Create new subscription
+      const { error: insertError } = await supabase
+        .from('user_subscriptions_new')
+        .insert({
+          user_id: userId,
+          plan: plan,
+          status: 'active',
+          expires_at: expiryDate.toISOString(),
+          auto_renew: true
+        });
+
+      if (insertError) throw insertError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-subscriptions'] });
+      onSave(selectedPlan, selectedExpiryDate);
+    },
+  });
 
   const handleSave = () => {
-    onSave(selectedPlan, selectedExpiryDate);
+    updateSubscriptionMutation.mutate({
+      plan: selectedPlan,
+      expiryDate: selectedExpiryDate
+    });
   };
 
   const getPlanBadgeColor = (planId: string) => {
     switch (planId) {
-      case 'freemium':
+      case 'free':
         return 'bg-gray-500';
+      case 'starter':
+        return 'bg-green-500';
       case 'premium1':
         return 'bg-amber-500';
       case 'premium2':
@@ -80,9 +124,9 @@ export const SubscriptionEditor: React.FC<SubscriptionEditorProps> = ({
               <SelectValue placeholder="בחר תוכנית" />
             </SelectTrigger>
             <SelectContent>
-              {availablePlans.map((plan) => (
-                <SelectItem key={plan.id} value={plan.id} className="font-rubik">
-                  {plan.name} - ₪{plan.price}/חודש
+              {availablePlans?.map((plan) => (
+                <SelectItem key={plan.plan} value={plan.plan} className="font-rubik">
+                  {plan.plan} - {plan.storage_limit}GB, {plan.user_limit === -1 ? 'ללא הגבלה' : plan.user_limit} משתמשים
                 </SelectItem>
               ))}
             </SelectContent>
@@ -124,7 +168,7 @@ export const SubscriptionEditor: React.FC<SubscriptionEditorProps> = ({
         {selectedPlan !== currentPlan && (
           <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800 font-rubik">
-              המנוי ישונה מ-{currentPlan} ל-{availablePlans.find(p => p.id === selectedPlan)?.name}
+              המנוי ישונה מ-{currentPlan} ל-{selectedPlan}
             </p>
           </div>
         )}
@@ -132,10 +176,11 @@ export const SubscriptionEditor: React.FC<SubscriptionEditorProps> = ({
         <div className="flex gap-2 pt-4">
           <Button 
             onClick={handleSave}
+            disabled={updateSubscriptionMutation.isPending}
             className="flex-1 bg-green-600 hover:bg-green-700 font-rubik"
           >
             <Save className="w-4 h-4 ml-2" />
-            שמור שינויים
+            {updateSubscriptionMutation.isPending ? 'שומר...' : 'שמור שינויים'}
           </Button>
           <Button 
             onClick={onCancel}

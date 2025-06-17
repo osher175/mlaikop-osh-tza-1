@@ -594,6 +594,50 @@ export type Database = {
           },
         ]
       }
+      user_subscriptions_new: {
+        Row: {
+          auto_renew: boolean | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          plan: string
+          started_at: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auto_renew?: boolean | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          plan: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auto_renew?: boolean | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          plan?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_new_plan_fkey"
+            columns: ["plan"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans_new"
+            referencedColumns: ["plan"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

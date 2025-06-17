@@ -7,50 +7,61 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Crown, Zap, Star, Sparkles } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
-import type { Database } from '@/integrations/supabase/types';
-
-type SubscriptionPlan = Database['public']['Tables']['subscription_plans']['Row'];
 
 export const SubscriptionPlans: React.FC = () => {
   const { userRole } = useUserRole();
 
   const { data: plans, isLoading } = useQuery({
-    queryKey: ['subscription-plans'],
+    queryKey: ['subscription-plans-new'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('subscription_plans')
+        .from('subscription_plans_new')
         .select('*')
-        .order('monthly_price', { ascending: true });
+        .order('storage_limit', { ascending: true });
 
       if (error) throw error;
       return data;
     },
   });
 
-  const getPlanIcon = (role: string) => {
-    switch (role) {
-      case 'free_user':
+  const getPlanIcon = (plan: string) => {
+    switch (plan) {
+      case 'free':
         return <Sparkles className="w-6 h-6 text-green-500" />;
-      case 'pro_starter_user':
+      case 'starter':
+        return <Crown className="w-6 h-6 text-green-600" />;
+      case 'premium1':
         return <Crown className="w-6 h-6 text-amber-500" />;
-      case 'smart_master_user':
+      case 'premium2':
         return <Zap className="w-6 h-6 text-blue-500" />;
-      case 'elite_pilot_user':
+      case 'premium3':
         return <Star className="w-6 h-6 text-purple-500" />;
       default:
         return <Sparkles className="w-6 h-6 text-gray-500" />;
     }
   };
 
-  const formatPrice = (price: number | null) => {
-    if (price === null || price === 0) return 'חינם';
-    return `₪${price.toLocaleString()}`;
+  const getPlanDisplayName = (plan: string) => {
+    switch (plan) {
+      case 'free':
+        return 'חינמי';
+      case 'starter':
+        return 'מתחילים';
+      case 'premium1':
+        return 'פרימיום 1';
+      case 'premium2':
+        return 'פרימיום 2';
+      case 'premium3':
+        return 'פרימיום 3';
+      default:
+        return plan;
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        {[...Array(5)].map((_, i) => (
           <Card key={i} className="animate-pulse">
             <CardHeader>
               <div className="h-6 bg-gray-200 rounded"></div>
@@ -72,105 +83,63 @@ export const SubscriptionPlans: React.FC = () => {
         <p className="text-gray-600">בחר את התוכנית המתאימה לעסק שלך</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {plans?.map((plan) => {
-          const isCurrentPlan = plan.role === userRole;
-          const features = plan.features as any;
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        {plans?.map((plan) => (
+          <Card 
+            key={plan.plan} 
+            className={`relative ${plan.plan === 'premium2' ? 'border-blue-500 shadow-lg' : ''}`}
+          >
+            {plan.plan === 'premium2' && (
+              <Badge className="absolute -top-2 right-4 bg-blue-500">מומלץ</Badge>
+            )}
+            
+            <CardHeader className="text-center">
+              <div className="flex justify-center mb-2">
+                {getPlanIcon(plan.plan)}
+              </div>
+              <CardTitle className="text-xl">{getPlanDisplayName(plan.plan)}</CardTitle>
+              <CardDescription className="text-2xl font-bold text-primary">
+                {plan.plan === 'free' ? 'חינם' : 'צור קשר'}
+              </CardDescription>
+            </CardHeader>
 
-          return (
-            <Card 
-              key={plan.id} 
-              className={`relative ${isCurrentPlan ? 'ring-2 ring-primary' : ''} ${
-                plan.role === 'smart_master_user' ? 'border-blue-500 shadow-lg' : ''
-              }`}
-            >
-              {plan.role === 'smart_master_user' && (
-                <Badge className="absolute -top-2 right-4 bg-blue-500">מומלץ</Badge>
-              )}
-              
-              <CardHeader className="text-center">
-                <div className="flex justify-center mb-2">
-                  {getPlanIcon(plan.role)}
+            <CardContent className="space-y-4">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-green-500" />
+                  <span>{plan.storage_limit}GB אחסון</span>
                 </div>
-                <CardTitle className="text-xl">{plan.name}</CardTitle>
-                <CardDescription className="text-2xl font-bold text-primary">
-                  {formatPrice(plan.monthly_price)}
-                  {plan.monthly_price && plan.monthly_price > 0 && (
-                    <span className="text-sm text-gray-500">/חודש</span>
-                  )}
-                </CardDescription>
-                {plan.setup_fee && plan.setup_fee > 0 && (
-                  <p className="text-sm text-gray-600">
-                    דמי הקמה: {formatPrice(plan.setup_fee)}
-                  </p>
-                )}
-              </CardHeader>
+                
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-green-500" />
+                  <span>
+                    {plan.user_limit === -1 ? 'משתמשים ללא הגבלה' : `עד ${plan.user_limit} משתמשים`}
+                  </span>
+                </div>
 
-              <CardContent className="space-y-4">
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span>{plan.storage_gb}GB אחסון</span>
-                  </div>
-                  
+                {plan.ai_credit > 0 && (
                   <div className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-green-500" />
                     <span>
-                      {plan.max_users === 999 ? 'משתמשים ללא הגבלה' : `עד ${plan.max_users} משתמשים`}
+                      {plan.ai_credit === -1 ? 'AI ללא הגבלה' : `₪${plan.ai_credit} קרדיט AI`}
                     </span>
                   </div>
+                )}
 
-                  <div className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span>תוקף למשך {plan.duration_months} חודשים</span>
-                  </div>
-
-                  {plan.ai_access && (
-                    <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-500" />
-                      <span>גישה ל-AI</span>
-                    </div>
-                  )}
-
-                  {features?.unlimited_inventory && (
-                    <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-500" />
-                      <span>מלאי ללא הגבלה</span>
-                    </div>
-                  )}
-
-                  {features?.basic_reports && (
-                    <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-500" />
-                      <span>דוחות בסיסיים</span>
-                    </div>
-                  )}
-
-                  {features?.advanced_reports && (
-                    <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-500" />
-                      <span>דוחות מתקדמים</span>
-                    </div>
-                  )}
-
-                  {features?.priority_support && (
-                    <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-500" />
-                      <span>תמיכה עדיפה</span>
-                    </div>
-                  )}
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-green-500" />
+                  <span>תמיכה {plan.support_level === 'basic' ? 'בסיסית' : 
+                              plan.support_level === 'standard' ? 'סטנדרטית' :
+                              plan.support_level === 'advanced' ? 'מתקדמת' : 'VIP'}</span>
                 </div>
+              </div>
 
-                <Button 
-                  className={`w-full ${isCurrentPlan ? 'bg-gray-400' : 'bg-primary hover:bg-primary-600'}`}
-                  disabled={isCurrentPlan}
-                >
-                  {isCurrentPlan ? 'התוכנית הנוכחית' : 'בחר תוכנית'}
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
+              <Button className="w-full bg-primary hover:bg-primary-600">
+                בחר תוכנית
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   );

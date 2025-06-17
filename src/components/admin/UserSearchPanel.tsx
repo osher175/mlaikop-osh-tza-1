@@ -1,10 +1,12 @@
 
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, User, Crown, Mail } from 'lucide-react';
+import { Search, User, Crown, Mail, Loader2 } from 'lucide-react';
 
 interface SearchedUser {
   id: string;
@@ -19,43 +21,77 @@ interface SearchedUser {
 
 export const UserSearchPanel: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResult, setSearchResult] = useState<SearchedUser | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [searchTriggered, setSearchTriggered] = useState(false);
+
+  const { data: searchResult, isLoading, error } = useQuery({
+    queryKey: ['user-search', searchQuery],
+    queryFn: async () => {
+      if (!searchQuery.trim()) return null;
+
+      // Search for user by email pattern in auth.users through profiles
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          first_name,
+          last_name
+        `)
+        .or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`)
+        .limit(1)
+        .single();
+
+      if (profileError && profileError.code !== 'PGRST116') throw profileError;
+
+      if (!profileData) {
+        // Try searching by user ID directly
+        const { data: directSearch, error: directError } = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            first_name,
+            last_name
+          `)
+          .eq('id', searchQuery)
+          .single();
+
+        if (directError && directError.code !== 'PGRST116') throw directError;
+        if (!directSearch) return null;
+
+        profileData.id = directSearch.id;
+        profileData.first_name = directSearch.first_name;
+        profileData.last_name = directSearch.last_name;
+      }
+
+      // Get user's current subscription
+      const { data: subscriptionData, error: subError } = await supabase
+        .from('user_subscriptions_new')
+        .select('plan, status, started_at, expires_at')
+        .eq('user_id', profileData.id)
+        .eq('status', 'active')
+        .single();
+
+      if (subError && subError.code !== 'PGRST116') {
+        console.log('No active subscription found for user');
+      }
+
+      return {
+        id: profileData.id,
+        email: searchQuery.includes('@') ? searchQuery : 'לא זמין',
+        firstName: profileData.first_name || 'לא',
+        lastName: profileData.last_name || 'זמין',
+        currentPlan: subscriptionData?.plan || 'free',
+        status: subscriptionData?.status === 'active' ? 'active' : 'inactive',
+        joinDate: subscriptionData?.started_at || new Date().toISOString(),
+        subscriptionExpiry: subscriptionData?.expires_at,
+      } as SearchedUser;
+    },
+    enabled: searchTriggered && searchQuery.trim().length > 0,
+  });
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-
-    setIsLoading(true);
-    setError(null);
-    setSearchResult(null);
-
-    try {
-      // TODO: Replace with actual Supabase query
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Dummy data for demonstration
-      if (searchQuery.includes('@')) {
-        setSearchResult({
-          id: 'user-123',
-          email: searchQuery,
-          firstName: 'יוסי',
-          lastName: 'כהן',
-          currentPlan: 'Premium 1',
-          status: 'active',
-          joinDate: '2024-01-15',
-          subscriptionExpiry: '2024-07-15',
-        });
-      } else {
-        setError('משתמש לא נמצא');
-      }
-    } catch (err) {
-      setError('שגיאה בחיפוש המשתמש');
-    } finally {
-      setIsLoading(false);
-    }
+    setSearchTriggered(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -80,7 +116,7 @@ export const UserSearchPanel: React.FC = () => {
         <form onSubmit={handleSearch} className="flex gap-2" dir="rtl">
           <Input
             type="text"
-            placeholder="הכנס אימייל או מזהה משתמש"
+            placeholder="הכנס שם פרטי, שם משפחה או מזהה משתמש"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="font-rubik"
@@ -90,19 +126,26 @@ export const UserSearchPanel: React.FC = () => {
             disabled={isLoading}
             className="bg-turquoise hover:bg-turquoise/90"
           >
-            <Search className="h-4 w-4" />
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           </Button>
         </form>
 
         {isLoading && (
-          <div className="text-center py-4 text-gray-500 font-rubik">
+          <div className="text-center py-4 text-gray-500 font-rubik flex items-center justify-center">
+            <Loader2 className="h-4 w-4 animate-spin ml-2" />
             מחפש...
           </div>
         )}
 
         {error && (
           <div className="text-center py-4 text-red-500 font-rubik">
-            {error}
+            שגיאה בחיפוש המשתמש
+          </div>
+        )}
+
+        {searchTriggered && !isLoading && !searchResult && !error && (
+          <div className="text-center py-4 text-gray-500 font-rubik">
+            משתמש לא נמצא
           </div>
         )}
 
