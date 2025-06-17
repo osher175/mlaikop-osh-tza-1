@@ -1,17 +1,23 @@
 
 import React from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { StatsCards } from '@/components/dashboard/StatsCards';
+import { SummaryGrid } from '@/components/dashboard/SummaryGrid';
 import { QuickActions } from '@/components/dashboard/QuickActions';
-import { RecentActivity } from '@/components/dashboard/RecentActivity';
+import { MonthlyProfitChart } from '@/components/dashboard/MonthlyProfitChart';
+import { NotificationPanel } from '@/components/dashboard/NotificationPanel';
 import { ProtectedFeature } from '@/components/ProtectedFeature';
 import { useNotificationChecker } from '@/hooks/useNotificationChecker';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart3, Brain, Users, Settings } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   // Initialize notification checking
   useNotificationChecker();
+  const { user } = useAuth();
+
+  // Get user's first name for welcome message
+  const userName = user?.user_metadata?.first_name || 'משתמש';
 
   return (
     <MainLayout>
@@ -19,15 +25,18 @@ export const Dashboard: React.FC = () => {
         {/* Welcome Header */}
         <div className="text-hebrew">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-            ברוך הבא ל-Mlaiko
+            שלום, {userName}!
           </h1>
           <p className="text-gray-600">
             סקירה כללית של המלאי והפעילות העסקית שלך
           </p>
         </div>
 
-        {/* Stats Cards */}
-        <StatsCards />
+        {/* Summary Cards */}
+        <SummaryGrid />
+
+        {/* Monthly Profit Chart */}
+        <MonthlyProfitChart />
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -53,7 +62,7 @@ export const Dashboard: React.FC = () => {
           </div>
           
           <div className="space-y-6">
-            <RecentActivity />
+            <NotificationPanel />
             
             {/* AI Features - Smart Master and above */}
             <ProtectedFeature requiredRole="smart_master_user">
