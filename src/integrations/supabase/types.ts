@@ -33,15 +33,140 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          ai_access: boolean | null
+          created_at: string | null
+          duration_months: number | null
+          features: Json | null
+          id: string
+          max_users: number | null
+          monthly_price: number | null
+          name: string
+          role: Database["public"]["Enums"]["user_role"]
+          setup_fee: number | null
+          storage_gb: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ai_access?: boolean | null
+          created_at?: string | null
+          duration_months?: number | null
+          features?: Json | null
+          id?: string
+          max_users?: number | null
+          monthly_price?: number | null
+          name: string
+          role: Database["public"]["Enums"]["user_role"]
+          setup_fee?: number | null
+          storage_gb?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ai_access?: boolean | null
+          created_at?: string | null
+          duration_months?: number | null
+          features?: Json | null
+          id?: string
+          max_users?: number | null
+          monthly_price?: number | null
+          name?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          setup_fee?: number | null
+          storage_gb?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          plan_id: string
+          started_at: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          plan_id: string
+          started_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          plan_id?: string
+          started_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_uuid?: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
+      has_role_or_higher: {
+        Args: {
+          required_role: Database["public"]["Enums"]["user_role"]
+          user_uuid?: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      user_role:
+        | "admin"
+        | "free_user"
+        | "pro_starter_user"
+        | "smart_master_user"
+        | "elite_pilot_user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -156,6 +281,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: [
+        "admin",
+        "free_user",
+        "pro_starter_user",
+        "smart_master_user",
+        "elite_pilot_user",
+      ],
+    },
   },
 } as const

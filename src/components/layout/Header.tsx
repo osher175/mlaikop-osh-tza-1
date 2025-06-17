@@ -1,9 +1,11 @@
 
 import React from 'react';
-import { Bell, Search, User, LogOut } from 'lucide-react';
+import { Bell, Search, User, LogOut, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,9 +17,25 @@ import {
 
 export const Header: React.FC = () => {
   const { signOut, user } = useAuth();
+  const { userRole, getRoleDisplayName } = useUserRole();
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const getRoleBadgeColor = () => {
+    switch (userRole) {
+      case 'admin':
+        return 'bg-red-500';
+      case 'elite_pilot_user':
+        return 'bg-purple-500';
+      case 'smart_master_user':
+        return 'bg-blue-500';
+      case 'pro_starter_user':
+        return 'bg-amber-500';
+      default:
+        return 'bg-gray-500';
+    }
   };
 
   return (
@@ -43,14 +61,30 @@ export const Header: React.FC = () => {
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <User className="w-5 h-5" />
+              <Button variant="ghost" className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <Badge className={`${getRoleBadgeColor()} text-white text-xs`}>
+                    <Crown className="w-3 h-3 ml-1" />
+                    {getRoleDisplayName(userRole)}
+                  </Badge>
+                  <User className="w-5 h-5" />
+                </div>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="text-right">
-                {user?.email}
+                <div className="flex flex-col">
+                  <span>{user?.email}</span>
+                  <span className="text-xs text-gray-500 font-normal">
+                    {getRoleDisplayName(userRole)}
+                  </span>
+                </div>
               </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-right cursor-pointer">
+                <Crown className="ml-2 h-4 w-4" />
+                ניהול מנוי
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={handleSignOut}
