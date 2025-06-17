@@ -152,6 +152,7 @@ export type Database = {
       notifications: {
         Row: {
           business_id: string
+          channel: string
           created_at: string
           id: string
           is_read: boolean
@@ -164,6 +165,7 @@ export type Database = {
         }
         Insert: {
           business_id: string
+          channel?: string
           created_at?: string
           id?: string
           is_read?: boolean
@@ -176,6 +178,7 @@ export type Database = {
         }
         Update: {
           business_id?: string
+          channel?: string
           created_at?: string
           id?: string
           is_read?: boolean

@@ -28,6 +28,7 @@ export const useNotifications = () => {
           products:product_id(name)
         `)
         .eq('business_id', business.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50);
       
@@ -46,7 +47,8 @@ export const useNotifications = () => {
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true, updated_at: new Date().toISOString() })
-        .eq('id', notificationId);
+        .eq('id', notificationId)
+        .eq('user_id', user?.id);
       
       if (error) throw error;
     },
@@ -65,12 +67,13 @@ export const useNotifications = () => {
 
   const markAllAsRead = useMutation({
     mutationFn: async () => {
-      if (!business?.id) throw new Error('No business found');
+      if (!business?.id || !user?.id) throw new Error('No business or user found');
       
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true, updated_at: new Date().toISOString() })
         .eq('business_id', business.id)
+        .eq('user_id', user.id)
         .eq('is_read', false);
       
       if (error) throw error;

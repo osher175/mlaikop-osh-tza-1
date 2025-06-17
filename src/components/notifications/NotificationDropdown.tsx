@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Bell, CheckCheck, Clock, Package, AlertTriangle } from 'lucide-react';
+import { Bell, CheckCheck, Clock, Package, AlertTriangle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -20,10 +20,12 @@ const getNotificationIcon = (type: string) => {
   switch (type) {
     case 'low_stock':
       return <Package className="w-4 h-4 text-amber-500" />;
-    case 'expired_product':
+    case 'expired':
       return <AlertTriangle className="w-4 h-4 text-red-500" />;
     case 'plan_limit':
       return <Clock className="w-4 h-4 text-blue-500" />;
+    case 'custom':
+      return <Zap className="w-4 h-4 text-purple-500" />;
     default:
       return <Bell className="w-4 h-4" />;
   }
@@ -105,12 +107,19 @@ export const NotificationDropdown: React.FC = () => {
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                       {notification.message}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatDistanceToNow(new Date(notification.created_at), {
-                        addSuffix: true,
-                        locale: he,
-                      })}
-                    </p>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(notification.created_at), {
+                          addSuffix: true,
+                          locale: he,
+                        })}
+                      </p>
+                      <span className="text-xs text-muted-foreground">
+                        {notification.channel === 'in-app' ? 'באפליקציה' : 
+                         notification.channel === 'email' ? 'אימייל' : 
+                         notification.channel === 'sms' ? 'SMS' : notification.channel}
+                      </span>
+                    </div>
                   </div>
                 </DropdownMenuItem>
               ))}
