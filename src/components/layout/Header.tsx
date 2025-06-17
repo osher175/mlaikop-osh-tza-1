@@ -1,11 +1,12 @@
 
 import React from 'react';
-import { Bell, Search, User, LogOut, Crown } from 'lucide-react';
+import { Search, User, LogOut, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,9 +56,7 @@ export const Header: React.FC = () => {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon">
-            <Bell className="w-5 h-5" />
-          </Button>
+          <NotificationDropdown />
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

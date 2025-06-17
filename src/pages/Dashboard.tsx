@@ -5,10 +5,14 @@ import { StatsCards } from '@/components/dashboard/StatsCards';
 import { QuickActions } from '@/components/dashboard/QuickActions';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { ProtectedFeature } from '@/components/ProtectedFeature';
+import { useNotificationChecker } from '@/hooks/useNotificationChecker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart3, Brain, Users, Settings } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
+  // Initialize notification checking
+  useNotificationChecker();
+
   return (
     <MainLayout>
       <div className="space-y-6">
