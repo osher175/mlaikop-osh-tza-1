@@ -19,20 +19,35 @@ export const SubscriptionTable: React.FC = () => {
   const { data: subscriptions, isLoading, error } = useQuery({
     queryKey: ['user-subscriptions'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get all active subscriptions
+      const { data: subscriptionData, error: subError } = await supabase
         .from('user_subscriptions_new')
-        .select(`
-          *,
-          profiles!inner(
-            first_name,
-            last_name
-          )
-        `)
-        .eq('profiles.id', supabase.raw('user_subscriptions_new.user_id'))
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data;
+      if (subError) throw subError;
+
+      // Then get profile data for each user
+      const subscriptionsWithProfiles = await Promise.all(
+        subscriptionData.map(async (subscription) => {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', subscription.user_id)
+            .single();
+
+          if (profileError) {
+            console.warn('Profile not found for user:', subscription.user_id);
+          }
+
+          return {
+            ...subscription,
+            profiles: profile || { first_name: 'לא זמין', last_name: '' }
+          };
+        })
+      );
+
+      return subscriptionsWithProfiles;
     },
   });
 
