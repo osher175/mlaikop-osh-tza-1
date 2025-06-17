@@ -59,7 +59,7 @@ export const Header: React.FC = () => {
           <NotificationDropdown />
           
           {/* Admin Settings Button - Only for admins */}
-          {permissions.isPlatformAdmin && (
+          {userRole === 'admin' && (
             <Button
               variant="ghost"
               size="sm"
