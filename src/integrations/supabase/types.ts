@@ -461,6 +461,36 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans_new: {
+        Row: {
+          ai_credit: number
+          created_at: string | null
+          plan: string
+          storage_limit: number
+          support_level: Database["public"]["Enums"]["support_level"]
+          updated_at: string | null
+          user_limit: number
+        }
+        Insert: {
+          ai_credit: number
+          created_at?: string | null
+          plan: string
+          storage_limit: number
+          support_level: Database["public"]["Enums"]["support_level"]
+          updated_at?: string | null
+          user_limit: number
+        }
+        Update: {
+          ai_credit?: number
+          created_at?: string | null
+          plan?: string
+          storage_limit?: number
+          support_level?: Database["public"]["Enums"]["support_level"]
+          updated_at?: string | null
+          user_limit?: number
+        }
+        Relationships: []
+      }
       suppliers: {
         Row: {
           contact_email: string | null
@@ -590,6 +620,7 @@ export type Database = {
       }
     }
     Enums: {
+      support_level: "basic" | "standard" | "advanced" | "vip"
       user_role:
         | "admin"
         | "free_user"
@@ -711,6 +742,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      support_level: ["basic", "standard", "advanced", "vip"],
       user_role: [
         "admin",
         "free_user",
