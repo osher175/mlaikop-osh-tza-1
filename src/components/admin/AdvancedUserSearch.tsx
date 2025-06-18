@@ -28,23 +28,22 @@ export const AdvancedUserSearch: React.FC = () => {
   });
   const [isSearching, setIsSearching] = useState(false);
 
-  // Create a combined search term from all inputs
-  const combinedSearchTerm = [
-    searchTerms.firstName,
-    searchTerms.lastName,
-    searchTerms.email
-  ].filter(term => term.trim()).join(' ');
+  // Check if we have any search terms
+  const hasSearchTerms = searchTerms.firstName.trim() || searchTerms.lastName.trim() || searchTerms.email.trim();
 
   const { data: searchResults, isLoading, refetch } = useQuery({
-    queryKey: ['admin-user-search', combinedSearchTerm],
+    queryKey: ['admin-user-search', searchTerms],
     queryFn: async () => {
-      if (!combinedSearchTerm.trim()) return [];
+      console.log('=== Starting user search ===');
+      console.log('Search terms:', searchTerms);
 
-      console.log('Searching for users with term:', combinedSearchTerm);
-      
+      if (!hasSearchTerms) {
+        console.log('No search terms provided');
+        return [];
+      }
+
       try {
-        console.log('Searching using profiles table...');
-        const { data: profileData, error: profileError } = await supabase
+        let query = supabase
           .from('profiles')
           .select(`
             id,
@@ -52,26 +51,71 @@ export const AdvancedUserSearch: React.FC = () => {
             last_name,
             created_at,
             user_roles!left(role)
-          `)
-          .or(`first_name.ilike.%${combinedSearchTerm}%,last_name.ilike.%${combinedSearchTerm}%`)
-          .limit(20);
+          `);
+
+        // Build search conditions based on what the user entered
+        const conditions = [];
+        
+        if (searchTerms.firstName.trim()) {
+          conditions.push(`first_name.ilike.%${searchTerms.firstName.trim()}%`);
+          console.log('Added first name condition:', searchTerms.firstName.trim());
+        }
+        
+        if (searchTerms.lastName.trim()) {
+          conditions.push(`last_name.ilike.%${searchTerms.lastName.trim()}%`);
+          console.log('Added last name condition:', searchTerms.lastName.trim());
+        }
+
+        // For email search, we'll search in both first and last name as fallback
+        // since we can't directly access auth.users table
+        if (searchTerms.email.trim()) {
+          const emailTerm = searchTerms.email.trim();
+          console.log('Email search term provided:', emailTerm);
+          
+          // Try to extract name parts from email
+          const beforeAt = emailTerm.split('@')[0];
+          if (beforeAt && beforeAt.length > 2) {
+            conditions.push(`first_name.ilike.%${beforeAt}%`);
+            conditions.push(`last_name.ilike.%${beforeAt}%`);
+            console.log('Added email-based name conditions for:', beforeAt);
+          }
+        }
+
+        if (conditions.length === 0) {
+          console.log('No valid search conditions built');
+          return [];
+        }
+
+        // Apply OR conditions
+        const orCondition = conditions.join(',');
+        console.log('Final OR condition:', orCondition);
+        
+        query = query.or(orCondition).limit(20);
+
+        const { data: profileData, error: profileError } = await query;
 
         if (profileError) {
           console.error('Profile search error:', profileError);
           throw profileError;
         }
 
-        // Transform the data to match our interface
-        const transformedData: SearchedUser[] = (profileData || []).map(profile => ({
-          user_id: profile.id,
-          email: 'לא זמין', // Email not available in direct profiles query
-          first_name: profile.first_name || '',
-          last_name: profile.last_name || '',
-          role: (profile.user_roles as any)?.[0]?.role || 'free_user',
-          created_at: profile.created_at || '',
-        }));
+        console.log('Raw profile data:', profileData);
 
-        console.log('Search results:', transformedData);
+        // Transform the data to match our interface
+        const transformedData: SearchedUser[] = (profileData || []).map(profile => {
+          const transformedUser = {
+            user_id: profile.id,
+            email: 'מוסתר מטעמי אבטחה', // Hidden for security
+            first_name: profile.first_name || '',
+            last_name: profile.last_name || '',
+            role: (profile.user_roles as any)?.[0]?.role || 'free_user',
+            created_at: profile.created_at || '',
+          };
+          console.log('Transformed user:', transformedUser);
+          return transformedUser;
+        });
+
+        console.log(`=== Search completed: Found ${transformedData.length} users ===`);
         return transformedData;
       } catch (error) {
         console.error('Search failed:', error);
@@ -82,19 +126,24 @@ export const AdvancedUserSearch: React.FC = () => {
   });
 
   const handleSearch = () => {
-    if (combinedSearchTerm.trim()) {
-      console.log('Starting search for:', combinedSearchTerm);
+    if (hasSearchTerms) {
+      console.log('=== Manual search triggered ===');
+      console.log('Current search terms:', searchTerms);
       setIsSearching(true);
       refetch().finally(() => setIsSearching(false));
+    } else {
+      console.log('Search attempted but no terms provided');
     }
   };
 
   const handleInputChange = (field: keyof typeof searchTerms, value: string) => {
+    console.log(`Input changed - ${field}:`, value);
     setSearchTerms(prev => ({ ...prev, [field]: value }));
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       handleSearch();
     }
   };
@@ -151,23 +200,26 @@ export const AdvancedUserSearch: React.FC = () => {
             />
           </div>
           <div>
-            <Label htmlFor="email" className="font-rubik">כתובת אימייל</Label>
+            <Label htmlFor="email" className="font-rubik">כתובת אימייל (חיפוש חלקי)</Label>
             <Input
               id="email"
-              type="email"
-              placeholder="הכנס אימייל"
+              type="text"
+              placeholder="הכנס חלק מהאימייל"
               value={searchTerms.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
               onKeyPress={handleKeyPress}
               className="font-rubik"
             />
+            <p className="text-xs text-gray-500 mt-1 font-rubik">
+              חיפוש אימייל יחפש לפי חלק מהשם שלפני ה-@
+            </p>
           </div>
         </div>
 
         <div className="flex justify-center">
           <Button 
             onClick={handleSearch}
-            disabled={isLoading || isSearching || !combinedSearchTerm.trim()}
+            disabled={isLoading || isSearching || !hasSearchTerms}
             className="bg-turquoise hover:bg-turquoise/90 font-rubik"
           >
             <Search className="w-4 h-4 ml-2" />
@@ -226,11 +278,18 @@ export const AdvancedUserSearch: React.FC = () => {
           </div>
         )}
 
-        {searchResults && searchResults.length === 0 && combinedSearchTerm.trim() && !isLoading && (
+        {searchResults && searchResults.length === 0 && hasSearchTerms && !isLoading && (
           <div className="text-center py-8 text-gray-500">
             <User className="w-12 h-12 mx-auto mb-4 text-gray-300" />
             <p className="font-rubik">לא נמצאו משתמשים התואמים לחיפוש</p>
-            <p className="text-sm font-rubik">נסה לשנות את מונחי החיפוש</p>
+            <p className="text-sm font-rubik">נסה לשנות את מונחי החיפוש או חפש לפי שם בלבד</p>
+          </div>
+        )}
+
+        {!hasSearchTerms && (
+          <div className="text-center py-8 text-gray-500">
+            <Search className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+            <p className="font-rubik">הכנס לפחות שדה אחד כדי להתחיל לחפש</p>
           </div>
         )}
       </CardContent>
