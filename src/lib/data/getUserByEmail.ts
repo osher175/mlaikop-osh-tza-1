@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -23,16 +22,22 @@ export const useUserByEmail = () => {
     setUser(null);
 
     try {
-      // First try to find by email in profiles
+      // חיפוש לפי אימייל, שם פרטי או שם משפחה
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select(`
           id,
+          email,
           first_name,
           last_name,
           created_at
         `)
-        .eq('id', query)
+        .or(`
+          email.ilike.%${query}%,
+          first_name.ilike.%${query}%,
+          last_name.ilike.%${query}%
+        `)
+        .limit(1)
         .single();
 
       if (profileError && profileError.code !== 'PGRST116') {
@@ -40,14 +45,14 @@ export const useUserByEmail = () => {
       }
 
       if (profileData) {
-        // Get user role
+        // שליפת תפקיד המשתמש
         const { data: roleData } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', profileData.id)
           .single();
 
-        // Get subscription info
+        // שליפת חבילת המנוי והסטטוס
         const { data: subscriptionData } = await supabase
           .from('user_subscriptions')
           .select(`
@@ -60,7 +65,7 @@ export const useUserByEmail = () => {
 
         setUser({
           id: profileData.id,
-          email: query, // This would normally come from auth.users but we can't query that directly
+          email: profileData.email || '',
           firstName: profileData.first_name || '',
           lastName: profileData.last_name || '',
           planType: subscriptionData?.subscription_plans?.name || 'freemium',
