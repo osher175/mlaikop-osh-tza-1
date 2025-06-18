@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -5,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, User, Mail, Crown, Calendar, Loader2, Users } from 'lucide-react';
+import { Search, User, Mail, Crown, Calendar, Loader2, Users, Shield, Lock } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 
 interface ProfileResult {
@@ -19,9 +20,12 @@ interface ProfileResult {
 }
 
 export const EnhancedUserSearch: React.FC = () => {
-  const { getRoleDisplayName } = useUserRole();
+  const { getRoleDisplayName, userRole, permissions } = useUserRole();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  // Check if user has admin permissions
+  const isAdmin = permissions.isPlatformAdmin;
 
   // Debounce search term with 500ms delay
   useEffect(() => {
@@ -35,6 +39,10 @@ export const EnhancedUserSearch: React.FC = () => {
   const { data: searchResults, isLoading, error } = useQuery({
     queryKey: ['enhanced-user-search', debouncedSearchTerm],
     queryFn: async () => {
+      if (!isAdmin) {
+        throw new Error('Access denied. Admin role required.');
+      }
+
       if (!debouncedSearchTerm.trim() || debouncedSearchTerm.trim().length < 2) {
         return [];
       }
@@ -112,7 +120,7 @@ export const EnhancedUserSearch: React.FC = () => {
         return [];
       }
     },
-    enabled: debouncedSearchTerm.trim().length >= 2,
+    enabled: debouncedSearchTerm.trim().length >= 2 && isAdmin,
   });
 
   const getRoleBadgeColor = (role: string) => {
@@ -155,6 +163,34 @@ export const EnhancedUserSearch: React.FC = () => {
       ))}
     </div>
   );
+
+  // Show access denied message if user is not admin
+  if (!isAdmin) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-900 font-rubik" dir="rtl">
+            חיפוש משתמשים מתקדם
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6" dir="rtl">
+          <div className="text-center py-12">
+            <Lock className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <h3 className="text-xl font-semibold text-gray-700 font-rubik mb-2">
+              גישה מוגבלת
+            </h3>
+            <p className="text-gray-600 font-rubik mb-4">
+              תכונה זו זמינה רק למנהלי מערכת
+            </p>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+              <Shield className="w-4 h-4" />
+              <span className="font-rubik">התפקיד הנוכחי שלך: {getRoleDisplayName(userRole as any)}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
