@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Pencil, Save, X, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -17,17 +18,17 @@ interface SubscriptionPlan {
   storage_limit: number;
   ai_credit: number;
   user_limit: number;
-  support_level: string;
+  support_level: 'basic' | 'standard' | 'advanced' | 'vip';
   created_at?: string;
   updated_at?: string;
 }
 
-interface NewPlan extends SubscriptionPlan {
-  title: string;
-  description: string;
-  price_monthly: number;
-  price_one_time: number;
-  is_active: boolean;
+interface PlanFormData {
+  plan: string;
+  storage_limit: number;
+  ai_credit: number;
+  user_limit: number;
+  support_level: 'basic' | 'standard' | 'advanced' | 'vip';
 }
 
 export const SubscriptionPlanEditor: React.FC = () => {
@@ -35,7 +36,7 @@ export const SubscriptionPlanEditor: React.FC = () => {
   const queryClient = useQueryClient();
   const [editingPlan, setEditingPlan] = useState<string | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<NewPlan> | null>(null);
+  const [editForm, setEditForm] = useState<PlanFormData | null>(null);
 
   const { data: plans, isLoading } = useQuery({
     queryKey: ['subscription-plans-admin'],
@@ -51,7 +52,7 @@ export const SubscriptionPlanEditor: React.FC = () => {
   });
 
   const savePlanMutation = useMutation({
-    mutationFn: async (planData: Partial<NewPlan>) => {
+    mutationFn: async (planData: PlanFormData) => {
       if (editingPlan && editingPlan !== 'new') {
         // Update existing plan
         const { error } = await supabase
@@ -118,12 +119,11 @@ export const SubscriptionPlanEditor: React.FC = () => {
   const startEditing = (plan: SubscriptionPlan) => {
     setEditingPlan(plan.plan);
     setEditForm({
-      ...plan,
-      title: plan.plan,
-      description: `תוכנית ${plan.plan}`,
-      price_monthly: 0,
-      price_one_time: 0,
-      is_active: true,
+      plan: plan.plan,
+      storage_limit: plan.storage_limit,
+      ai_credit: plan.ai_credit,
+      user_limit: plan.user_limit,
+      support_level: plan.support_level,
     });
   };
 
@@ -132,15 +132,10 @@ export const SubscriptionPlanEditor: React.FC = () => {
     setEditingPlan('new');
     setEditForm({
       plan: '',
-      title: '',
-      description: '',
       storage_limit: 1,
       ai_credit: 0,
       user_limit: 1,
       support_level: 'basic',
-      price_monthly: 0,
-      price_one_time: 0,
-      is_active: true,
     });
   };
 
@@ -151,7 +146,7 @@ export const SubscriptionPlanEditor: React.FC = () => {
   };
 
   const savePlan = () => {
-    if (editForm && editForm.plan && editForm.title) {
+    if (editForm && editForm.plan) {
       // Validate required fields
       if (!editForm.storage_limit || !editForm.user_limit) {
         toast({
@@ -172,7 +167,7 @@ export const SubscriptionPlanEditor: React.FC = () => {
     }
   };
 
-  const updateEditForm = (field: keyof NewPlan, value: any) => {
+  const updateEditForm = (field: keyof PlanFormData, value: any) => {
     if (editForm) {
       setEditForm({ ...editForm, [field]: value });
     }
@@ -246,57 +241,13 @@ export const SubscriptionPlanEditor: React.FC = () => {
               <CardContent className="space-y-4">
                 {editingPlan === plan.plan && editForm ? (
                   <>
-                    <div className="grid grid-cols-1 gap-4">
-                      <div>
-                        <Label htmlFor="title" className="font-rubik">כותרת התוכנית</Label>
-                        <Input
-                          id="title"
-                          value={editForm.title || ''}
-                          onChange={(e) => updateEditForm('title', e.target.value)}
-                          className="font-rubik"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="description" className="font-rubik">תיאור</Label>
-                        <Textarea
-                          id="description"
-                          value={editForm.description || ''}
-                          onChange={(e) => updateEditForm('description', e.target.value)}
-                          className="font-rubik"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="price_monthly" className="font-rubik">מחיר חודשי (₪)</Label>
-                        <Input
-                          id="price_monthly"
-                          type="number"
-                          value={editForm.price_monthly || 0}
-                          onChange={(e) => updateEditForm('price_monthly', parseFloat(e.target.value) || 0)}
-                          className="font-rubik"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="price_one_time" className="font-rubik">תשלום חד פעמי (₪)</Label>
-                        <Input
-                          id="price_one_time"
-                          type="number"
-                          value={editForm.price_one_time || 0}
-                          onChange={(e) => updateEditForm('price_one_time', parseFloat(e.target.value) || 0)}
-                          className="font-rubik"
-                        />
-                      </div>
-                    </div>
-
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="storage_limit" className="font-rubik">מגבלת אחסון (GB)</Label>
                         <Input
                           id="storage_limit"
                           type="number"
-                          value={editForm.storage_limit || 1}
+                          value={editForm.storage_limit}
                           onChange={(e) => updateEditForm('storage_limit', parseInt(e.target.value) || 1)}
                           className="font-rubik"
                         />
@@ -306,7 +257,7 @@ export const SubscriptionPlanEditor: React.FC = () => {
                         <Input
                           id="user_limit"
                           type="number"
-                          value={editForm.user_limit || 1}
+                          value={editForm.user_limit}
                           onChange={(e) => updateEditForm('user_limit', parseInt(e.target.value) || 1)}
                           className="font-rubik"
                         />
@@ -319,18 +270,24 @@ export const SubscriptionPlanEditor: React.FC = () => {
                         <Input
                           id="ai_credit"
                           type="number"
-                          value={editForm.ai_credit || 0}
+                          value={editForm.ai_credit}
                           onChange={(e) => updateEditForm('ai_credit', parseInt(e.target.value) || 0)}
                           className="font-rubik"
                         />
                       </div>
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <Label htmlFor="is_active" className="font-rubik">תוכנית פעילה</Label>
-                        <Switch
-                          id="is_active"
-                          checked={editForm.is_active || false}
-                          onCheckedChange={(checked) => updateEditForm('is_active', checked)}
-                        />
+                      <div>
+                        <Label htmlFor="support_level" className="font-rubik">רמת תמיכה</Label>
+                        <Select value={editForm.support_level} onValueChange={(value: 'basic' | 'standard' | 'advanced' | 'vip') => updateEditForm('support_level', value)}>
+                          <SelectTrigger className="font-rubik">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="basic">בסיסית</SelectItem>
+                            <SelectItem value="standard">רגילה</SelectItem>
+                            <SelectItem value="advanced">מתקדמת</SelectItem>
+                            <SelectItem value="vip">VIP</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   </>
@@ -389,27 +346,15 @@ export const SubscriptionPlanEditor: React.FC = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <Label htmlFor="new_plan" className="font-rubik">מזהה תוכנית *</Label>
-                    <Input
-                      id="new_plan"
-                      value={editForm.plan || ''}
-                      onChange={(e) => updateEditForm('plan', e.target.value)}
-                      className="font-rubik"
-                      placeholder="למשל: premium_plus"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="new_title" className="font-rubik">כותרת התוכנית *</Label>
-                    <Input
-                      id="new_title"
-                      value={editForm.title || ''}
-                      onChange={(e) => updateEditForm('title', e.target.value)}
-                      className="font-rubik"
-                      placeholder="למשל: פרימיום פלוס"
-                    />
-                  </div>
+                <div>
+                  <Label htmlFor="new_plan" className="font-rubik">מזהה תוכנית *</Label>
+                  <Input
+                    id="new_plan"
+                    value={editForm.plan}
+                    onChange={(e) => updateEditForm('plan', e.target.value)}
+                    className="font-rubik"
+                    placeholder="למשל: premium_plus"
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -418,7 +363,7 @@ export const SubscriptionPlanEditor: React.FC = () => {
                     <Input
                       id="new_storage"
                       type="number"
-                      value={editForm.storage_limit || 1}
+                      value={editForm.storage_limit}
                       onChange={(e) => updateEditForm('storage_limit', parseInt(e.target.value) || 1)}
                       className="font-rubik"
                     />
@@ -428,10 +373,37 @@ export const SubscriptionPlanEditor: React.FC = () => {
                     <Input
                       id="new_users"
                       type="number"
-                      value={editForm.user_limit || 1}
+                      value={editForm.user_limit}
                       onChange={(e) => updateEditForm('user_limit', parseInt(e.target.value) || 1)}
                       className="font-rubik"
                     />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="new_ai_credit" className="font-rubik">קרדיט AI</Label>
+                    <Input
+                      id="new_ai_credit"
+                      type="number"
+                      value={editForm.ai_credit}
+                      onChange={(e) => updateEditForm('ai_credit', parseInt(e.target.value) || 0)}
+                      className="font-rubik"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="new_support_level" className="font-rubik">רמת תמיכה</Label>
+                    <Select value={editForm.support_level} onValueChange={(value: 'basic' | 'standard' | 'advanced' | 'vip') => updateEditForm('support_level', value)}>
+                      <SelectTrigger className="font-rubik">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="basic">בסיסית</SelectItem>
+                        <SelectItem value="standard">רגילה</SelectItem>
+                        <SelectItem value="advanced">מתקדמת</SelectItem>
+                        <SelectItem value="vip">VIP</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </CardContent>

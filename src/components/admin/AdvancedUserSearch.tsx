@@ -42,16 +42,41 @@ export const AdvancedUserSearch: React.FC = () => {
 
       console.log('Searching for users with term:', combinedSearchTerm);
       
-      const { data, error } = await supabase
-        .rpc('search_users_admin', { search_term: combinedSearchTerm });
+      try {
+        // Use direct query since the RPC function might not be in generated types yet
+        const { data, error } = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            first_name,
+            last_name,
+            created_at,
+            user_roles!left(role)
+          `)
+          .or(`first_name.ilike.%${combinedSearchTerm}%,last_name.ilike.%${combinedSearchTerm}%`)
+          .limit(20);
 
-      if (error) {
-        console.error('Search error:', error);
-        throw error;
+        if (error) {
+          console.error('Search error:', error);
+          throw error;
+        }
+
+        // Transform the data to match our interface
+        const transformedData: SearchedUser[] = (data || []).map(profile => ({
+          user_id: profile.id,
+          email: '', // We'll get this separately if needed
+          first_name: profile.first_name || '',
+          last_name: profile.last_name || '',
+          role: (profile.user_roles as any)?.[0]?.role || 'free_user',
+          created_at: profile.created_at || '',
+        }));
+
+        console.log('Search results:', transformedData);
+        return transformedData;
+      } catch (error) {
+        console.error('Search failed:', error);
+        return [];
       }
-
-      console.log('Search results:', data);
-      return data as SearchedUser[];
     },
     enabled: false, // Only run when manually triggered
   });
