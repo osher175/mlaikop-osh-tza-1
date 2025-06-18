@@ -32,52 +32,64 @@ export const SimpleUserSearch: React.FC = () => {
   }, [searchTerm]);
 
   const { data: searchResults, isLoading } = useQuery({
-    queryKey: ['simple-user-search', debouncedSearchTerm],
+    queryKey: ['admin-user-search', debouncedSearchTerm],
     queryFn: async () => {
       if (!debouncedSearchTerm.trim() || debouncedSearchTerm.trim().length < 2) {
         return [];
       }
 
-      console.log('=== Simple User Search ===');
+      console.log('=== Admin User Search (Enhanced) ===');
       console.log('Search term:', debouncedSearchTerm);
 
       try {
-        // Search in profiles table
         const searchPattern = `%${debouncedSearchTerm.trim()}%`;
         
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select(`
-            id,
-            first_name,
-            last_name,
-            created_at,
-            user_roles!left(role)
-          `)
-          .or(`first_name.ilike.${searchPattern},last_name.ilike.${searchPattern}`)
-          .limit(20);
+        // Get admin data using RPC function that can access auth schema
+        const { data: adminData, error: adminError } = await supabase.rpc('get_users_for_admin_search', {
+          search_pattern: searchPattern
+        });
 
-        if (profileError) {
-          console.error('Profile search error:', profileError);
-          throw profileError;
+        if (adminError) {
+          console.error('Admin search RPC error:', adminError);
+          
+          // Fallback to profiles table search if RPC fails
+          console.log('Falling back to profiles search...');
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select(`
+              id,
+              first_name,
+              last_name,
+              created_at,
+              user_roles!left(role)
+            `)
+            .or(`first_name.ilike.${searchPattern},last_name.ilike.${searchPattern}`)
+            .limit(20);
+
+          if (profileError) {
+            console.error('Fallback profile search error:', profileError);
+            throw profileError;
+          }
+
+          // Transform fallback data
+          const transformedData: SearchedUser[] = (profileData || []).map(profile => ({
+            user_id: profile.id,
+            email: 'דורש הרשאות מנהל מתקדמות',
+            first_name: profile.first_name || '',
+            last_name: profile.last_name || '',
+            role: (profile.user_roles as any)?.[0]?.role || 'free_user',
+            created_at: profile.created_at || '',
+          }));
+
+          console.log('Fallback results:', transformedData.length);
+          return transformedData;
         }
 
-        console.log('Found profiles:', profileData?.length || 0);
-
-        // Transform the data
-        const transformedData: SearchedUser[] = (profileData || []).map(profile => ({
-          user_id: profile.id,
-          email: 'מוסתר מטעמי אבטחה', // Hidden for security
-          first_name: profile.first_name || '',
-          last_name: profile.last_name || '',
-          role: (profile.user_roles as any)?.[0]?.role || 'free_user',
-          created_at: profile.created_at || '',
-        }));
-
-        console.log('Transformed results:', transformedData.length);
-        return transformedData;
+        console.log('Admin RPC found:', adminData?.length || 0, 'users');
+        return adminData || [];
+        
       } catch (error) {
-        console.error('Search failed:', error);
+        console.error('Search failed completely:', error);
         return [];
       }
     },
@@ -105,7 +117,7 @@ export const SimpleUserSearch: React.FC = () => {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-gray-900 font-rubik" dir="rtl">
-          חיפוש משתמשים
+          חיפוש משתמשים מתקדם
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6" dir="rtl">
@@ -120,7 +132,7 @@ export const SimpleUserSearch: React.FC = () => {
           </div>
           <Input
             type="text"
-            placeholder="חפש לפי שם פרטי, שם משפחה או חלק מהאימייל..."
+            placeholder="חפש לפי שם פרטי, שם משפחה או אימייל..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="font-rubik pr-10"
