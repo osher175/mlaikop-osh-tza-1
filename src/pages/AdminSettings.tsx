@@ -3,7 +3,7 @@ import React from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProtectedFeature } from '@/components/ProtectedFeature';
 import { SubscriptionPlanEditor } from '@/components/admin/SubscriptionPlanEditor';
-import { SimpleUserSearch } from '@/components/admin/SimpleUserSearch';
+import { EnhancedUserSearch } from '@/components/admin/EnhancedUserSearch';
 import { AdminDataManagement } from '@/components/admin/AdminDataManagement';
 import { AdminSystemSettings } from '@/components/admin/AdminSystemSettings';
 import { EmailManagement } from '@/components/admin/EmailManagement';
@@ -54,7 +54,7 @@ export const AdminSettings: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="users" className="space-y-6">
-              <SimpleUserSearch />
+              <EnhancedUserSearch />
             </TabsContent>
 
             <TabsContent value="emails" className="space-y-6">
