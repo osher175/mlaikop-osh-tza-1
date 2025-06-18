@@ -14,8 +14,8 @@ interface ProfileResult {
   first_name: string;
   last_name: string;
   created_at: string;
-  user_roles?: Array<{ role: string }>;
-  emails?: Array<{ email: string }>;
+  role?: string;
+  email?: string;
 }
 
 export const EnhancedUserSearch: React.FC = () => {
@@ -45,17 +45,10 @@ export const EnhancedUserSearch: React.FC = () => {
       try {
         const searchPattern = `%${debouncedSearchTerm.trim()}%`;
         
-        // Search profiles by first_name or last_name
+        // First, get profiles that match the search
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select(`
-            id,
-            first_name,
-            last_name,
-            created_at,
-            user_roles!left(role),
-            emails!left(email)
-          `)
+          .select('id, first_name, last_name, created_at')
           .or(`first_name.ilike.${searchPattern},last_name.ilike.${searchPattern}`)
           .order('created_at', { ascending: false })
           .limit(20);
@@ -65,8 +58,52 @@ export const EnhancedUserSearch: React.FC = () => {
           throw profileError;
         }
 
-        console.log('Found profiles:', profileData?.length || 0);
-        return (profileData || []) as ProfileResult[];
+        if (!profileData || profileData.length === 0) {
+          return [];
+        }
+
+        console.log('Found profiles:', profileData.length);
+
+        // Get user IDs to fetch additional data
+        const userIds = profileData.map(p => p.id);
+
+        // Get user roles for these users
+        const { data: rolesData, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('user_id, role')
+          .in('user_id', userIds);
+
+        if (rolesError) {
+          console.warn('Error fetching roles:', rolesError);
+        }
+
+        // Get emails for these users
+        const { data: emailsData, error: emailsError } = await supabase
+          .from('emails')
+          .select('user_id, email')
+          .in('user_id', userIds);
+
+        if (emailsError) {
+          console.warn('Error fetching emails:', emailsError);
+        }
+
+        // Combine the data
+        const results: ProfileResult[] = profileData.map(profile => {
+          const userRole = rolesData?.find(r => r.user_id === profile.id);
+          const userEmail = emailsData?.find(e => e.user_id === profile.id);
+
+          return {
+            id: profile.id,
+            first_name: profile.first_name || '',
+            last_name: profile.last_name || '',
+            created_at: profile.created_at,
+            role: userRole?.role || 'free_user',
+            email: userEmail?.email || 'לא זמין'
+          };
+        });
+
+        console.log('Final results:', results.length);
+        return results;
         
       } catch (error) {
         console.error('Search failed:', error);
@@ -175,8 +212,8 @@ export const EnhancedUserSearch: React.FC = () => {
 
             <div className="grid grid-cols-1 gap-4" data-name="repeatingGroup_profiles">
               {searchResults.map((profile) => {
-                const userRole = profile.user_roles?.[0]?.role || 'free_user';
-                const userEmail = profile.emails?.[0]?.email || 'לא זמין';
+                const userRole = profile.role || 'free_user';
+                const userEmail = profile.email || 'לא זמין';
 
                 return (
                   <Card key={profile.id} className="border-2 border-gray-200 hover:border-turquoise transition-colors">
