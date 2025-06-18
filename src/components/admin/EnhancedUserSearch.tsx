@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +13,7 @@ interface ProfileResult {
   first_name: string;
   last_name: string;
   created_at: string;
+  is_active: boolean;
   role?: string;
   email?: string;
 }
@@ -45,11 +45,12 @@ export const EnhancedUserSearch: React.FC = () => {
       try {
         const searchPattern = `%${debouncedSearchTerm.trim()}%`;
         
-        // First, get profiles that match the search
+        // First, get profiles that match the search AND are active
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, created_at')
+          .select('id, first_name, last_name, created_at, is_active')
           .or(`first_name.ilike.${searchPattern},last_name.ilike.${searchPattern}`)
+          .eq('is_active', true)
           .order('created_at', { ascending: false })
           .limit(20);
 
@@ -62,7 +63,7 @@ export const EnhancedUserSearch: React.FC = () => {
           return [];
         }
 
-        console.log('Found profiles:', profileData.length);
+        console.log('Found active profiles:', profileData.length);
 
         // Get user IDs to fetch additional data
         const userIds = profileData.map(p => p.id);
@@ -97,6 +98,7 @@ export const EnhancedUserSearch: React.FC = () => {
             first_name: profile.first_name || '',
             last_name: profile.last_name || '',
             created_at: profile.created_at,
+            is_active: profile.is_active,
             role: userRole?.role || 'free_user',
             email: userEmail?.email || 'לא זמין'
           };
@@ -158,7 +160,7 @@ export const EnhancedUserSearch: React.FC = () => {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-gray-900 font-rubik" dir="rtl">
-          חיפוש משתמשים מתקדם
+          חיפוש משתמשים מתקדם (משתמשים פעילים בלבד)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6" dir="rtl">
@@ -203,7 +205,7 @@ export const EnhancedUserSearch: React.FC = () => {
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-turquoise" />
               <h3 className="text-lg font-semibold font-rubik">
-                נמצאו {searchResults.length} משתמשים
+                נמצאו {searchResults.length} משתמשים פעילים
               </h3>
               {searchResults.length === 20 && (
                 <span className="text-sm text-gray-500 font-rubik">(מוגבל ל-20 תוצאות)</span>
@@ -224,9 +226,16 @@ export const EnhancedUserSearch: React.FC = () => {
                             <User className="w-5 h-5 text-turquoise" />
                           </div>
                           <div>
-                            <h4 className="font-semibold font-rubik">
-                              {profile.first_name} {profile.last_name}
-                            </h4>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold font-rubik">
+                                {profile.first_name} {profile.last_name}
+                              </h4>
+                              {profile.is_active && (
+                                <Badge className="bg-green-500 text-white text-xs font-rubik">
+                                  פעיל
+                                </Badge>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <Mail className="w-4 h-4" />
                               <span className="font-rubik">{userEmail}</span>
@@ -260,7 +269,7 @@ export const EnhancedUserSearch: React.FC = () => {
         {searchResults && Array.isArray(searchResults) && searchResults.length === 0 && debouncedSearchTerm.trim().length >= 2 && !isLoading && (
           <div className="text-center py-8 text-gray-500">
             <User className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-            <p className="font-rubik">לא נמצאו משתמשים התואמים לחיפוש "{debouncedSearchTerm}"</p>
+            <p className="font-rubik">לא נמצאו משתמשים פעילים התואמים לחיפוש "{debouncedSearchTerm}"</p>
             <p className="text-sm font-rubik mt-1">נסה לשנות את מונח החיפוש או חפש לפי שם בלבד</p>
           </div>
         )}
@@ -270,7 +279,7 @@ export const EnhancedUserSearch: React.FC = () => {
           <div className="text-center py-8 text-gray-500">
             <Search className="w-12 h-12 mx-auto mb-4 text-gray-300" />
             <p className="font-rubik">הכנס לפחות 2 תווים כדי להתחיל לחפש</p>
-            <p className="text-sm font-rubik mt-1">חיפוש בזמן אמת לפי שם פרטי או שם משפחה</p>
+            <p className="text-sm font-rubik mt-1">חיפוש בזמן אמת לפי שם פרטי או שם משפחה (משתמשים פעילים בלבד)</p>
           </div>
         )}
       </CardContent>
