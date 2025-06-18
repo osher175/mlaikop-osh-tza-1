@@ -3,7 +3,7 @@ import React from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProtectedFeature } from '@/components/ProtectedFeature';
 import { SubscriptionPlanEditor } from '@/components/admin/SubscriptionPlanEditor';
-import { AdvancedUserSearch } from '@/components/admin/AdvancedUserSearch';
+import { SimpleUserSearch } from '@/components/admin/SimpleUserSearch';
 import { AdminDataManagement } from '@/components/admin/AdminDataManagement';
 import { AdminSystemSettings } from '@/components/admin/AdminSystemSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -49,7 +49,7 @@ export const AdminSettings: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="users" className="space-y-6">
-              <AdvancedUserSearch />
+              <SimpleUserSearch />
             </TabsContent>
 
             <TabsContent value="data" className="space-y-6">
