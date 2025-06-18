@@ -44,13 +44,21 @@ export const SimpleUserSearch: React.FC = () => {
       try {
         const searchPattern = `%${debouncedSearchTerm.trim()}%`;
         
-        // Get admin data using RPC function that can access auth schema
-        const { data: adminData, error: adminError } = await supabase.rpc('get_users_for_admin_search', {
-          search_pattern: searchPattern
-        });
+        // Try using the new RPC function first
+        try {
+          const { data: adminData, error: adminError } = await supabase.rpc('get_users_for_admin_search' as any, {
+            search_pattern: searchPattern
+          });
 
-        if (adminError) {
-          console.error('Admin search RPC error:', adminError);
+          if (adminError) {
+            console.error('Admin search RPC error:', adminError);
+            throw adminError;
+          }
+
+          console.log('Admin RPC found:', adminData?.length || 0, 'users');
+          return (adminData || []) as SearchedUser[];
+        } catch (rpcError) {
+          console.error('RPC call failed:', rpcError);
           
           // Fallback to profiles table search if RPC fails
           console.log('Falling back to profiles search...');
@@ -84,9 +92,6 @@ export const SimpleUserSearch: React.FC = () => {
           console.log('Fallback results:', transformedData.length);
           return transformedData;
         }
-
-        console.log('Admin RPC found:', adminData?.length || 0, 'users');
-        return adminData || [];
         
       } catch (error) {
         console.error('Search failed completely:', error);
@@ -145,7 +150,7 @@ export const SimpleUserSearch: React.FC = () => {
         </div>
 
         {/* Search Results */}
-        {searchResults && searchResults.length > 0 && (
+        {searchResults && Array.isArray(searchResults) && searchResults.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <User className="w-5 h-5 text-turquoise" />
@@ -198,7 +203,7 @@ export const SimpleUserSearch: React.FC = () => {
           </div>
         )}
 
-        {searchResults && searchResults.length === 0 && debouncedSearchTerm.trim().length >= 2 && !isLoading && (
+        {searchResults && Array.isArray(searchResults) && searchResults.length === 0 && debouncedSearchTerm.trim().length >= 2 && !isLoading && (
           <div className="text-center py-8 text-gray-500">
             <User className="w-12 h-12 mx-auto mb-4 text-gray-300" />
             <p className="font-rubik">לא נמצאו משתמשים התואמים לחיפוש "{debouncedSearchTerm}"</p>

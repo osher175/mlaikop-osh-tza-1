@@ -655,6 +655,17 @@ export type Database = {
         Args: { user_uuid?: string }
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      get_users_for_admin_search: {
+        Args: { search_pattern: string }
+        Returns: {
+          user_id: string
+          email: string
+          first_name: string
+          last_name: string
+          role: Database["public"]["Enums"]["user_role"]
+          created_at: string
+        }[]
+      }
       has_role_or_higher: {
         Args: {
           required_role: Database["public"]["Enums"]["user_role"]
