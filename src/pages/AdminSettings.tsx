@@ -6,8 +6,9 @@ import { SubscriptionPlanEditor } from '@/components/admin/SubscriptionPlanEdito
 import { SimpleUserSearch } from '@/components/admin/SimpleUserSearch';
 import { AdminDataManagement } from '@/components/admin/AdminDataManagement';
 import { AdminSystemSettings } from '@/components/admin/AdminSystemSettings';
+import { EmailManagement } from '@/components/admin/EmailManagement';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Users, Crown, Database, Cog } from 'lucide-react';
+import { Settings, Users, Crown, Database, Cog, Mail } from 'lucide-react';
 
 export const AdminSettings: React.FC = () => {
   return (
@@ -25,7 +26,7 @@ export const AdminSettings: React.FC = () => {
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="plans" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="plans" className="font-rubik flex items-center gap-2">
                 <Crown className="w-4 h-4" />
                 תוכניות מנוי
@@ -33,6 +34,10 @@ export const AdminSettings: React.FC = () => {
               <TabsTrigger value="users" className="font-rubik flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 ניהול משתמשים
+              </TabsTrigger>
+              <TabsTrigger value="emails" className="font-rubik flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                ניהול מיילים
               </TabsTrigger>
               <TabsTrigger value="data" className="font-rubik flex items-center gap-2">
                 <Database className="w-4 h-4" />
@@ -50,6 +55,10 @@ export const AdminSettings: React.FC = () => {
 
             <TabsContent value="users" className="space-y-6">
               <SimpleUserSearch />
+            </TabsContent>
+
+            <TabsContent value="emails" className="space-y-6">
+              <EmailManagement />
             </TabsContent>
 
             <TabsContent value="data" className="space-y-6">
