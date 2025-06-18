@@ -43,8 +43,38 @@ export const AdvancedUserSearch: React.FC = () => {
       console.log('Searching for users with term:', combinedSearchTerm);
       
       try {
-        // Use direct query since the RPC function might not be in generated types yet
-        const { data, error } = await supabase
+        // Try to use the view first, fallback to direct query if it fails
+        let data, error;
+        
+        try {
+          console.log('Attempting to search using user_search_view...');
+          const viewResult = await supabase
+            .from('user_search_view')
+            .select('*')
+            .or(`first_name.ilike.%${combinedSearchTerm}%,last_name.ilike.%${combinedSearchTerm}%,email.ilike.%${combinedSearchTerm}%`)
+            .limit(20);
+          
+          data = viewResult.data;
+          error = viewResult.error;
+          
+          if (!error && data) {
+            console.log('Search via view successful:', data);
+            return data.map((user: any) => ({
+              user_id: user.user_id,
+              email: user.email || 'לא זמין',
+              first_name: user.first_name || '',
+              last_name: user.last_name || '',
+              role: user.role || 'free_user',
+              created_at: user.created_at || '',
+            })) as SearchedUser[];
+          }
+        } catch (viewError) {
+          console.log('View search failed, falling back to direct query:', viewError);
+        }
+        
+        // Fallback to direct profiles query
+        console.log('Using fallback profiles query...');
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select(`
             id,
@@ -56,25 +86,25 @@ export const AdvancedUserSearch: React.FC = () => {
           .or(`first_name.ilike.%${combinedSearchTerm}%,last_name.ilike.%${combinedSearchTerm}%`)
           .limit(20);
 
-        if (error) {
-          console.error('Search error:', error);
-          throw error;
+        if (profileError) {
+          console.error('Profile search error:', profileError);
+          throw profileError;
         }
 
         // Transform the data to match our interface
-        const transformedData: SearchedUser[] = (data || []).map(profile => ({
+        const transformedData: SearchedUser[] = (profileData || []).map(profile => ({
           user_id: profile.id,
-          email: '', // We'll get this separately if needed
+          email: 'לא זמין', // Email not available in direct query
           first_name: profile.first_name || '',
           last_name: profile.last_name || '',
           role: (profile.user_roles as any)?.[0]?.role || 'free_user',
           created_at: profile.created_at || '',
         }));
 
-        console.log('Search results:', transformedData);
+        console.log('Fallback search results:', transformedData);
         return transformedData;
       } catch (error) {
-        console.error('Search failed:', error);
+        console.error('Search failed completely:', error);
         return [];
       }
     },
@@ -83,6 +113,7 @@ export const AdvancedUserSearch: React.FC = () => {
 
   const handleSearch = () => {
     if (combinedSearchTerm.trim()) {
+      console.log('Starting search for:', combinedSearchTerm);
       setIsSearching(true);
       refetch().finally(() => setIsSearching(false));
     }

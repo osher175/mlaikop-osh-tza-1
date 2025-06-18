@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,9 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Pencil, Save, X, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -38,39 +35,67 @@ export const SubscriptionPlanEditor: React.FC = () => {
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [editForm, setEditForm] = useState<PlanFormData | null>(null);
 
-  const { data: plans, isLoading } = useQuery({
+  const { data: plans, isLoading, error } = useQuery({
     queryKey: ['subscription-plans-admin'],
     queryFn: async () => {
+      console.log('Fetching subscription plans...');
       const { data, error } = await supabase
         .from('subscription_plans_new')
         .select('*')
         .order('created_at');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching plans:', error);
+        throw error;
+      }
+      
+      console.log('Plans fetched successfully:', data);
       return data as SubscriptionPlan[];
     },
   });
 
   const savePlanMutation = useMutation({
     mutationFn: async (planData: PlanFormData) => {
+      console.log('Saving plan data:', planData);
+      
       if (editingPlan && editingPlan !== 'new') {
         // Update existing plan
+        console.log('Updating existing plan:', editingPlan);
         const { error } = await supabase
           .from('subscription_plans_new')
-          .update(planData)
+          .update({
+            storage_limit: planData.storage_limit,
+            ai_credit: planData.ai_credit,
+            user_limit: planData.user_limit,
+            support_level: planData.support_level
+          })
           .eq('plan', editingPlan);
         
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating plan:', error);
+          throw error;
+        }
       } else {
         // Create new plan
+        console.log('Creating new plan:', planData);
         const { error } = await supabase
           .from('subscription_plans_new')
-          .insert([planData]);
+          .insert([{
+            plan: planData.plan,
+            storage_limit: planData.storage_limit,
+            ai_credit: planData.ai_credit,
+            user_limit: planData.user_limit,
+            support_level: planData.support_level
+          }]);
         
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating plan:', error);
+          throw error;
+        }
       }
     },
     onSuccess: () => {
+      console.log('Plan saved successfully');
       queryClient.invalidateQueries({ queryKey: ['subscription-plans-admin'] });
       setEditingPlan(null);
       setIsCreatingNew(false);
@@ -92,14 +117,19 @@ export const SubscriptionPlanEditor: React.FC = () => {
 
   const deletePlanMutation = useMutation({
     mutationFn: async (planId: string) => {
+      console.log('Deleting plan:', planId);
       const { error } = await supabase
         .from('subscription_plans_new')
         .delete()
         .eq('plan', planId);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting plan:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
+      console.log('Plan deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['subscription-plans-admin'] });
       toast({
         title: "תוכנית נמחקה",
@@ -178,6 +208,18 @@ export const SubscriptionPlanEditor: React.FC = () => {
       <Card>
         <CardContent className="p-6 text-center font-rubik" dir="rtl">
           טוען תוכניות מנוי...
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    console.error('Subscription plans error:', error);
+    return (
+      <Card>
+        <CardContent className="p-6 text-center font-rubik" dir="rtl">
+          <p className="text-red-500">שגיאה בטעינת תוכניות המנוי</p>
+          <p className="text-sm text-gray-600">בדוק את הקונסול לפרטים נוספים</p>
         </CardContent>
       </Card>
     );
