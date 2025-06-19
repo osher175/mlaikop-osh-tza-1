@@ -3,12 +3,11 @@ import React from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProtectedFeature } from '@/components/ProtectedFeature';
 import { SubscriptionPlanEditor } from '@/components/admin/SubscriptionPlanEditor';
-import { EnhancedUserSearch } from '@/components/admin/EnhancedUserSearch';
 import { AdminDataManagement } from '@/components/admin/AdminDataManagement';
 import { AdminSystemSettings } from '@/components/admin/AdminSystemSettings';
 import { EmailManagement } from '@/components/admin/EmailManagement';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Users, Crown, Database, Cog, Mail } from 'lucide-react';
+import { Settings, Crown, Database, Cog, Mail } from 'lucide-react';
 
 export const AdminSettings: React.FC = () => {
   return (
@@ -26,14 +25,10 @@ export const AdminSettings: React.FC = () => {
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="plans" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="plans" className="font-rubik flex items-center gap-2">
                 <Crown className="w-4 h-4" />
                 תוכניות מנוי
-              </TabsTrigger>
-              <TabsTrigger value="users" className="font-rubik flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                ניהול משתמשים
               </TabsTrigger>
               <TabsTrigger value="emails" className="font-rubik flex items-center gap-2">
                 <Mail className="w-4 h-4" />
@@ -51,10 +46,6 @@ export const AdminSettings: React.FC = () => {
 
             <TabsContent value="plans" className="space-y-6">
               <SubscriptionPlanEditor />
-            </TabsContent>
-
-            <TabsContent value="users" className="space-y-6">
-              <EnhancedUserSearch />
             </TabsContent>
 
             <TabsContent value="emails" className="space-y-6">
