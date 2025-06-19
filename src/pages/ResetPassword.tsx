@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, Loader2, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { Package, Loader2, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -18,27 +18,88 @@ export const ResetPassword = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isValidToken, setIsValidToken] = useState(false);
+  const [isTokenChecked, setIsTokenChecked] = useState(false);
   
   const [formData, setFormData] = useState({
     password: '',
     confirmPassword: '',
   });
 
-  // Check if user is authenticated and has valid session for password reset
+  // Check for access token and authenticate user
   useEffect(() => {
-    if (!user) {
+    const checkAccessToken = async () => {
+      try {
+        // Check URL hash for access_token
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        
+        if (!accessToken) {
+          console.log('No access token found in URL');
+          setIsTokenChecked(true);
+          return;
+        }
+
+        // Set the session using the tokens from URL
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || '',
+        });
+
+        if (error) {
+          console.error('Error setting session:', error);
+          toast({
+            title: 'שגיאת אימות',
+            description: 'הקישור שלך לא תקף או שפג תוקפו. אנא בקש קישור חדש.',
+            variant: 'destructive',
+          });
+        } else if (data.session) {
+          console.log('Session set successfully for password reset');
+          setIsValidToken(true);
+        }
+      } catch (error) {
+        console.error('Error checking access token:', error);
+        toast({
+          title: 'שגיאה',
+          description: 'אירעה שגיאה בעת אימות הקישור',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsTokenChecked(true);
+      }
+    };
+
+    checkAccessToken();
+  }, [toast]);
+
+  // Redirect if no valid token after check is complete
+  useEffect(() => {
+    if (isTokenChecked && !isValidToken && !user) {
       toast({
         title: 'גישה נדחתה',
         description: 'אנא לחץ על הקישור שנשלח למייל שלך כדי לאפס את הסיסמה',
         variant: 'destructive',
       });
-      navigate('/auth');
+      setTimeout(() => {
+        navigate('/auth');
+      }, 2000);
     }
-  }, [user, navigate, toast]);
+  }, [isTokenChecked, isValidToken, user, navigate, toast]);
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation
+    if (!formData.password.trim() || !formData.confirmPassword.trim()) {
+      toast({
+        title: 'שגיאה',
+        description: 'אנא מלא את כל השדות',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: 'שגיאה',
@@ -81,7 +142,7 @@ export const ResetPassword = () => {
         // Log successful password reset
         console.log('Password reset completed for user:', user?.email, 'at', new Date().toISOString());
         
-        // Redirect to login after 3 seconds
+        // Redirect to auth page after 3 seconds
         setTimeout(() => {
           navigate('/auth');
         }, 3000);
@@ -98,6 +159,41 @@ export const ResetPassword = () => {
     }
   };
 
+  // Loading state while checking token
+  if (!isTokenChecked) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center p-4" dir="rtl">
+        <div className="w-full max-w-md">
+          <Card className="shadow-xl border-0 text-center">
+            <CardContent className="pt-8 pb-8">
+              <Loader2 className="w-16 h-16 text-primary mx-auto mb-4 animate-spin" />
+              <h2 className="text-xl font-medium text-gray-900">בודק את הקישור...</h2>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state for invalid token
+  if (isTokenChecked && !isValidToken && !user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center p-4" dir="rtl">
+        <div className="w-full max-w-md">
+          <Card className="shadow-xl border-0 text-center">
+            <CardContent className="pt-8 pb-8">
+              <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">קישור לא תקף</h2>
+              <p className="text-gray-600 mb-4">הקישור לאיפוס הסיסמה לא תקף או שפג תוקפו</p>
+              <p className="text-sm text-gray-500">מעביר אותך לדף ההתחברות...</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Success state
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center p-4" dir="rtl">
@@ -115,6 +211,7 @@ export const ResetPassword = () => {
     );
   }
 
+  // Main reset password form
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center p-4" dir="rtl">
       <div className="w-full max-w-md">
