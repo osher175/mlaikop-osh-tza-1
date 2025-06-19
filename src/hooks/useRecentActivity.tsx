@@ -6,7 +6,9 @@ import { useAuth } from './useAuth';
 import { useBusiness } from './useBusiness';
 import type { Database } from '@/integrations/supabase/types';
 
-type RecentActivity = Database['public']['Tables']['recent_activity']['Row'] & {
+type RecentActivityRow = Database['public']['Tables']['recent_activity']['Row'];
+
+type RecentActivity = RecentActivityRow & {
   products?: { name: string } | null;
   profiles?: { first_name: string; last_name: string } | null;
 };
@@ -37,7 +39,7 @@ export const useRecentActivity = (limit: number = 10) => {
         throw error;
       }
       
-      return data as RecentActivity[];
+      return (data || []) as RecentActivity[];
     },
     enabled: !!business?.id && !!user?.id,
   });
