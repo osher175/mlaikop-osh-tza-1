@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,16 +8,22 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Settings, Building, Bell, Shield, Palette, Save } from 'lucide-react';
+import { useBusiness } from '@/hooks/useBusiness';
+import { useBusinessOwnership } from '@/hooks/useBusinessOwnership';
+import { Settings, Building, Bell, Shield, Palette, Save, Lock } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export const BusinessSettings: React.FC = () => {
   const { toast } = useToast();
+  const { business, updateBusiness } = useBusiness();
+  const { isOwner, isLoading: ownershipLoading } = useBusinessOwnership();
+  
   const [settings, setSettings] = useState({
-    businessName: 'החנות שלי',
-    businessType: 'retail',
-    address: 'תל אביב, ישראל',
-    phone: '03-1234567',
-    email: 'info@mystore.com',
+    businessName: '',
+    businessType: '',
+    address: '',
+    phone: '',
+    email: '',
     currency: 'ILS',
     language: 'he',
     notifications: {
@@ -33,14 +39,46 @@ export const BusinessSettings: React.FC = () => {
     }
   });
 
-  const handleSave = () => {
-    toast({
-      title: "ההגדרות נשמרו בהצלחה",
-      description: "השינויים שלך עודכנו במערכת",
-    });
+  // Load business data when available
+  useEffect(() => {
+    if (business) {
+      setSettings(prev => ({
+        ...prev,
+        businessName: business.name || '',
+        businessType: business.business_type || '',
+        address: business.address || '',
+        phone: business.phone || '',
+      }));
+    }
+  }, [business]);
+
+  const handleSave = async () => {
+    if (!isOwner) {
+      toast({
+        title: "אין הרשאה",
+        description: "רק בעל העסק יכול לעדכן הגדרות אלה",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await updateBusiness.mutateAsync({
+        name: settings.businessName,
+        business_type: settings.businessType,
+        address: settings.address,
+        phone: settings.phone,
+      });
+    } catch (error) {
+      // Error handling is done in the mutation
+    }
   };
 
   const updateSetting = (path: string, value: any) => {
+    if (!isOwner && ['businessName', 'businessType', 'address', 'phone'].includes(path)) {
+      return; // Don't allow updates for non-owners
+    }
+    
     setSettings(prev => {
       const keys = path.split('.');
       const updated = { ...prev };
@@ -55,6 +93,19 @@ export const BusinessSettings: React.FC = () => {
     });
   };
 
+  if (ownershipLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[400px]" dir="rtl">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>טוען הגדרות...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="space-y-6" dir="rtl">
@@ -67,6 +118,15 @@ export const BusinessSettings: React.FC = () => {
           </div>
         </div>
 
+        {!isOwner && (
+          <Alert>
+            <Lock className="h-4 w-4" />
+            <AlertDescription>
+              חלק מההגדרות זמינות לעריכה רק לבעל העסק. אתה יכול לצפות בהגדרות אבל לא לערוך אותן.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Business Information */}
           <div className="lg:col-span-2 space-y-6">
@@ -75,6 +135,7 @@ export const BusinessSettings: React.FC = () => {
                 <CardTitle className="flex items-center gap-2">
                   <Building className="w-5 h-5" />
                   פרטי העסק
+                  {!isOwner && <Lock className="w-4 h-4 text-gray-400" />}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -85,6 +146,8 @@ export const BusinessSettings: React.FC = () => {
                       id="businessName"
                       value={settings.businessName}
                       onChange={(e) => updateSetting('businessName', e.target.value)}
+                      disabled={!isOwner}
+                      className={!isOwner ? 'bg-gray-100' : ''}
                     />
                   </div>
                   
@@ -93,8 +156,9 @@ export const BusinessSettings: React.FC = () => {
                     <Select 
                       value={settings.businessType}
                       onValueChange={(value) => updateSetting('businessType', value)}
+                      disabled={!isOwner}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className={!isOwner ? 'bg-gray-100' : ''}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -116,6 +180,8 @@ export const BusinessSettings: React.FC = () => {
                     id="address"
                     value={settings.address}
                     onChange={(e) => updateSetting('address', e.target.value)}
+                    disabled={!isOwner}
+                    className={!isOwner ? 'bg-gray-100' : ''}
                   />
                 </div>
 
@@ -126,6 +192,8 @@ export const BusinessSettings: React.FC = () => {
                       id="phone"
                       value={settings.phone}
                       onChange={(e) => updateSetting('phone', e.target.value)}
+                      disabled={!isOwner}
+                      className={!isOwner ? 'bg-gray-100' : ''}
                     />
                   </div>
                   
@@ -163,7 +231,7 @@ export const BusinessSettings: React.FC = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="ILS">שקל ישראלי (₪)</SelectItem>
-                        <SelectItem value="USD">דולר אמריקני ($)</SelectItem>
+                        <SelectItem value="USD">דولר אמריקני ($)</SelectItem>
                         <SelectItem value="EUR">יורו (€)</SelectItem>
                       </SelectContent>
                     </Select>
@@ -305,10 +373,19 @@ export const BusinessSettings: React.FC = () => {
             {/* Save Button */}
             <Card>
               <CardContent className="p-6">
-                <Button onClick={handleSave} className="w-full bg-primary hover:bg-primary-600">
+                <Button 
+                  onClick={handleSave} 
+                  className="w-full bg-primary hover:bg-primary-600"
+                  disabled={!isOwner || updateBusiness.isPending}
+                >
                   <Save className="w-4 h-4 ml-2" />
-                  שמור הגדרות
+                  {updateBusiness.isPending ? 'שומר...' : 'שמור הגדרות'}
                 </Button>
+                {!isOwner && (
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    רק בעל העסק יכול לשמור שינויים
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>

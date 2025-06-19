@@ -7,6 +7,7 @@ import type { Database } from '@/integrations/supabase/types';
 
 type Business = Database['public']['Tables']['businesses']['Row'];
 type BusinessInsert = Database['public']['Tables']['businesses']['Insert'];
+type BusinessUpdate = Database['public']['Tables']['businesses']['Update'];
 
 export const useBusiness = () => {
   const { user } = useAuth();
@@ -67,10 +68,49 @@ export const useBusiness = () => {
     },
   });
 
+  const updateBusiness = useMutation({
+    mutationFn: async (businessData: BusinessUpdate) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      if (!business?.id) throw new Error('No business found');
+      
+      // Verify user is the owner
+      if (business.owner_id !== user.id) {
+        throw new Error('רק בעל העסק יכול לעדכן את הפרטים');
+      }
+      
+      const { data, error } = await supabase
+        .from('businesses')
+        .update(businessData)
+        .eq('id', business.id)
+        .eq('owner_id', user.id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['business'] });
+      toast({
+        title: "הפרטים עודכנו בהצלחה",
+        description: "פרטי העסק שלך עודכנו במערכת",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "שגיאה",
+        description: error.message || "שגיאה בעדכון פרטי העסק",
+        variant: "destructive",
+      });
+      console.error('Error updating business:', error);
+    },
+  });
+
   return {
     business,
     isLoading,
     error,
     createBusiness,
+    updateBusiness,
   };
 };

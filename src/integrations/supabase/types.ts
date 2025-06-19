@@ -11,24 +11,33 @@ export type Database = {
     Tables: {
       businesses: {
         Row: {
+          address: string | null
+          business_type: string | null
           created_at: string | null
           id: string
           name: string
           owner_id: string
+          phone: string | null
           updated_at: string | null
         }
         Insert: {
+          address?: string | null
+          business_type?: string | null
           created_at?: string | null
           id?: string
           name: string
           owner_id: string
+          phone?: string | null
           updated_at?: string | null
         }
         Update: {
+          address?: string | null
+          business_type?: string | null
           created_at?: string | null
           id?: string
           name?: string
           owner_id?: string
+          phone?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -376,6 +385,7 @@ export type Database = {
           id: string
           is_active: boolean
           last_name: string | null
+          role: string | null
           updated_at: string
         }
         Insert: {
@@ -384,6 +394,7 @@ export type Database = {
           id: string
           is_active?: boolean
           last_name?: string | null
+          role?: string | null
           updated_at?: string
         }
         Update: {
@@ -392,6 +403,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_name?: string | null
+          role?: string | null
           updated_at?: string
         }
         Relationships: []
