@@ -5,7 +5,6 @@ import { ProtectedFeature } from '@/components/ProtectedFeature';
 import { AdminSummaryGrid } from '@/components/admin/AdminSummaryGrid';
 import { RevenueChart } from '@/components/admin/RevenueChart';
 import { PlanDistribution } from '@/components/admin/PlanDistribution';
-import { UserSearch } from '@/components/admin/UserSearch';
 import { SubscriptionTable } from '@/components/admin/SubscriptionTable';
 import { Shield } from 'lucide-react';
 
@@ -32,14 +31,9 @@ export const AdminDashboard: React.FC = () => {
             <PlanDistribution />
           </div>
 
-          {/* User Management Section */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div className="xl:col-span-1">
-              <UserSearch />
-            </div>
-            <div className="xl:col-span-2">
-              <SubscriptionTable />
-            </div>
+          {/* Subscription Management Section */}
+          <div className="w-full">
+            <SubscriptionTable />
           </div>
         </div>
       </ProtectedFeature>
