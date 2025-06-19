@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,14 +7,60 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Package, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export const ResetPassword = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+
+  // Check if we arrived here from a reset link with error/success
+  useEffect(() => {
+    const checkResetLink = () => {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const searchParams = new URLSearchParams(window.location.search);
+      
+      // Check for success parameters in hash (recovery flow)
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      const type = hashParams.get('type');
+      
+      // If we have valid recovery tokens, redirect to set new password
+      if (type === 'recovery' && accessToken && refreshToken) {
+        navigate('/set-new-password');
+        return;
+      }
+      
+      // Check for error parameters
+      const error = hashParams.get('error') || searchParams.get('error');
+      const errorCode = hashParams.get('error_code') || searchParams.get('error_code');
+      const errorDescription = hashParams.get('error_description') || searchParams.get('error_description');
+      
+      if (error) {
+        let errorMessage = 'אירעה שגיאה בעת איפוס הסיסמה';
+        
+        if (errorCode === 'otp_expired' || errorDescription?.includes('expired')) {
+          errorMessage = 'הקישור לאיפוס הסיסמה פג תוקף. אנא בקש קישור חדש.';
+        } else if (errorCode === 'access_denied') {
+          errorMessage = 'הקישור לאיפוס הסיסמה לא תקף. אנא בקש קישור חדש.';
+        }
+        
+        toast({
+          title: 'קישור לא תקף',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        
+        // Clean the URL
+        window.history.replaceState({}, document.title, '/reset-password');
+      }
+    };
+
+    checkResetLink();
+  }, [navigate, toast]);
 
   // Cooldown timer
   React.useEffect(() => {
