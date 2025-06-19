@@ -408,6 +408,101 @@ export type Database = {
         }
         Relationships: []
       }
+      recent_activity: {
+        Row: {
+          action_type: string
+          business_id: string
+          category_id: string | null
+          created_at: string
+          description: string | null
+          icon_name: string | null
+          id: string
+          is_critical: boolean
+          is_system_generated: boolean
+          metadata: Json | null
+          priority_level: string
+          product_id: string | null
+          quantity_changed: number | null
+          status_color: string
+          supplier_id: string | null
+          timestamp: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          business_id: string
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          is_critical?: boolean
+          is_system_generated?: boolean
+          metadata?: Json | null
+          priority_level?: string
+          product_id?: string | null
+          quantity_changed?: number | null
+          status_color?: string
+          supplier_id?: string | null
+          timestamp?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          business_id?: string
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          is_critical?: boolean
+          is_system_generated?: boolean
+          metadata?: Json | null
+          priority_level?: string
+          product_id?: string | null
+          quantity_changed?: number | null
+          status_color?: string
+          supplier_id?: string | null
+          timestamp?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recent_activity_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recent_activity_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recent_activity_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recent_activity_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_cycles: {
         Row: {
           business_id: string
