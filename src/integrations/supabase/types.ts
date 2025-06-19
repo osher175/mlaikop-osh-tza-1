@@ -675,6 +675,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      delete_user_by_admin: {
+        Args: { target_user_id: string }
+        Returns: boolean
+      }
       get_user_role: {
         Args: { user_uuid?: string }
         Returns: Database["public"]["Enums"]["user_role"]
@@ -695,6 +699,21 @@ export type Database = {
           required_role: Database["public"]["Enums"]["user_role"]
           user_uuid?: string
         }
+        Returns: boolean
+      }
+      search_users_for_admin: {
+        Args: { search_pattern: string }
+        Returns: {
+          user_id: string
+          email: string
+          first_name: string
+          last_name: string
+          is_active: boolean
+          created_at: string
+        }[]
+      }
+      toggle_user_active_status: {
+        Args: { target_user_id: string }
         Returns: boolean
       }
     }
