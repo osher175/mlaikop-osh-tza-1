@@ -61,7 +61,7 @@ export const EmailSendDialog: React.FC<EmailSendDialogProps> = ({
         isBulk: isBulk
       };
 
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/send-admin-email`, {
+      const response = await fetch('https://gtakgctmtayalcbpnryg.supabase.co/functions/v1/send-admin-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
