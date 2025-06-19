@@ -385,6 +385,7 @@ export type Database = {
           id: string
           is_active: boolean
           last_name: string | null
+          password: string | null
           role: string | null
           updated_at: string
         }
@@ -394,6 +395,7 @@ export type Database = {
           id: string
           is_active?: boolean
           last_name?: string | null
+          password?: string | null
           role?: string | null
           updated_at?: string
         }
@@ -403,6 +405,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_name?: string | null
+          password?: string | null
           role?: string | null
           updated_at?: string
         }
