@@ -47,13 +47,16 @@ export const useRecentActivity = (limit: number = 10) => {
           ? activity.products 
           : null;
         
-        // Check profiles separately with explicit null check
-        const profiles = activity.profiles && 
-          activity.profiles !== null && 
-          typeof activity.profiles === 'object' && 
-          'first_name' in activity.profiles
-            ? activity.profiles 
-            : null;
+        // Check profiles with more explicit type guards
+        let profiles: { first_name: string; last_name: string } | null = null;
+        if (activity.profiles && 
+            activity.profiles !== null && 
+            typeof activity.profiles === 'object') {
+          const profilesObj = activity.profiles as any;
+          if ('first_name' in profilesObj) {
+            profiles = profilesObj;
+          }
+        }
         
         return {
           ...activity,
