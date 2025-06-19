@@ -9,14 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useBusiness } from '@/hooks/useBusiness';
-import { useBusinessOwnership } from '@/hooks/useBusinessOwnership';
+import { useOwnerRole } from '@/hooks/useOwnerRole';
 import { Settings, Building, Bell, Shield, Palette, Save, Lock } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export const BusinessSettings: React.FC = () => {
   const { toast } = useToast();
   const { business, updateBusiness } = useBusiness();
-  const { isOwner, isLoading: ownershipLoading } = useBusinessOwnership();
+  const { isOwner, isLoading: ownershipLoading } = useOwnerRole();
   
   const [settings, setSettings] = useState({
     businessName: '',
@@ -56,7 +56,7 @@ export const BusinessSettings: React.FC = () => {
     if (!isOwner) {
       toast({
         title: "אין הרשאה",
-        description: "רק בעל העסק יכול לעדכן הגדרות אלה",
+        description: "אין לך הרשאה לעדכן את הגדרות העסק. רק בעלי עסק יכולים לבצע עדכונים אלה.",
         variant: "destructive",
       });
       return;
@@ -69,8 +69,15 @@ export const BusinessSettings: React.FC = () => {
         address: settings.address,
         phone: settings.phone,
       });
-    } catch (error) {
-      // Error handling is done in the mutation
+    } catch (error: any) {
+      // Check if the error is related to RLS policy violation
+      if (error?.message?.includes('policy')) {
+        toast({
+          title: "שגיאת הרשאה",
+          description: "אין לך הרשאה לעדכן את הגדרות העסק. נדרש תפקיד OWNER.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -122,7 +129,7 @@ export const BusinessSettings: React.FC = () => {
           <Alert>
             <Lock className="h-4 w-4" />
             <AlertDescription>
-              חלק מההגדרות זמינות לעריכה רק לבעל העסק. אתה יכול לצפות בהגדרות אבל לא לערוך אותן.
+              הגדרות העסק זמינות לעריכה רק לבעלי עסק עם תפקיד OWNER. אתה יכול לצפות בהגדרות אבל לא לערוך אותן.
             </AlertDescription>
           </Alert>
         )}
@@ -231,7 +238,7 @@ export const BusinessSettings: React.FC = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="ILS">שקל ישראלי (₪)</SelectItem>
-                        <SelectItem value="USD">דولר אמריקני ($)</SelectItem>
+                        <SelectItem value="USD">דולר אמריקני ($)</SelectItem>
                         <SelectItem value="EUR">יורו (€)</SelectItem>
                       </SelectContent>
                     </Select>
@@ -383,7 +390,7 @@ export const BusinessSettings: React.FC = () => {
                 </Button>
                 {!isOwner && (
                   <p className="text-xs text-gray-500 mt-2 text-center">
-                    רק בעל העסק יכול לשמור שינויים
+                    רק בעלי עסק עם תפקיד OWNER יכולים לשמור שינויים
                   </p>
                 )}
               </CardContent>

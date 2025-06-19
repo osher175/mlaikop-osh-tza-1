@@ -48,7 +48,13 @@ export const useBusiness = () => {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating business:', error);
+        if (error.message?.includes('policy')) {
+          throw new Error('נדרש תפקיד OWNER כדי ליצור עסק');
+        }
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
@@ -58,10 +64,10 @@ export const useBusiness = () => {
         description: "העסק שלך נוצר במערכת",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "שגיאה",
-        description: "שגיאה ביצירת העסק",
+        description: error.message || "שגיאה ביצירת העסק",
         variant: "destructive",
       });
       console.error('Error creating business:', error);
@@ -73,11 +79,6 @@ export const useBusiness = () => {
       if (!user?.id) throw new Error('User not authenticated');
       if (!business?.id) throw new Error('No business found');
       
-      // Verify user is the owner
-      if (business.owner_id !== user.id) {
-        throw new Error('רק בעל העסק יכול לעדכן את הפרטים');
-      }
-      
       const { data, error } = await supabase
         .from('businesses')
         .update(businessData)
@@ -86,7 +87,13 @@ export const useBusiness = () => {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating business:', error);
+        if (error.message?.includes('policy')) {
+          throw new Error('אין לך הרשאה לעדכן את הגדרות העסק. נדרש תפקיד OWNER.');
+        }
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
@@ -96,7 +103,7 @@ export const useBusiness = () => {
         description: "פרטי העסק שלך עודכנו במערכת",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "שגיאה",
         description: error.message || "שגיאה בעדכון פרטי העסק",
