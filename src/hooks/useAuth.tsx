@@ -41,7 +41,6 @@ export const useAuth = () => {
         data: {
           first_name: firstName,
           last_name: lastName,
-          password: password, // Add password to metadata for the trigger
         }
       }
     });

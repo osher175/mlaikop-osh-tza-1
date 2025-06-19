@@ -11,7 +11,6 @@ export const useProfile = () => {
     queryFn: async () => {
       if (!user?.id) return null;
       
-      // Explicitly exclude password field from selection for security
       const { data, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, role, created_at, updated_at, is_active')
