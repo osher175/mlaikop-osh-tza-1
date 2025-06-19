@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Mail, Search, Calendar, User, Download, Filter, Loader2 } from 'lucide-react';
+import { EmailSendDialog } from './EmailSendDialog';
+import { Mail, Search, Calendar, User, Download, Filter, Loader2, Send, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface EmailRecord {
@@ -19,6 +20,9 @@ interface EmailRecord {
 export const EmailManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [bulkEmailDialogOpen, setBulkEmailDialogOpen] = useState(false);
+  const [selectedRecipient, setSelectedRecipient] = useState<string>('');
 
   // Debounce search term
   React.useEffect(() => {
@@ -89,6 +93,17 @@ export const EmailManagement: React.FC = () => {
     }
   };
 
+  const handleSendIndividualEmail = (email: string) => {
+    setSelectedRecipient(email);
+    setEmailDialogOpen(true);
+  };
+
+  const handleSendBulkEmail = () => {
+    setBulkEmailDialogOpen(true);
+  };
+
+  const allEmails = emailRecords?.map(record => record.email) || [];
+
   return (
     <Card>
       <CardHeader>
@@ -120,6 +135,15 @@ export const EmailManagement: React.FC = () => {
           </div>
           
           <div className="flex gap-2">
+            {emailRecords && emailRecords.length > 0 && (
+              <Button 
+                onClick={handleSendBulkEmail}
+                className="font-rubik bg-turquoise hover:bg-turquoise/90"
+              >
+                <Users className="w-4 h-4 ml-2" />
+                שלח לכולם
+              </Button>
+            )}
             <Button 
               onClick={exportEmails}
               variant="outline"
@@ -193,6 +217,14 @@ export const EmailManagement: React.FC = () => {
                       </div>
                       
                       <div className="flex items-center gap-3">
+                        <Button
+                          size="sm"
+                          onClick={() => handleSendIndividualEmail(record.email)}
+                          className="font-rubik bg-mango hover:bg-mango/90 text-white"
+                        >
+                          <Send className="w-4 h-4 ml-2" />
+                          שלח מייל
+                        </Button>
                         <Badge className={`font-rubik ${
                           record.user_id 
                             ? 'bg-green-500 text-white' 
@@ -231,6 +263,23 @@ export const EmailManagement: React.FC = () => {
             <p className="text-sm font-rubik">או השאר ריק כדי לראות את כל המיילים</p>
           </div>
         )}
+
+        {/* Email Send Dialogs */}
+        <EmailSendDialog
+          isOpen={emailDialogOpen}
+          onClose={() => {
+            setEmailDialogOpen(false);
+            setSelectedRecipient('');
+          }}
+          recipient={selectedRecipient}
+        />
+
+        <EmailSendDialog
+          isOpen={bulkEmailDialogOpen}
+          onClose={() => setBulkEmailDialogOpen(false)}
+          recipients={allEmails}
+          isBulk={true}
+        />
       </CardContent>
     </Card>
   );
