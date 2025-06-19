@@ -8,7 +8,7 @@ import type { Database } from '@/integrations/supabase/types';
 
 type RecentActivityRow = Database['public']['Tables']['recent_activity']['Row'];
 
-// Make the joined types more flexible to handle potential query errors
+// Define the joined types more explicitly
 type RecentActivity = RecentActivityRow & {
   products?: { name: string } | null;
   profiles?: { first_name: string; last_name: string } | null;
@@ -41,15 +41,26 @@ export const useRecentActivity = (limit: number = 10) => {
       }
       
       // Transform the data to handle potential join failures more gracefully
-      const transformedData = (data || []).map(activity => ({
-        ...activity,
-        products: activity.products && typeof activity.products === 'object' && 'name' in activity.products 
+      const transformedData = (data || []).map(activity => {
+        // Check products separately
+        const products = activity.products && typeof activity.products === 'object' && 'name' in activity.products 
           ? activity.products 
-          : null,
-        profiles: activity.profiles && activity.profiles !== null && typeof activity.profiles === 'object' && 'first_name' in activity.profiles
-          ? activity.profiles 
-          : null,
-      }));
+          : null;
+        
+        // Check profiles separately with explicit null check
+        const profiles = activity.profiles && 
+          activity.profiles !== null && 
+          typeof activity.profiles === 'object' && 
+          'first_name' in activity.profiles
+            ? activity.profiles 
+            : null;
+        
+        return {
+          ...activity,
+          products,
+          profiles,
+        };
+      });
       
       return transformedData as RecentActivity[];
     },
