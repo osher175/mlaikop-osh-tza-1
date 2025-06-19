@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Package, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
 
 export const Auth = () => {
   const { signIn, signUp, user, loading } = useAuth();
@@ -15,6 +17,10 @@ export const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetCooldown, setResetCooldown] = useState(0);
 
   // Sign In Form State
   const [signInData, setSignInData] = useState({
@@ -31,12 +37,85 @@ export const Auth = () => {
     confirmPassword: '',
   });
 
+  // Reset cooldown timer
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (resetCooldown > 0) {
+      interval = setInterval(() => {
+        setResetCooldown(resetCooldown - 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [resetCooldown]);
+
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !loading) {
       window.location.href = '/';
     }
   }, [user, loading]);
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!resetEmail) {
+      toast({
+        title: 'שגיאה',
+        description: 'אנא הזן כתובת אימייל',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (resetCooldown > 0) {
+      toast({
+        title: 'המתן',
+        description: `אנא המתן ${resetCooldown} שניות לפני שליחה נוספת`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsResetting(true);
+
+    try {
+      const redirectUrl = `${window.location.origin}/reset-password`;
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: redirectUrl,
+      });
+
+      if (error) {
+        toast({
+          title: 'שגיאה בשליחת הקישור',
+          description: 'לא הצלחנו לשלוח את הקישור. ודא שכתובת המייל שהזנת תקינה.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'קישור נשלח בהצלחה!',
+          description: 'קישור לאיפוס הסיסמה נשלח למייל שלך. אנא בדוק את תיבת הדואר.',
+        });
+        setResetDialogOpen(false);
+        setResetEmail('');
+        setResetCooldown(60); // 60 seconds cooldown
+        
+        // Log activity (optional)
+        console.log('Password reset attempted for:', resetEmail, 'at', new Date().toISOString());
+      }
+    } catch (error) {
+      toast({
+        title: 'שגיאה',
+        description: 'אירעה שגיאה בלתי צפויה',
+        variant: 'destructive',
+      });
+      console.error('Password reset error:', error);
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,6 +282,56 @@ export const Auth = () => {
                       </Button>
                     </div>
                   </div>
+                  
+                  {/* Forgot Password Link */}
+                  <div className="text-center">
+                    <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="link" className="text-sm text-primary hover:underline p-0">
+                          שכחת סיסמה? לחץ כאן לאיפוס
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md" dir="rtl">
+                        <DialogHeader>
+                          <DialogTitle>איפוס סיסמה</DialogTitle>
+                          <DialogDescription>
+                            הזן את כתובת המייל שלך ונשלח לך קישור לאיפוס הסיסמה
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handlePasswordReset} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="reset-email">כתובת אימייל</Label>
+                            <Input
+                              id="reset-email"
+                              type="email"
+                              placeholder="name@example.com"
+                              value={resetEmail}
+                              onChange={(e) => setResetEmail(e.target.value)}
+                              required
+                              className="text-right"
+                            />
+                          </div>
+                          <Button 
+                            type="submit" 
+                            className="w-full"
+                            disabled={isResetting || resetCooldown > 0}
+                          >
+                            {isResetting ? (
+                              <>
+                                <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                                שולח...
+                              </>
+                            ) : resetCooldown > 0 ? (
+                              `המתן ${resetCooldown} שניות`
+                            ) : (
+                              'שלח קישור לאיפוס הסיסמה'
+                            )}
+                          </Button>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+
                   <Button 
                     type="submit" 
                     className="w-full bg-primary hover:bg-primary-600 text-white font-medium py-2.5"
