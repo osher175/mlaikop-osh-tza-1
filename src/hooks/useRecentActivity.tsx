@@ -46,7 +46,7 @@ export const useRecentActivity = (limit: number = 10) => {
         products: activity.products && typeof activity.products === 'object' && 'name' in activity.products 
           ? activity.products 
           : null,
-        profiles: activity.profiles && typeof activity.profiles === 'object' && 'first_name' in activity.profiles
+        profiles: activity.profiles && activity.profiles !== null && typeof activity.profiles === 'object' && 'first_name' in activity.profiles
           ? activity.profiles 
           : null,
       }));
