@@ -27,15 +27,45 @@ const getActivityIcon = (actionType: string) => {
   }
 };
 
-const getActivityColor = (statusColor: string, isCritical: boolean = false) => {
-  if (isCritical) return 'bg-red-100 text-red-800 border-red-200';
+const getActivityBadgeStyle = (actionType: string, isCritical: boolean = false) => {
+  if (isCritical) {
+    return 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100';
+  }
   
-  switch (statusColor) {
-    case 'success': return 'bg-green-100 text-green-800 border-green-200';
-    case 'warning': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'error': return 'bg-red-100 text-red-800 border-red-200';
-    case 'info': return 'bg-blue-100 text-blue-800 border-blue-200';
-    default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  switch (actionType) {
+    case 'product_added':
+    case 'inventory_added':
+      return 'bg-primary-50 text-primary-700 border border-primary-200 hover:bg-primary-100';
+    case 'out_of_stock':
+    case 'low_stock_warning':
+      return 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100';
+    case 'product_updated':
+      return 'bg-accent-50 text-accent-700 border border-accent-200 hover:bg-accent-100';
+    case 'inventory_reduced':
+      return 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100';
+    default:
+      return 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100';
+  }
+};
+
+const getIconBadgeStyle = (actionType: string, isCritical: boolean = false) => {
+  if (isCritical) {
+    return 'bg-red-100 text-red-600';
+  }
+  
+  switch (actionType) {
+    case 'product_added':
+    case 'inventory_added':
+      return 'bg-primary-100 text-primary-600';
+    case 'out_of_stock':
+    case 'low_stock_warning':
+      return 'bg-red-100 text-red-600';
+    case 'product_updated':
+      return 'bg-accent-100 text-accent-600';
+    case 'inventory_reduced':
+      return 'bg-orange-100 text-orange-600';
+    default:
+      return 'bg-gray-100 text-gray-600';
   }
 };
 
@@ -55,14 +85,14 @@ export const RecentActivity: React.FC = () => {
 
   if (error) {
     return (
-      <Card className="card-shadow">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900">
+      <Card className="rounded-lg shadow-sm border border-gray-200 bg-white">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg font-semibold text-gray-900 font-rubik" dir="rtl">
             פעילות אחרונה
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-red-600 text-center py-4">
+          <p className="text-red-600 text-center py-4 font-rubik text-sm" dir="rtl">
             שגיאה בטעינת הפעילות האחרונה
           </p>
         </CardContent>
@@ -71,23 +101,23 @@ export const RecentActivity: React.FC = () => {
   }
 
   return (
-    <Card className="card-shadow">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+    <Card className="rounded-lg shadow-sm border border-gray-200 bg-white">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg font-semibold text-gray-900 font-rubik flex items-center gap-2" dir="rtl">
           פעילות אחרונה
           {activities.length > 0 && (
-            <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+            <Badge className="bg-primary-50 text-primary-700 border border-primary-200 text-xs font-medium px-2 py-0.5 rounded-full">
               {activities.length}
             </Badge>
           )}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-3" dir="rtl">
           {isLoading ? (
             // Loading skeleton
             Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="flex items-center gap-3">
+              <div key={index} className="flex items-center gap-3 p-3">
                 <Skeleton className="h-10 w-10 rounded-lg" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-3/4" />
@@ -98,8 +128,8 @@ export const RecentActivity: React.FC = () => {
           ) : activities.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Package className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-              <p>אין פעילות אחרונה</p>
-              <p className="text-sm">כאשר תתבצע פעילות במערכת, היא תופיע כאן</p>
+              <p className="font-rubik text-sm">אין פעילות אחרונה</p>
+              <p className="text-xs font-rubik text-gray-400 mt-1">כאשר תתבצע פעילות במערכת, היא תופיע כאן</p>
             </div>
           ) : (
             activities.map((activity) => {
@@ -109,21 +139,14 @@ export const RecentActivity: React.FC = () => {
                 : 'משתמש לא ידוע';
               
               return (
-                <div key={activity.id} className="flex items-start gap-3 group hover:bg-gray-50 p-2 rounded-lg transition-colors">
-                  <div className={`p-2 rounded-lg flex-shrink-0 ${
-                    activity.is_critical ? 'bg-red-100' : 'bg-gray-100'
-                  }`}>
-                    <Icon className={`h-4 w-4 ${
-                      activity.is_critical ? 'text-red-600' : 'text-gray-600'
-                    }`} />
+                <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200">
+                  <div className={`p-2.5 rounded-lg flex-shrink-0 ${getIconBadgeStyle(activity.action_type, activity.is_critical)}`}>
+                    <Icon className="h-4 w-4" />
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <Badge 
-                        variant="secondary" 
-                        className={`text-xs ${getActivityColor(activity.status_color, activity.is_critical)}`}
-                      >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <Badge className={`text-xs font-medium px-2.5 py-1 rounded-lg ${getActivityBadgeStyle(activity.action_type, activity.is_critical)}`}>
                         {activity.title}
                       </Badge>
                       {activity.is_critical && (
@@ -132,19 +155,23 @@ export const RecentActivity: React.FC = () => {
                     </div>
                     
                     {activity.description && (
-                      <p className="text-sm text-gray-600 mb-1">
+                      <p className="text-sm text-gray-600 mb-2 font-rubik leading-relaxed">
                         {activity.description}
                       </p>
                     )}
                     
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <span>{userName}</span>
-                      <span>•</span>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 font-rubik">
+                      <span className="font-medium">{userName}</span>
+                      <span className="text-gray-300">•</span>
                       <span>{formatTimeAgo(activity.timestamp)}</span>
                       {activity.quantity_changed && (
                         <>
-                          <span>•</span>
-                          <span className={activity.quantity_changed > 0 ? 'text-green-600' : 'text-red-600'}>
+                          <span className="text-gray-300">•</span>
+                          <span className={`font-medium px-1.5 py-0.5 rounded text-xs ${
+                            activity.quantity_changed > 0 
+                              ? 'bg-green-50 text-green-600' 
+                              : 'bg-red-50 text-red-600'
+                          }`}>
                             {activity.quantity_changed > 0 ? '+' : ''}{activity.quantity_changed}
                           </span>
                         </>
