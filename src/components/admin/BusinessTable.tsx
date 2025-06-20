@@ -18,7 +18,7 @@ export const BusinessTable: React.FC = () => {
         .from('businesses')
         .select(`
           *,
-          profiles!businesses_owner_id_fkey(first_name, last_name)
+          owner:profiles!businesses_owner_id_fkey(first_name, last_name)
         `)
         .order('created_at', { ascending: false });
 
@@ -87,7 +87,7 @@ export const BusinessTable: React.FC = () => {
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="text-sm">
-                        {business.profiles?.first_name} {business.profiles?.last_name}
+                        {business.owner?.first_name} {business.owner?.last_name}
                       </span>
                     </div>
                   </TableCell>
