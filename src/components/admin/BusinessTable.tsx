@@ -28,7 +28,7 @@ export const BusinessTable: React.FC = () => {
   const { data: businesses, isLoading } = useQuery({
     queryKey: ['admin-businesses', searchTerm],
     queryFn: async () => {
-      let query = supabase
+      let businessQuery = supabase
         .from('businesses')
         .select(`
           id,
@@ -38,22 +38,52 @@ export const BusinessTable: React.FC = () => {
           employee_count,
           avg_monthly_revenue,
           created_at,
-          profiles!businesses_owner_id_fkey(first_name, last_name)
+          owner_id
         `)
         .order('created_at', { ascending: false });
 
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,industry.ilike.%${searchTerm}%,official_email.ilike.%${searchTerm}%`);
+        businessQuery = businessQuery.or(`name.ilike.%${searchTerm}%,industry.ilike.%${searchTerm}%,official_email.ilike.%${searchTerm}%`);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
+      const { data: businessData, error: businessError } = await businessQuery;
+      if (businessError) throw businessError;
+
+      if (!businessData || businessData.length === 0) {
+        return [];
+      }
+
+      // Get all unique owner IDs
+      const ownerIds = [...new Set(businessData.map(b => b.owner_id).filter(Boolean))];
       
-      // Transform the data to match our interface
-      return data?.map(business => ({
-        ...business,
-        owner_profile: business.profiles
-      })) as BusinessWithProfile[];
+      // Fetch profiles for all owners
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', ownerIds);
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+      }
+
+      // Create a map for quick profile lookup
+      const profilesMap = new Map(
+        profilesData?.map(profile => [profile.id, profile]) || []
+      );
+
+      // Combine business data with profile data
+      const businessesWithProfiles: BusinessWithProfile[] = businessData.map(business => ({
+        id: business.id,
+        name: business.name,
+        industry: business.industry,
+        official_email: business.official_email,
+        employee_count: business.employee_count,
+        avg_monthly_revenue: business.avg_monthly_revenue,
+        created_at: business.created_at,
+        owner_profile: business.owner_id ? profilesMap.get(business.owner_id) || null : null
+      }));
+
+      return businessesWithProfiles;
     },
   });
 
