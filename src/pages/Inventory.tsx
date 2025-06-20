@@ -3,22 +3,28 @@ import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Package, AlertCircle, Loader2 } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Package, AlertCircle, Loader2 } from 'lucide-react';
 import { ProtectedFeature } from '@/components/ProtectedFeature';
 import { CreateBusinessDialog } from '@/components/CreateBusinessDialog';
-import { ProductSearchBar } from '@/components/ProductSearchBar';
 import { useProducts } from '@/hooks/useProducts';
 import { useBusiness } from '@/hooks/useBusiness';
 import { useNavigate } from 'react-router-dom';
 
 export const Inventory: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState('');
   const [showCreateBusiness, setShowCreateBusiness] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const navigate = useNavigate();
   
   const { products, isLoading: productsLoading, deleteProduct } = useProducts();
   const { business, isLoading: businessLoading } = useBusiness();
+
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product.barcode && product.barcode.includes(searchTerm)) ||
+    (product.location && product.location.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   const getStatusBadge = (quantity: number) => {
     if (quantity === 0) {
@@ -39,17 +45,6 @@ export const Inventory: React.FC = () => {
   };
 
   const { inStock, lowStock, outOfStock } = getStatusCounts();
-
-  // Filter products based on selected search result
-  const displayProducts = selectedProduct ? [selectedProduct] : products;
-
-  const handleProductSelect = (product: any) => {
-    setSelectedProduct(product);
-  };
-
-  const clearSearch = () => {
-    setSelectedProduct(null);
-  };
 
   if (businessLoading || productsLoading) {
     return (
@@ -102,34 +97,24 @@ export const Inventory: React.FC = () => {
           </Button>
         </div>
 
-        {/* Enhanced Search Bar */}
+        {/* Search and Filters */}
         <Card>
           <CardContent className="p-6">
             <div className="flex gap-4">
-              <div className="flex-1">
-                <ProductSearchBar 
-                  onProductSelect={handleProductSelect}
-                  placeholder="חפש מוצרים לפי שם, ברקוד או מיקום..."
+              <div className="flex-1 relative">
+                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="חפש מוצרים..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pr-10"
                 />
               </div>
-              {selectedProduct && (
-                <Button variant="outline" onClick={clearSearch}>
-                  נקה חיפוש
-                </Button>
-              )}
               <ProtectedFeature requiredRole="pro_starter_user">
                 <Button variant="outline">סנן לפי קטגוריה</Button>
                 <Button variant="outline">סנן לפי מיקום</Button>
               </ProtectedFeature>
             </div>
-            
-            {selectedProduct && (
-              <div className="mt-4 p-3 bg-primary-50 rounded-lg border border-primary-200">
-                <p className="text-sm text-primary-700 font-rubik">
-                  מציג תוצאות עבור: <strong>{selectedProduct.name}</strong>
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -190,13 +175,13 @@ export const Inventory: React.FC = () => {
             <CardTitle>רשימת מוצרים</CardTitle>
           </CardHeader>
           <CardContent>
-            {displayProducts.length === 0 ? (
+            {filteredProducts.length === 0 ? (
               <div className="text-center py-8">
                 <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-500">
-                  {selectedProduct ? 'לא נמצאו מוצרים מתאימים' : 'עדיין לא נוספו מוצרים'}
+                  {searchTerm ? 'לא נמצאו מוצרים מתאימים' : 'עדיין לא נוספו מוצרים'}
                 </p>
-                {!selectedProduct && (
+                {!searchTerm && (
                   <Button 
                     className="mt-4" 
                     onClick={() => navigate('/add-product')}
@@ -220,7 +205,7 @@ export const Inventory: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {displayProducts.map((product) => (
+                    {filteredProducts.map((product) => (
                       <tr key={product.id} className="border-b hover:bg-gray-50">
                         <td className="p-4 font-medium">{product.name}</td>
                         <td className="p-4 text-gray-600">{product.barcode || '-'}</td>

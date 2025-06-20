@@ -3,7 +3,7 @@ import React from 'react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Lock, Crown, Zap, Star, Shield, Building } from 'lucide-react';
+import { Lock, Crown, Zap, Star, Shield } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -83,8 +83,6 @@ export const ProtectedFeature: React.FC<ProtectedFeatureProps> = ({
 
     const getRoleIcon = (role: UserRole) => {
       switch (role) {
-        case 'OWNER':
-          return <Building className="w-6 h-6 text-orange-500" />;
         case 'pro_starter_user':
           return <Crown className="w-6 h-6 text-amber-500" />;
         case 'smart_master_user':

@@ -55,22 +55,10 @@ export const useBusiness = () => {
         }
         throw error;
       }
-
-      // Update the profile to link to the new business
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ owned_business_id: data.id })
-        .eq('id', user.id);
-
-      if (profileError) {
-        console.error('Error linking profile to business:', profileError);
-      }
-
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['business'] });
-      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
       toast({
         title: "עסק נוצר בהצלחה",
         description: "העסק שלך נוצר במערכת",
