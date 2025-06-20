@@ -12,30 +12,42 @@ export type Database = {
       businesses: {
         Row: {
           address: string | null
+          avg_monthly_revenue: number | null
           business_type: string | null
           created_at: string | null
+          employee_count: number | null
           id: string
+          industry: string | null
           name: string
+          official_email: string | null
           owner_id: string
           phone: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          avg_monthly_revenue?: number | null
           business_type?: string | null
           created_at?: string | null
+          employee_count?: number | null
           id?: string
+          industry?: string | null
           name: string
+          official_email?: string | null
           owner_id: string
           phone?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          avg_monthly_revenue?: number | null
           business_type?: string | null
           created_at?: string | null
+          employee_count?: number | null
           id?: string
+          industry?: string | null
           name?: string
+          official_email?: string | null
           owner_id?: string
           phone?: string | null
           updated_at?: string | null
@@ -385,6 +397,7 @@ export type Database = {
           id: string
           is_active: boolean
           last_name: string | null
+          owned_business_id: string | null
           role: string | null
           updated_at: string
         }
@@ -394,6 +407,7 @@ export type Database = {
           id: string
           is_active?: boolean
           last_name?: string | null
+          owned_business_id?: string | null
           role?: string | null
           updated_at?: string
         }
@@ -403,10 +417,19 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_name?: string | null
+          owned_business_id?: string | null
           role?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_owned_business_id_fkey"
+            columns: ["owned_business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       recent_activity: {
         Row: {
