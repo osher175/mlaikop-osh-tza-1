@@ -18,9 +18,8 @@ export const BusinessTable: React.FC = () => {
         .from('businesses')
         .select(`
           *,
-          owner_profile:profiles!inner(first_name, last_name)
+          profiles!businesses_owner_id_fkey(first_name, last_name)
         `)
-        .eq('profiles.id', supabase.raw('businesses.owner_id'))
         .order('created_at', { ascending: false });
 
       if (searchTerm) {
@@ -88,7 +87,7 @@ export const BusinessTable: React.FC = () => {
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="text-sm">
-                        {business.owner_profile?.first_name} {business.owner_profile?.last_name}
+                        {business.profiles?.first_name} {business.profiles?.last_name}
                       </span>
                     </div>
                   </TableCell>
