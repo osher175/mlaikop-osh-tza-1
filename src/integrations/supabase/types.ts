@@ -819,6 +819,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_first_user_in_business: {
+        Args: { business_uuid: string }
+        Returns: boolean
+      }
       search_products: {
         Args: {
           search_term?: string

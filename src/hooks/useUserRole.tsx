@@ -60,6 +60,7 @@ export const useUserRole = () => {
       'smart_master_user': 3, // Super User - Full business control
       'elite_pilot_user': 4,  // Super User - Full business control
       'admin': 5,             // Admin - Platform settings only
+      'OWNER': 6,             // Owner - Ultimate business control
     };
 
     const hasPermission = roleHierarchy[userRole] >= roleHierarchy[requiredRole];
@@ -74,6 +75,7 @@ export const useUserRole = () => {
       'smart_master_user': 'משתמש על',
       'elite_pilot_user': 'משתמש על',
       'admin': 'מנהל מערכת',
+      'OWNER': 'בעל עסק',
     };
 
     return roleNames[role] || role;
@@ -93,13 +95,25 @@ export const useUserRole = () => {
           canManageInventory: false,      // No inventory management
         };
       
+      case 'OWNER':
+        return {
+          canAccessBusinessData: true,    // Full business access
+          canManageUsers: true,           // Full user management
+          canViewReports: true,           // All reports
+          canManageSettings: true,        // All business settings
+          canEditProducts: true,          // Full product management
+          canViewProducts: true,          // View products
+          isPlatformAdmin: false,         // No platform access
+          canManageInventory: true,       // Full inventory control
+        };
+      
       case 'smart_master_user':
       case 'elite_pilot_user':
         return {
           canAccessBusinessData: true,    // Full business access
-          canManageUsers: true,           // Business user management
+          canManageUsers: false,          // Limited user management
           canViewReports: true,           // All reports
-          canManageSettings: true,        // Business settings
+          canManageSettings: false,       // Limited settings access
           canEditProducts: true,          // Full product management
           canViewProducts: true,          // View products
           isPlatformAdmin: false,         // No platform access
@@ -113,7 +127,7 @@ export const useUserRole = () => {
           canAccessBusinessData: true,    // Limited business access
           canManageUsers: false,          // No user management
           canViewReports: false,          // No reports
-          canManageSettings: true,        // Basic settings access
+          canManageSettings: false,       // No settings access
           canEditProducts: false,         // No product editing
           canViewProducts: true,          // View products only
           isPlatformAdmin: false,         // No platform access
