@@ -399,6 +399,7 @@ export type Database = {
           last_name: string | null
           owned_business_id: string | null
           role: string | null
+          selected_plan_id: string | null
           updated_at: string
         }
         Insert: {
@@ -409,6 +410,7 @@ export type Database = {
           last_name?: string | null
           owned_business_id?: string | null
           role?: string | null
+          selected_plan_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -419,6 +421,7 @@ export type Database = {
           last_name?: string | null
           owned_business_id?: string | null
           role?: string | null
+          selected_plan_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -428,6 +431,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "businesses"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_selected_plan_id_fkey"
+            columns: ["selected_plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans_new"
+            referencedColumns: ["plan"]
           },
         ]
       }
@@ -840,6 +850,10 @@ export type Database = {
           required_role: Database["public"]["Enums"]["user_role"]
           user_uuid?: string
         }
+        Returns: boolean
+      }
+      is_business_name_available: {
+        Args: { business_name: string }
         Returns: boolean
       }
       is_first_user_in_business: {
