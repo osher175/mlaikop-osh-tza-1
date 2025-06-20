@@ -2,7 +2,6 @@
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlanSelection } from '@/hooks/usePlanSelection';
-import { useUserRole } from '@/hooks/useUserRole';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,9 +18,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, loading } = useAuth();
   const { hasPlan, isLoading: planLoading } = usePlanSelection();
-  const { userRole, isLoading: roleLoading } = useUserRole();
 
-  if (loading || planLoading || roleLoading) {
+  if (loading || planLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -35,12 +33,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (!user) {
     window.location.href = '/auth';
     return null;
-  }
-
-  // Admin users bypass all plan requirements
-  if (userRole === 'admin') {
-    console.log('Admin user accessing protected route - bypassing plan check');
-    return <>{children}</>;
   }
 
   // Check if plan is required and user hasn't selected one

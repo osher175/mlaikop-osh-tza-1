@@ -2,22 +2,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useUserRole } from './useUserRole';
 
 export const usePlanSelection = () => {
   const { user } = useAuth();
-  const { userRole, isLoading: roleLoading } = useUserRole();
 
-  const { data: hasPlan, isLoading: planLoading } = useQuery({
+  const { data: hasPlan, isLoading } = useQuery({
     queryKey: ['user-plan-selection', user?.id],
     queryFn: async () => {
       if (!user?.id) return false;
-      
-      // Admin users bypass plan requirement completely
-      if (userRole === 'admin') {
-        console.log('Admin user detected - bypassing plan requirement');
-        return true;
-      }
       
       const { data, error } = await supabase
         .from('profiles')
@@ -32,11 +24,11 @@ export const usePlanSelection = () => {
       
       return !!data?.selected_plan_id;
     },
-    enabled: !!user?.id && !roleLoading,
+    enabled: !!user?.id,
   });
 
   return {
     hasPlan: hasPlan ?? false,
-    isLoading: planLoading || roleLoading,
+    isLoading,
   };
 };
