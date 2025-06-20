@@ -8,16 +8,24 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Plus, Edit, Trash2, Package, AlertCircle, Loader2 } from 'lucide-react';
 import { ProtectedFeature } from '@/components/ProtectedFeature';
 import { CreateBusinessDialog } from '@/components/CreateBusinessDialog';
+import { EditProductDialog } from '@/components/inventory/EditProductDialog';
+import { DeleteProductDialog } from '@/components/inventory/DeleteProductDialog';
+import { ExpirationAlertsPanel } from '@/components/inventory/ExpirationAlertsPanel';
 import { useProducts } from '@/hooks/useProducts';
 import { useBusiness } from '@/hooks/useBusiness';
 import { useNavigate } from 'react-router-dom';
+import type { Database } from '@/integrations/supabase/types';
+
+type Product = Database['public']['Tables']['products']['Row'];
 
 export const Inventory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateBusiness, setShowCreateBusiness] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const navigate = useNavigate();
   
-  const { products, isLoading: productsLoading, deleteProduct } = useProducts();
+  const { products, isLoading: productsLoading, refetch } = useProducts();
   const { business, isLoading: businessLoading } = useBusiness();
 
   const filteredProducts = products.filter(product =>
@@ -42,6 +50,14 @@ export const Inventory: React.FC = () => {
     const outOfStock = products.filter(p => p.quantity === 0).length;
     
     return { inStock, lowStock, outOfStock };
+  };
+
+  const handleProductUpdated = () => {
+    refetch();
+  };
+
+  const handleProductDeleted = () => {
+    refetch();
   };
 
   const { inStock, lowStock, outOfStock } = getStatusCounts();
@@ -96,6 +112,9 @@ export const Inventory: React.FC = () => {
             הוסף מוצר חדש
           </Button>
         </div>
+
+        {/* Expiration Alerts Panel */}
+        <ExpirationAlertsPanel />
 
         {/* Search and Filters */}
         <Card>
@@ -215,15 +234,20 @@ export const Inventory: React.FC = () => {
                         <td className="p-4">{getStatusBadge(product.quantity)}</td>
                         <td className="p-4">
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => setEditingProduct(product)}
+                              title="ערוך מוצר"
+                            >
                               <Edit className="w-4 h-4" />
                             </Button>
                             <Button 
                               size="sm" 
                               variant="outline" 
                               className="text-red-600 hover:text-red-700"
-                              onClick={() => deleteProduct.mutate(product.id)}
-                              disabled={deleteProduct.isPending}
+                              onClick={() => setDeletingProduct(product)}
+                              title="מחק מוצר"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -237,6 +261,22 @@ export const Inventory: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Edit Product Dialog */}
+        <EditProductDialog
+          product={editingProduct}
+          open={!!editingProduct}
+          onOpenChange={(open) => !open && setEditingProduct(null)}
+          onProductUpdated={handleProductUpdated}
+        />
+
+        {/* Delete Product Dialog */}
+        <DeleteProductDialog
+          product={deletingProduct}
+          open={!!deletingProduct}
+          onOpenChange={(open) => !open && setDeletingProduct(null)}
+          onProductDeleted={handleProductDeleted}
+        />
       </div>
     </MainLayout>
   );

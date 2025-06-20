@@ -14,7 +14,7 @@ export const useProducts = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: products = [], isLoading, error } = useQuery({
+  const { data: products = [], isLoading, error, refetch } = useQuery({
     queryKey: ['products', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
@@ -130,6 +130,7 @@ export const useProducts = () => {
     products,
     isLoading,
     error,
+    refetch,
     createProduct,
     updateProduct,
     deleteProduct,

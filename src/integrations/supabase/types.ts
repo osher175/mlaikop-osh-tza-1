@@ -316,6 +316,7 @@ export type Database = {
       }
       products: {
         Row: {
+          alert_dismissed: boolean
           barcode: string | null
           business_id: string
           category_id: string | null
@@ -333,6 +334,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          alert_dismissed?: boolean
           barcode?: string | null
           business_id: string
           category_id?: string | null
@@ -350,6 +352,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          alert_dismissed?: boolean
           barcode?: string | null
           business_id?: string
           category_id?: string | null
