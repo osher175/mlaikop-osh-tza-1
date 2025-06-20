@@ -1,216 +1,473 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
+import { Package, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Mail, Lock, User, Building2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
 
 export const Auth = () => {
-  const { signIn, signUp, loading } = useAuth();
+  const { signIn, signUp, user, loading } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetCooldown, setResetCooldown] = useState(0);
 
-  const [formData, setFormData] = useState({
+  // Sign In Form State
+  const [signInData, setSignInData] = useState({
     email: '',
     password: '',
-    firstName: '',
-    lastName: '',
   });
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  // Sign Up Form State
+  const [signUpData, setSignUpData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+
+  // Reset cooldown timer
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (resetCooldown > 0) {
+      interval = setInterval(() => {
+        setResetCooldown(resetCooldown - 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [resetCooldown]);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user && !loading) {
+      window.location.href = '/';
+    }
+  }, [user, loading]);
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!resetEmail) {
+      toast({
+        title: 'שגיאה',
+        description: 'אנא הזן כתובת אימייל',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (resetCooldown > 0) {
+      toast({
+        title: 'המתן',
+        description: `אנא המתן ${resetCooldown} שניות לפני שליחה נוספת`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsResetting(true);
+
+    try {
+      const redirectUrl = `${window.location.origin}/reset-password`;
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: redirectUrl,
+      });
+
+      if (error) {
+        toast({
+          title: 'שגיאה בשליחת הקישור',
+          description: 'לא הצלחנו לשלוח את הקישור. ודא שכתובת המייל שהזנת תקינה.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'קישור נשלח בהצלחה!',
+          description: 'קישור לאיפוס הסיסמה נשלח למייל שלך. אנא בדוק את תיבת הדואר.',
+        });
+        setResetDialogOpen(false);
+        setResetEmail('');
+        setResetCooldown(60); // 60 seconds cooldown
+        
+        // Log activity (optional)
+        console.log('Password reset attempted for:', resetEmail, 'at', new Date().toISOString());
+      }
+    } catch (error) {
+      toast({
+        title: 'שגיאה',
+        description: 'אירעה שגיאה בלתי צפויה',
+        variant: 'destructive',
+      });
+      console.error('Password reset error:', error);
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    const { error } = await signIn(formData.email, formData.password);
-    
-    if (error) {
+    try {
+      const { error } = await signIn(signInData.email, signInData.password);
+      
+      if (error) {
+        toast({
+          title: 'שגיאה בהתחברות',
+          description: error.message === 'Invalid login credentials' 
+            ? 'פרטי ההתחברות שגויים'
+            : 'אירעה שגיאה בעת ההתחברות',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
       toast({
-        title: "שגיאה בהתחברות",
-        description: error.message,
-        variant: "destructive",
+        title: 'שגיאה',
+        description: 'אירעה שגיאה בלתי צפויה',
+        variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (signUpData.password !== signUpData.confirmPassword) {
+      toast({
+        title: 'שגיאה',
+        description: 'הסיסמאות אינן תואמות',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (signUpData.password.length < 6) {
+      toast({
+        title: 'שגיאה',
+        description: 'הסיסמה חייבת להכיל לפחות 6 תווים',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
 
-    const { error } = await signUp(
-      formData.email, 
-      formData.password, 
-      formData.firstName, 
-      formData.lastName
-    );
-    
-    if (error) {
+    try {
+      const { error } = await signUp(
+        signUpData.email, 
+        signUpData.password, 
+        signUpData.firstName, 
+        signUpData.lastName
+      );
+      
+      if (error) {
+        if (error.message.includes('already registered')) {
+          toast({
+            title: 'שגיאה בהרשמה',
+            description: 'משתמש עם כתובת אימייל זו כבר קיים',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'שגיאה בהרשמה',
+            description: 'אירעה שגיאה בעת ההרשמה',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        toast({
+          title: 'הרשמה בוצעה בהצלחה!',
+          description: 'בדוק את תיבת המייל שלך לאישור החשבון',
+        });
+      }
+    } catch (error) {
       toast({
-        title: "שגיאה ברישום",
-        description: error.message,
-        variant: "destructive",
+        title: 'שגיאה',
+        description: 'אירעה שגיאה בלתי צפויה',
+        variant: 'destructive',
       });
-    } else {
-      toast({
-        title: "ברוך הבא למלאיקו!",
-        description: "בואו נתחיל להגדיר את העסק שלך",
-      });
-      // Redirect to business setup for new users
-      window.location.href = '/business-setup';
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-gray-600">טוען...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center p-4" dir="rtl">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Building2 className="w-12 h-12 text-primary mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-gray-900">מלאיקו</h1>
-          <p className="text-gray-600">ניהול מלאי חכם לעסק שלך</p>
+        {/* Logo and Brand */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-16 h-16 mlaiko-gradient rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+            <Package className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Mlaiko</h1>
+          <p className="text-gray-600 text-center">מערכת ניהול מלאי חכמה</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center">ברוכים הבאים</CardTitle>
-            <CardDescription className="text-center">
-              התחבר או הירשם כדי להתחיל
+        <Card className="shadow-xl border-0">
+          <CardHeader className="text-center pb-4">
+            <CardTitle className="text-2xl text-gray-900">ברוכים הבאים</CardTitle>
+            <CardDescription className="text-gray-600">
+              התחברו או הירשמו כדי להתחיל
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">התחברות</TabsTrigger>
-                <TabsTrigger value="signup">הרשמה</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="signin" className="text-sm">התחברות</TabsTrigger>
+                <TabsTrigger value="signup" className="text-sm">הרשמה</TabsTrigger>
               </TabsList>
-
-              <TabsContent value="signin" className="space-y-4">
+              
+              {/* Sign In Tab */}
+              <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">אימייל</Label>
-                    <div className="relative">
-                      <Mail className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        className="pr-10"
-                        required
-                      />
-                    </div>
+                    <Label htmlFor="signin-email">כתובת אימייל</Label>
+                    <Input
+                      id="signin-email"
+                      type="email"
+                      placeholder="name@example.com"
+                      value={signInData.email}
+                      onChange={(e) => setSignInData(prev => ({ ...prev, email: e.target.value }))}
+                      required
+                      className="text-right"
+                    />
                   </div>
-
                   <div className="space-y-2">
-                    <Label htmlFor="password">סיסמה</Label>
+                    <Label htmlFor="signin-password">סיסמה</Label>
                     <div className="relative">
-                      <Lock className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
-                        id="password"
-                        type="password"
-                        value={formData.password}
-                        onChange={(e) => handleInputChange('password', e.target.value)}
-                        className="pr-10"
+                        id="signin-password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="הכנס סיסמה"
+                        value={signInData.password}
+                        onChange={(e) => setSignInData(prev => ({ ...prev, password: e.target.value }))}
                         required
+                        className="text-right pl-10"
                       />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute left-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
                     </div>
                   </div>
+                  
+                  {/* Forgot Password Link */}
+                  <div className="text-center">
+                    <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="link" className="text-sm text-primary hover:underline p-0">
+                          שכחת סיסמה? לחץ כאן לאיפוס
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md" dir="rtl">
+                        <DialogHeader>
+                          <DialogTitle>איפוס סיסמה</DialogTitle>
+                          <DialogDescription>
+                            הזן את כתובת המייל שלך ונשלח לך קישור לאיפוס הסיסמה
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handlePasswordReset} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="reset-email">כתובת אימייל</Label>
+                            <Input
+                              id="reset-email"
+                              type="email"
+                              placeholder="name@example.com"
+                              value={resetEmail}
+                              onChange={(e) => setResetEmail(e.target.value)}
+                              required
+                              className="text-right"
+                            />
+                          </div>
+                          <Button 
+                            type="submit" 
+                            className="w-full"
+                            disabled={isResetting || resetCooldown > 0}
+                          >
+                            {isResetting ? (
+                              <>
+                                <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                                שולח...
+                              </>
+                            ) : resetCooldown > 0 ? (
+                              `המתן ${resetCooldown} שניות`
+                            ) : (
+                              'שלח קישור לאיפוס הסיסמה'
+                            )}
+                          </Button>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'התחבר'}
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-primary hover:bg-primary-600 text-white font-medium py-2.5"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                        מתחבר...
+                      </>
+                    ) : (
+                      'התחבר'
+                    )}
                   </Button>
                 </form>
               </TabsContent>
-
-              <TabsContent value="signup" className="space-y-4">
+              
+              {/* Sign Up Tab */}
+              <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">שם פרטי</Label>
-                      <div className="relative">
-                        <User className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
-                        <Input
-                          id="firstName"
-                          type="text"
-                          value={formData.firstName}
-                          onChange={(e) => handleInputChange('firstName', e.target.value)}
-                          className="pr-10"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">שם משפחה</Label>
+                      <Label htmlFor="signup-firstname">שם פרטי</Label>
                       <Input
-                        id="lastName"
+                        id="signup-firstname"
                         type="text"
-                        value={formData.lastName}
-                        onChange={(e) => handleInputChange('lastName', e.target.value)}
+                        placeholder="שם פרטי"
+                        value={signUpData.firstName}
+                        onChange={(e) => setSignUpData(prev => ({ ...prev, firstName: e.target.value }))}
                         required
+                        className="text-right"
                       />
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">אימייל</Label>
-                    <div className="relative">
-                      <Mail className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-lastname">שם משפחה</Label>
                       <Input
-                        id="signup-email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        className="pr-10"
+                        id="signup-lastname"
+                        type="text"
+                        placeholder="שם משפחה"
+                        value={signUpData.lastName}
+                        onChange={(e) => setSignUpData(prev => ({ ...prev, lastName: e.target.value }))}
                         required
+                        className="text-right"
                       />
                     </div>
                   </div>
-
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">כתובת אימייל</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="name@example.com"
+                      value={signUpData.email}
+                      onChange={(e) => setSignUpData(prev => ({ ...prev, email: e.target.value }))}
+                      required
+                      className="text-right"
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">סיסמה</Label>
                     <div className="relative">
-                      <Lock className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
                         id="signup-password"
-                        type="password"
-                        value={formData.password}
-                        onChange={(e) => handleInputChange('password', e.target.value)}
-                        className="pr-10"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="בחר סיסמה (לפחות 6 תווים)"
+                        value={signUpData.password}
+                        onChange={(e) => setSignUpData(prev => ({ ...prev, password: e.target.value }))}
                         required
+                        className="text-right pl-10"
                       />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute left-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
                     </div>
                   </div>
-
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'הירשם'}
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-confirm-password">אישור סיסמה</Label>
+                    <div className="relative">
+                      <Input
+                        id="signup-confirm-password"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="הכנס שוב את הסיסמה"
+                        value={signUpData.confirmPassword}
+                        onChange={(e) => setSignUpData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                        required
+                        className="text-right pl-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute left-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-accent hover:bg-accent-600 text-white font-medium py-2.5"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                        נרשם...
+                      </>
+                    ) : (
+                      'הירשם'
+                    )}
                   </Button>
                 </form>
               </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Footer */}
+        <div className="text-center mt-8 text-sm text-gray-500">
+          <p>פלטפורמת Mlaiko - ניהול מלאי מתקדם</p>
+        </div>
       </div>
     </div>
   );

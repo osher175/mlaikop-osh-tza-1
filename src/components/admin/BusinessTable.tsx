@@ -14,34 +14,21 @@ export const BusinessTable: React.FC = () => {
   const { data: businesses, isLoading } = useQuery({
     queryKey: ['admin-businesses', searchTerm],
     queryFn: async () => {
-      let businessQuery = supabase
+      let query = supabase
         .from('businesses')
-        .select('*')
+        .select(`
+          *,
+          profiles!businesses_owner_id_fkey(first_name, last_name)
+        `)
         .order('created_at', { ascending: false });
 
       if (searchTerm) {
-        businessQuery = businessQuery.or(`name.ilike.%${searchTerm}%,industry.ilike.%${searchTerm}%,official_email.ilike.%${searchTerm}%`);
+        query = query.or(`name.ilike.%${searchTerm}%,industry.ilike.%${searchTerm}%,official_email.ilike.%${searchTerm}%`);
       }
 
-      const { data: businessData, error: businessError } = await businessQuery;
-      if (businessError) throw businessError;
-
-      // Manually fetch owner profiles
-      const businessesWithOwners = [];
-      for (const business of businessData || []) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('first_name, last_name')
-          .eq('id', business.owner_id)
-          .single();
-
-        businessesWithOwners.push({
-          ...business,
-          profiles: profileError ? null : profile
-        });
-      }
-
-      return businessesWithOwners;
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
     },
   });
 
