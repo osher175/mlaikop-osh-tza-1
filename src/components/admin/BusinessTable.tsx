@@ -38,7 +38,7 @@ export const BusinessTable: React.FC = () => {
           employee_count,
           avg_monthly_revenue,
           created_at,
-          owner_profile:profiles!owner_id(first_name, last_name)
+          profiles!businesses_owner_id_fkey(first_name, last_name)
         `)
         .order('created_at', { ascending: false });
 
@@ -48,7 +48,12 @@ export const BusinessTable: React.FC = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as BusinessWithProfile[];
+      
+      // Transform the data to match our interface
+      return data?.map(business => ({
+        ...business,
+        owner_profile: business.profiles
+      })) as BusinessWithProfile[];
     },
   });
 
