@@ -59,7 +59,8 @@ export const useUserRole = () => {
       'pro_starter_user': 2, // User - Product list only  
       'smart_master_user': 3, // Super User - Full business control
       'elite_pilot_user': 4,  // Super User - Full business control
-      'admin': 5,             // Admin - Platform settings only
+      'OWNER': 5,             // Business Owner - Full business control
+      'admin': 6,             // Admin - Platform settings only
     };
 
     const hasPermission = roleHierarchy[userRole] >= roleHierarchy[requiredRole];
@@ -73,6 +74,7 @@ export const useUserRole = () => {
       'pro_starter_user': 'משתמש',
       'smart_master_user': 'משתמש על',
       'elite_pilot_user': 'משתמש על',
+      'OWNER': 'בעל עסק',
       'admin': 'מנהל מערכת',
     };
 
@@ -93,6 +95,7 @@ export const useUserRole = () => {
           canManageInventory: false,      // No inventory management
         };
       
+      case 'OWNER':
       case 'smart_master_user':
       case 'elite_pilot_user':
         return {
