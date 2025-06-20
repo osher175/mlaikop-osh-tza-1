@@ -786,6 +786,17 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: boolean
       }
+      get_product_autocomplete: {
+        Args: {
+          search_term: string
+          business_uuid?: string
+          limit_count?: number
+        }
+        Returns: {
+          suggestion: string
+          product_count: number
+        }[]
+      }
       get_user_role: {
         Args: { user_uuid?: string }
         Returns: Database["public"]["Enums"]["user_role"]
@@ -807,6 +818,26 @@ export type Database = {
           user_uuid?: string
         }
         Returns: boolean
+      }
+      search_products: {
+        Args: {
+          search_term?: string
+          business_uuid?: string
+          limit_count?: number
+        }
+        Returns: {
+          id: string
+          name: string
+          barcode: string
+          quantity: number
+          location: string
+          expiration_date: string
+          price: number
+          cost: number
+          category_name: string
+          supplier_name: string
+          search_rank: number
+        }[]
       }
       search_users_for_admin: {
         Args: { search_pattern: string }
