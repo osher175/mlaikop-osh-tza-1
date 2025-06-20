@@ -12,30 +12,42 @@ export type Database = {
       businesses: {
         Row: {
           address: string | null
+          avg_monthly_revenue: number | null
           business_type: string | null
           created_at: string | null
+          employee_count: number | null
           id: string
+          industry: string | null
           name: string
+          official_email: string | null
           owner_id: string
           phone: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          avg_monthly_revenue?: number | null
           business_type?: string | null
           created_at?: string | null
+          employee_count?: number | null
           id?: string
+          industry?: string | null
           name: string
+          official_email?: string | null
           owner_id: string
           phone?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          avg_monthly_revenue?: number | null
           business_type?: string | null
           created_at?: string | null
+          employee_count?: number | null
           id?: string
+          industry?: string | null
           name?: string
+          official_email?: string | null
           owner_id?: string
           phone?: string | null
           updated_at?: string | null
@@ -385,7 +397,9 @@ export type Database = {
           id: string
           is_active: boolean
           last_name: string | null
+          owned_business_id: string | null
           role: string | null
+          selected_plan_id: string | null
           updated_at: string
         }
         Insert: {
@@ -394,7 +408,9 @@ export type Database = {
           id: string
           is_active?: boolean
           last_name?: string | null
+          owned_business_id?: string | null
           role?: string | null
+          selected_plan_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -403,10 +419,122 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_name?: string | null
+          owned_business_id?: string | null
           role?: string | null
+          selected_plan_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_owned_business_id_fkey"
+            columns: ["owned_business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_selected_plan_id_fkey"
+            columns: ["selected_plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans_new"
+            referencedColumns: ["plan"]
+          },
+        ]
+      }
+      recent_activity: {
+        Row: {
+          action_type: string
+          business_id: string
+          category_id: string | null
+          created_at: string
+          description: string | null
+          icon_name: string | null
+          id: string
+          is_critical: boolean
+          is_system_generated: boolean
+          metadata: Json | null
+          priority_level: string
+          product_id: string | null
+          quantity_changed: number | null
+          status_color: string
+          supplier_id: string | null
+          timestamp: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          business_id: string
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          is_critical?: boolean
+          is_system_generated?: boolean
+          metadata?: Json | null
+          priority_level?: string
+          product_id?: string | null
+          quantity_changed?: number | null
+          status_color?: string
+          supplier_id?: string | null
+          timestamp?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          business_id?: string
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          is_critical?: boolean
+          is_system_generated?: boolean
+          metadata?: Json | null
+          priority_level?: string
+          product_id?: string | null
+          quantity_changed?: number | null
+          status_color?: string
+          supplier_id?: string | null
+          timestamp?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recent_activity_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recent_activity_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recent_activity_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recent_activity_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sales_cycles: {
         Row: {
@@ -691,6 +819,17 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: boolean
       }
+      get_product_autocomplete: {
+        Args: {
+          search_term: string
+          business_uuid?: string
+          limit_count?: number
+        }
+        Returns: {
+          suggestion: string
+          product_count: number
+        }[]
+      }
       get_user_role: {
         Args: { user_uuid?: string }
         Returns: Database["public"]["Enums"]["user_role"]
@@ -712,6 +851,34 @@ export type Database = {
           user_uuid?: string
         }
         Returns: boolean
+      }
+      is_business_name_available: {
+        Args: { business_name: string }
+        Returns: boolean
+      }
+      is_first_user_in_business: {
+        Args: { business_uuid: string }
+        Returns: boolean
+      }
+      search_products: {
+        Args: {
+          search_term?: string
+          business_uuid?: string
+          limit_count?: number
+        }
+        Returns: {
+          id: string
+          name: string
+          barcode: string
+          quantity: number
+          location: string
+          expiration_date: string
+          price: number
+          cost: number
+          category_name: string
+          supplier_name: string
+          search_rank: number
+        }[]
       }
       search_users_for_admin: {
         Args: { search_pattern: string }
@@ -737,6 +904,7 @@ export type Database = {
         | "pro_starter_user"
         | "smart_master_user"
         | "elite_pilot_user"
+        | "OWNER"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -859,6 +1027,7 @@ export const Constants = {
         "pro_starter_user",
         "smart_master_user",
         "elite_pilot_user",
+        "OWNER",
       ],
     },
   },
