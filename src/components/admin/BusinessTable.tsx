@@ -8,6 +8,20 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Search, Building, Users, Mail, TrendingUp } from 'lucide-react';
 
+interface BusinessWithProfile {
+  id: string;
+  name: string;
+  industry: string | null;
+  official_email: string | null;
+  employee_count: number | null;
+  avg_monthly_revenue: number | null;
+  created_at: string | null;
+  owner_profile: {
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
+}
+
 export const BusinessTable: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -17,8 +31,14 @@ export const BusinessTable: React.FC = () => {
       let query = supabase
         .from('businesses')
         .select(`
-          *,
-          profiles!businesses_owner_id_fkey(first_name, last_name)
+          id,
+          name,
+          industry,
+          official_email,
+          employee_count,
+          avg_monthly_revenue,
+          created_at,
+          owner_profile:profiles!owner_id(first_name, last_name)
         `)
         .order('created_at', { ascending: false });
 
@@ -28,7 +48,7 @@ export const BusinessTable: React.FC = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data as BusinessWithProfile[];
     },
   });
 
@@ -87,7 +107,7 @@ export const BusinessTable: React.FC = () => {
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="text-sm">
-                        {business.profiles?.first_name} {business.profiles?.last_name}
+                        {business.owner_profile?.first_name} {business.owner_profile?.last_name}
                       </span>
                     </div>
                   </TableCell>
