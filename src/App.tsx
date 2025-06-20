@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Index } from "./pages/Index";
+import Index from "./pages/Index";
 import { Auth } from "./pages/Auth";
 import { Dashboard } from "./pages/Dashboard";
 import { Inventory } from "./pages/Inventory";
@@ -15,10 +15,10 @@ import { UserProfile } from "./pages/UserProfile";
 import { AdminPanel } from "./pages/AdminPanel";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { AdminSettings } from "./pages/AdminSettings";
-import { NotFound } from "./pages/NotFound";
+import NotFound from "./pages/NotFound";
 import { ResetPassword } from "./pages/ResetPassword";
 import { SetNewPassword } from "./pages/SetNewPassword";
-import { NotificationSettings } from "./pages/NotificationSettings";
+import { NotificationSettingsPage } from "./pages/NotificationSettings";
 import { UserManagement } from "./pages/UserManagement";
 import { Subscriptions } from "./pages/Subscriptions";
 import { BusinessSetup } from "./pages/BusinessSetup";
@@ -84,7 +84,7 @@ const App = () => (
           } />
           <Route path="/notifications" element={
             <ProtectedRoute>
-              <NotificationSettings />
+              <NotificationSettingsPage />
             </ProtectedRoute>
           } />
           <Route path="/user-management" element={
