@@ -11,10 +11,10 @@ type BusinessUserWithProfile = {
   role: string;
   status: string;
   joined_at: string;
-  profiles?: {
-    first_name?: string;
-    last_name?: string;
-  };
+  profiles: {
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
 };
 
 export const useBusinessMembers = () => {
@@ -43,8 +43,16 @@ export const useBusinessMembers = () => {
       const { data: businessUsers, error } = await supabase
         .from('business_users')
         .select(`
-          *,
-          profiles(first_name, last_name)
+          id,
+          user_id,
+          business_id,
+          role,
+          status,
+          joined_at,
+          profiles!inner(
+            first_name,
+            last_name
+          )
         `)
         .eq('business_id', business.id)
         .eq('status', 'pending');
@@ -54,9 +62,22 @@ export const useBusinessMembers = () => {
         throw error;
       }
       
-      // Filter out admin user based on user_id if we know it
-      // Since we can't directly query by email, we'll handle this in the component
-      return businessUsers || [];
+      // Filter out admin user by checking user email from auth
+      const filteredUsers = [];
+      
+      for (const businessUser of businessUsers || []) {
+        // Get the email for this user_id from auth.users
+        const { data: authUser } = await supabase.auth.admin.getUserById(businessUser.user_id);
+        
+        // Skip admin user
+        if (authUser.user?.email === 'oshritzafriri@gmail.com') {
+          continue;
+        }
+        
+        filteredUsers.push(businessUser);
+      }
+      
+      return filteredUsers as BusinessUserWithProfile[];
     },
     enabled: !!user?.id,
   });
