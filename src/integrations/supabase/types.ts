@@ -9,6 +9,41 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      business_users: {
+        Row: {
+          business_id: string
+          id: string
+          joined_at: string | null
+          role: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          id?: string
+          joined_at?: string | null
+          role: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          id?: string
+          joined_at?: string | null
+          role?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_users_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           address: string | null
@@ -882,6 +917,15 @@ export type Database = {
           product_count: number
         }[]
       }
+      get_user_business_context: {
+        Args: { user_uuid?: string }
+        Returns: {
+          business_id: string
+          business_name: string
+          user_role: string
+          is_owner: boolean
+        }[]
+      }
       get_user_role: {
         Args: { user_uuid?: string }
         Returns: Database["public"]["Enums"]["user_role"]
@@ -945,6 +989,10 @@ export type Database = {
       }
       toggle_user_active_status: {
         Args: { target_user_id: string }
+        Returns: boolean
+      }
+      user_has_business_access: {
+        Args: { user_uuid?: string }
         Returns: boolean
       }
     }

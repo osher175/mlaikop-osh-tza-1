@@ -16,7 +16,11 @@ import { UserProfile } from "./pages/UserProfile";
 import { AdminPanel } from "./pages/AdminPanel";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { AdminSettings } from "./pages/AdminSettings";
+import { OnboardingDecision } from "./pages/OnboardingDecision";
+import { CreateBusiness } from "./pages/CreateBusiness";
+import { JoinBusiness } from "./pages/JoinBusiness";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { OnboardingGuard } from "./components/OnboardingGuard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,11 +33,41 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
+          
+          {/* Onboarding Routes */}
+          <Route 
+            path="/onboarding" 
+            element={
+              <ProtectedRoute>
+                <OnboardingDecision />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/create-business" 
+            element={
+              <ProtectedRoute>
+                <CreateBusiness />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/join-business" 
+            element={
+              <ProtectedRoute>
+                <JoinBusiness />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Protected Routes with Onboarding Guard */}
           <Route 
             path="/" 
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <OnboardingGuard>
+                  <Dashboard />
+                </OnboardingGuard>
               </ProtectedRoute>
             } 
           />
@@ -41,7 +75,9 @@ const App = () => (
             path="/dashboard" 
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <OnboardingGuard>
+                  <Dashboard />
+                </OnboardingGuard>
               </ProtectedRoute>
             } 
           />
@@ -49,7 +85,9 @@ const App = () => (
             path="/inventory" 
             element={
               <ProtectedRoute>
-                <Inventory />
+                <OnboardingGuard>
+                  <Inventory />
+                </OnboardingGuard>
               </ProtectedRoute>
             } 
           />
@@ -57,7 +95,9 @@ const App = () => (
             path="/add-product" 
             element={
               <ProtectedRoute>
-                <AddProduct />
+                <OnboardingGuard>
+                  <AddProduct />
+                </OnboardingGuard>
               </ProtectedRoute>
             } 
           />
@@ -65,7 +105,9 @@ const App = () => (
             path="/reports" 
             element={
               <ProtectedRoute>
-                <Reports />
+                <OnboardingGuard>
+                  <Reports />
+                </OnboardingGuard>
               </ProtectedRoute>
             } 
           />
@@ -73,7 +115,9 @@ const App = () => (
             path="/users" 
             element={
               <ProtectedRoute>
-                <UserManagement />
+                <OnboardingGuard>
+                  <UserManagement />
+                </OnboardingGuard>
               </ProtectedRoute>
             } 
           />
@@ -81,7 +125,9 @@ const App = () => (
             path="/settings" 
             element={
               <ProtectedRoute>
-                <BusinessSettings />
+                <OnboardingGuard>
+                  <BusinessSettings />
+                </OnboardingGuard>
               </ProtectedRoute>
             } 
           />
@@ -89,7 +135,9 @@ const App = () => (
             path="/profile" 
             element={
               <ProtectedRoute>
-                <UserProfile />
+                <OnboardingGuard>
+                  <UserProfile />
+                </OnboardingGuard>
               </ProtectedRoute>
             } 
           />
@@ -121,7 +169,9 @@ const App = () => (
             path="/subscriptions" 
             element={
               <ProtectedRoute>
-                <Subscriptions />
+                <OnboardingGuard>
+                  <Subscriptions />
+                </OnboardingGuard>
               </ProtectedRoute>
             } 
           />

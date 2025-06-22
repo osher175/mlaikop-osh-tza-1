@@ -12,7 +12,7 @@ import { EditProductDialog } from '@/components/inventory/EditProductDialog';
 import { DeleteProductDialog } from '@/components/inventory/DeleteProductDialog';
 import { ExpirationAlertsPanel } from '@/components/inventory/ExpirationAlertsPanel';
 import { useProducts } from '@/hooks/useProducts';
-import { useBusiness } from '@/hooks/useBusiness';
+import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useNavigate } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -25,8 +25,8 @@ export const Inventory: React.FC = () => {
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const navigate = useNavigate();
   
+  const { businessContext, isLoading: businessLoading } = useBusinessAccess();
   const { products, isLoading: productsLoading, refetch } = useProducts();
-  const { business, isLoading: businessLoading } = useBusiness();
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,24 +72,20 @@ export const Inventory: React.FC = () => {
     );
   }
 
-  if (!business) {
+  if (!businessContext) {
     return (
       <MainLayout>
         <div className="text-center py-12" dir="rtl">
           <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            עדיין לא נוצר עסק
+            לא נמצא עסק מקושר
           </h2>
           <p className="text-gray-600 mb-6">
-            כדי להתחיל לנהל מלאי, תחילה צריך ליצור עסק
+            אנא וודא שהצטרפת לעסק או יצרת עסק חדש
           </p>
-          <Button onClick={() => setShowCreateBusiness(true)}>
-            צור עסק חדש
+          <Button onClick={() => navigate('/onboarding')}>
+            חזור להגדרת העסק
           </Button>
-          <CreateBusinessDialog 
-            open={showCreateBusiness} 
-            onClose={() => setShowCreateBusiness(false)} 
-          />
         </div>
       </MainLayout>
     );
@@ -102,7 +98,10 @@ export const Inventory: React.FC = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">ניהול מלאי</h1>
-            <p className="text-gray-600">נהל את המוצרים והמלאי של {business.name}</p>
+            <p className="text-gray-600">
+              נהל את המוצרים והמלאי של {businessContext.business_name}
+              {businessContext.is_owner ? ' (בעלים)' : ` (${businessContext.user_role})`}
+            </p>
           </div>
           <Button 
             className="bg-primary hover:bg-primary-600"
