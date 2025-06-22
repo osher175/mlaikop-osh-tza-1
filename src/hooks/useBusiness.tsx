@@ -19,8 +19,6 @@ export const useBusiness = () => {
     queryFn: async () => {
       if (!user?.id) return null;
       
-      console.log('Fetching business for user:', user.id);
-      
       const { data, error } = await supabase
         .from('businesses')
         .select('*')
@@ -32,7 +30,6 @@ export const useBusiness = () => {
         throw error;
       }
       
-      console.log('Business fetch result:', data);
       return data;
     },
     enabled: !!user?.id,
@@ -41,11 +38,8 @@ export const useBusiness = () => {
   const createBusiness = useMutation({
     mutationFn: async (businessData: Omit<BusinessInsert, 'owner_id'>) => {
       if (!user?.id) {
-        console.error('No user ID available for business creation');
         throw new Error('User not authenticated');
       }
-      
-      console.log('Creating business with data:', { ...businessData, owner_id: user.id });
       
       const { data, error } = await supabase
         .from('businesses')
@@ -58,20 +52,13 @@ export const useBusiness = () => {
       
       if (error) {
         console.error('Error creating business:', error);
-        console.error('Error code:', error.code);
-        console.error('Error message:', error.message);
-        console.error('Error details:', error.details);
         
-        if (error.message?.includes('infinite recursion')) {
-          throw new Error('בעיה בהגדרות המערכת - אנא פנה למנהל המערכת');
-        }
-        if (error.message?.includes('policy')) {
-          throw new Error('אין הרשאה ליצור עסק');
+        if (error.message.includes('unique') || error.message.includes('duplicate')) {
+          throw new Error('שם העסק תפוס. בחר שם אחר.');
         }
         throw error;
       }
       
-      console.log('Business created successfully:', data);
       return data;
     },
     onSuccess: () => {
@@ -97,8 +84,6 @@ export const useBusiness = () => {
       if (!user?.id) throw new Error('User not authenticated');
       if (!business?.id) throw new Error('No business found');
       
-      console.log('Updating business:', business.id, 'with data:', businessData);
-      
       const { data, error } = await supabase
         .from('businesses')
         .update(businessData)
@@ -109,9 +94,6 @@ export const useBusiness = () => {
       
       if (error) {
         console.error('Error updating business:', error);
-        if (error.message?.includes('policy')) {
-          throw new Error('אין לך הרשאה לעדכן את הגדרות העסק. נדרש תפקיד OWNER.');
-        }
         throw error;
       }
       return data;

@@ -33,7 +33,6 @@ export const CreateBusiness: React.FC = () => {
 
   const onSubmit = async (data: BusinessFormData) => {
     if (!user?.id) {
-      console.error('No user available for business creation');
       toast({
         title: "שגיאה",
         description: "משתמש לא מחובר",
@@ -42,16 +41,10 @@ export const CreateBusiness: React.FC = () => {
       return;
     }
 
-    console.log('Starting business creation process');
-    console.log('User ID:', user.id);
-    console.log('Form data:', data);
-
     setIsLoading(true);
 
     try {
-      // Create business with detailed logging
-      console.log('Attempting to insert business into database...');
-      
+      // Create business
       const businessInsertData = {
         name: data.name,
         business_type: data.business_type,
@@ -62,8 +55,6 @@ export const CreateBusiness: React.FC = () => {
         official_email: data.official_email,
         owner_id: user.id,
       };
-      
-      console.log('Business insert data:', businessInsertData);
 
       const { data: business, error: businessError } = await supabase
         .from('businesses')
@@ -73,19 +64,6 @@ export const CreateBusiness: React.FC = () => {
 
       if (businessError) {
         console.error('Business creation error:', businessError);
-        console.error('Error code:', businessError.code);
-        console.error('Error message:', businessError.message);
-        console.error('Error details:', businessError.details);
-        console.error('Error hint:', businessError.hint);
-        
-        if (businessError.message?.includes('infinite recursion')) {
-          toast({
-            title: "שגיאה במערכת",
-            description: "זוהתה בעיה בהגדרות המערכת. אנא פנה למנהל המערכת.",
-            variant: "destructive",
-          });
-          return;
-        }
         
         if (businessError.message.includes('unique') || businessError.message.includes('duplicate')) {
           toast({
@@ -98,10 +76,7 @@ export const CreateBusiness: React.FC = () => {
         throw businessError;
       }
 
-      console.log('Business created successfully:', business);
-
       // Create business_users entry for owner
-      console.log('Creating business_users entry...');
       const { error: linkError } = await supabase
         .from('business_users')
         .insert({
@@ -114,8 +89,6 @@ export const CreateBusiness: React.FC = () => {
       if (linkError) {
         console.error('Error linking user to business:', linkError);
         // Continue anyway since business was created
-      } else {
-        console.log('Business_users entry created successfully');
       }
 
       toast({
