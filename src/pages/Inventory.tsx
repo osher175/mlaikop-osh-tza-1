@@ -214,6 +214,7 @@ export const Inventory: React.FC = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
+                      <th className="text-right p-4">תמונה</th>
                       <th className="text-right p-4">שם המוצר</th>
                       <th className="text-right p-4">ברקוד</th>
                       <th className="text-right p-4">כמות</th>
@@ -226,6 +227,19 @@ export const Inventory: React.FC = () => {
                   <tbody>
                     {filteredProducts.map((product) => (
                       <tr key={product.id} className="border-b hover:bg-gray-50">
+                        <td className="p-4">
+                          {product.image ? (
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-12 h-12 object-cover rounded-lg"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                              <Package className="w-6 h-6 text-gray-400" />
+                            </div>
+                          )}
+                        </td>
                         <td className="p-4 font-medium">{product.name}</td>
                         <td className="p-4 text-gray-600">{product.barcode || '-'}</td>
                         <td className="p-4">{product.quantity}</td>

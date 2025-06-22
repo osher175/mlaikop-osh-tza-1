@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Package, Save, ArrowRight } from 'lucide-react';
+import { Package, Save } from 'lucide-react';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useSuppliers } from '@/hooks/useSuppliers';
@@ -77,6 +77,14 @@ export const AddProduct: React.FC = () => {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleImageUpload = (imageUrl: string) => {
+    handleInputChange('image', imageUrl);
+  };
+
+  const handleImageRemove = () => {
+    handleInputChange('image', '');
   };
 
   if (!business) {
@@ -189,12 +197,11 @@ export const AddProduct: React.FC = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="image">תמונת מוצר (URL)</Label>
-                  <Input
-                    id="image"
-                    value={formData.image}
-                    onChange={(e) => handleInputChange('image', e.target.value)}
-                    placeholder="הכנס קישור לתמונה..."
+                  <Label>תמונת מוצר</Label>
+                  <ImageUpload
+                    currentImageUrl={formData.image}
+                    onImageUpload={handleImageUpload}
+                    onImageRemove={handleImageRemove}
                   />
                 </div>
               </CardContent>
