@@ -6,9 +6,13 @@ import { QuickActions } from '@/components/dashboard/QuickActions';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { MonthlyProfitChart } from '@/components/dashboard/MonthlyProfitChart';
 import { NotificationPanel } from '@/components/dashboard/NotificationPanel';
+import { PendingApprovalsPanel } from '@/components/dashboard/PendingApprovalsPanel';
 import { AdminNavigationHelper } from '@/components/AdminNavigationHelper';
+import { useUserRole } from '@/hooks/useUserRole';
 
 export const Dashboard: React.FC = () => {
+  const { permissions } = useUserRole();
+
   return (
     <MainLayout>
       <div className="space-y-6" dir="rtl">
@@ -32,6 +36,10 @@ export const Dashboard: React.FC = () => {
           </div>
           <div className="space-y-6">
             <NotificationPanel />
+            {/* Show Pending Approvals Panel for Business Owners */}
+            {permissions.canManageUsers && !permissions.isPlatformAdmin && (
+              <PendingApprovalsPanel />
+            )}
             <QuickActions />
           </div>
         </div>
