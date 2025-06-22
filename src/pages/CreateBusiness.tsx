@@ -33,6 +33,7 @@ export const CreateBusiness: React.FC = () => {
 
   const onSubmit = async (data: BusinessFormData) => {
     if (!user?.id) {
+      console.error('No user available for business creation');
       toast({
         title: "שגיאה",
         description: "משתמש לא מחובר",
@@ -41,26 +42,51 @@ export const CreateBusiness: React.FC = () => {
       return;
     }
 
+    console.log('Starting business creation process');
+    console.log('User ID:', user.id);
+    console.log('Form data:', data);
+
     setIsLoading(true);
 
     try {
-      // Create business
+      // Create business with detailed logging
+      console.log('Attempting to insert business into database...');
+      
+      const businessInsertData = {
+        name: data.name,
+        business_type: data.business_type,
+        employee_count: data.employee_count,
+        avg_monthly_revenue: data.avg_monthly_revenue,
+        phone: data.phone,
+        address: data.address,
+        official_email: data.official_email,
+        owner_id: user.id,
+      };
+      
+      console.log('Business insert data:', businessInsertData);
+
       const { data: business, error: businessError } = await supabase
         .from('businesses')
-        .insert({
-          name: data.name,
-          business_type: data.business_type,
-          employee_count: data.employee_count,
-          avg_monthly_revenue: data.avg_monthly_revenue,
-          phone: data.phone,
-          address: data.address,
-          official_email: data.official_email,
-          owner_id: user.id,
-        })
+        .insert(businessInsertData)
         .select()
         .single();
 
       if (businessError) {
+        console.error('Business creation error:', businessError);
+        console.error('Error code:', businessError.code);
+        console.error('Error message:', businessError.message);
+        console.error('Error details:', businessError.details);
+        console.error('Error hint:', businessError.hint);
+        
+        if (businessError.message?.includes('infinite recursion')) {
+          toast({
+            title: "שגיאה במערכת",
+            description: "זוהתה בעיה בהגדרות המערכת. אנא פנה למנהל המערכת.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
         if (businessError.message.includes('unique') || businessError.message.includes('duplicate')) {
           toast({
             title: "שם העסק תפוס",
@@ -72,7 +98,10 @@ export const CreateBusiness: React.FC = () => {
         throw businessError;
       }
 
+      console.log('Business created successfully:', business);
+
       // Create business_users entry for owner
+      console.log('Creating business_users entry...');
       const { error: linkError } = await supabase
         .from('business_users')
         .insert({
@@ -85,6 +114,8 @@ export const CreateBusiness: React.FC = () => {
       if (linkError) {
         console.error('Error linking user to business:', linkError);
         // Continue anyway since business was created
+      } else {
+        console.log('Business_users entry created successfully');
       }
 
       toast({
@@ -96,7 +127,7 @@ export const CreateBusiness: React.FC = () => {
       navigate('/dashboard');
 
     } catch (error: any) {
-      console.error('Error creating business:', error);
+      console.error('Unexpected error creating business:', error);
       toast({
         title: "שגיאה ביצירת העסק",
         description: error.message || "אנא נסה שוב",
@@ -169,12 +200,12 @@ export const CreateBusiness: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="1">1</SelectItem>
-                    <SelectItem value="2-5">2-5</SelectItem>
-                    <SelectItem value="6-10">6-10</SelectItem>
-                    <SelectItem value="11-20">11-20</SelectItem>
-                    <SelectItem value="21-50">21-50</SelectItem>
-                    <SelectItem value="51-100">51-100</SelectItem>
-                    <SelectItem value="100+">100+</SelectItem>
+                    <SelectItem value="2">2-5</SelectItem>
+                    <SelectItem value="6">6-10</SelectItem>
+                    <SelectItem value="11">11-20</SelectItem>
+                    <SelectItem value="21">21-50</SelectItem>
+                    <SelectItem value="51">51-100</SelectItem>
+                    <SelectItem value="100">100+</SelectItem>
                   </SelectContent>
                 </Select>
                 {errors.employee_count && <p className="text-sm text-red-600">מספר עובדים חובה</p>}

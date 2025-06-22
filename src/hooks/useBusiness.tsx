@@ -19,6 +19,8 @@ export const useBusiness = () => {
     queryFn: async () => {
       if (!user?.id) return null;
       
+      console.log('Fetching business for user:', user.id);
+      
       const { data, error } = await supabase
         .from('businesses')
         .select('*')
@@ -30,6 +32,7 @@ export const useBusiness = () => {
         throw error;
       }
       
+      console.log('Business fetch result:', data);
       return data;
     },
     enabled: !!user?.id,
@@ -37,7 +40,12 @@ export const useBusiness = () => {
 
   const createBusiness = useMutation({
     mutationFn: async (businessData: Omit<BusinessInsert, 'owner_id'>) => {
-      if (!user?.id) throw new Error('User not authenticated');
+      if (!user?.id) {
+        console.error('No user ID available for business creation');
+        throw new Error('User not authenticated');
+      }
+      
+      console.log('Creating business with data:', { ...businessData, owner_id: user.id });
       
       const { data, error } = await supabase
         .from('businesses')
@@ -50,27 +58,37 @@ export const useBusiness = () => {
       
       if (error) {
         console.error('Error creating business:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error details:', error.details);
+        
+        if (error.message?.includes('infinite recursion')) {
+          throw new Error('בעיה בהגדרות המערכת - אנא פנה למנהל המערכת');
+        }
         if (error.message?.includes('policy')) {
-          throw new Error('נדרש תפקיד OWNER כדי ליצור עסק');
+          throw new Error('אין הרשאה ליצור עסק');
         }
         throw error;
       }
+      
+      console.log('Business created successfully:', data);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['business'] });
+      queryClient.invalidateQueries({ queryKey: ['business-access'] });
       toast({
         title: "עסק נוצר בהצלחה",
         description: "העסק שלך נוצר במערכת",
       });
     },
     onError: (error: any) => {
+      console.error('Business creation mutation error:', error);
       toast({
         title: "שגיאה",
         description: error.message || "שגיאה ביצירת העסק",
         variant: "destructive",
       });
-      console.error('Error creating business:', error);
     },
   });
 
@@ -78,6 +96,8 @@ export const useBusiness = () => {
     mutationFn: async (businessData: BusinessUpdate) => {
       if (!user?.id) throw new Error('User not authenticated');
       if (!business?.id) throw new Error('No business found');
+      
+      console.log('Updating business:', business.id, 'with data:', businessData);
       
       const { data, error } = await supabase
         .from('businesses')
