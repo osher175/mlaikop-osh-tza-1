@@ -9,41 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      business_users: {
-        Row: {
-          business_id: string
-          id: string
-          joined_at: string | null
-          role: string
-          status: string
-          user_id: string
-        }
-        Insert: {
-          business_id: string
-          id?: string
-          joined_at?: string | null
-          role: string
-          status: string
-          user_id: string
-        }
-        Update: {
-          business_id?: string
-          id?: string
-          joined_at?: string | null
-          role?: string
-          status?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "business_users_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       businesses: {
         Row: {
           address: string | null
