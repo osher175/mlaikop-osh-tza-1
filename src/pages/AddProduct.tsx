@@ -11,13 +11,13 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useSuppliers } from '@/hooks/useSuppliers';
-import { useBusiness } from '@/hooks/useBusiness';
+import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useAuth } from '@/hooks/useAuth';
 import { CreateBusinessDialog } from '@/components/CreateBusinessDialog';
 
 export const AddProduct: React.FC = () => {
   const { user } = useAuth();
-  const { business } = useBusiness();
+  const { businessContext } = useBusinessAccess();
   const { categories } = useCategories();
   const { suppliers } = useSuppliers();
   const { createProduct } = useProducts();
@@ -39,7 +39,7 @@ export const AddProduct: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!business?.id || !user?.id) {
+    if (!businessContext?.business_id || !user?.id) {
       console.error('Business ID or User ID not found');
       return;
     }
@@ -47,8 +47,6 @@ export const AddProduct: React.FC = () => {
     try {
       await createProduct.mutateAsync({
         ...formData,
-        business_id: business.id,
-        created_by: user.id,
         category_id: formData.category_id || null,
         supplier_id: formData.supplier_id || null,
         expiration_date: formData.expiration_date || null,
@@ -87,7 +85,7 @@ export const AddProduct: React.FC = () => {
     handleInputChange('image', '');
   };
 
-  if (!business) {
+  if (!businessContext) {
     return (
       <MainLayout>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir="rtl">
