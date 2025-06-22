@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,6 +30,30 @@ interface CreateBusinessFormProps {
   onBack: () => void;
 }
 
+// Helper function to convert revenue range to numeric value
+const getRevenueValue = (range: string): number => {
+  switch (range) {
+    case '0-10000': return 5000;
+    case '10000-50000': return 30000;
+    case '50000-100000': return 75000;
+    case '100000-500000': return 300000;
+    case '500000+': return 750000;
+    default: return 0;
+  }
+};
+
+// Helper function to convert employee count to numeric value
+const getEmployeeValue = (range: string): number => {
+  switch (range) {
+    case '1': return 1;
+    case '2-5': return 3;
+    case '6-10': return 8;
+    case '11-50': return 25;
+    case '50+': return 75;
+    default: return 1;
+  }
+};
+
 export const CreateBusinessForm: React.FC<CreateBusinessFormProps> = ({ onBack }) => {
   const { user } = useAuth();
   const { createBusiness } = useBusiness();
@@ -50,7 +73,19 @@ export const CreateBusinessForm: React.FC<CreateBusinessFormProps> = ({ onBack }
   const onSubmit = async (data: BusinessFormData) => {
     if (!user?.id) return;
 
-    createBusiness.mutate(data, {
+    // Transform the form data to match database expectations
+    const businessData = {
+      name: data.name,
+      business_type: data.business_type,
+      industry: data.industry,
+      address: data.address,
+      phone: data.phone,
+      official_email: data.official_email,
+      avg_monthly_revenue: getRevenueValue(data.avg_monthly_revenue),
+      employee_count: getEmployeeValue(data.employee_count),
+    };
+
+    createBusiness.mutate(businessData, {
       onSuccess: async (business) => {
         // Add user as business owner
         createBusinessUser.mutate(business.id, {
