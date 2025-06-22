@@ -1,13 +1,50 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { Dashboard } from './Dashboard';
+import { Onboarding } from './Onboarding';
+import { Loader2 } from 'lucide-react';
 
 const Index = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+  const { user, loading: authLoading } = useAuth();
+  const { needsOnboarding, isLoading: onboardingLoading } = useOnboardingStatus();
+
+  if (authLoading || onboardingLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-gray-600">טוען...</p>
+        </div>
       </div>
-    </div>
+    );
+  }
+
+  if (!user) {
+    window.location.href = '/auth';
+    return null;
+  }
+
+  // Admin user skip onboarding
+  if (user.email === 'oshritzafriri@gmail.com') {
+    return (
+      <ProtectedRoute>
+        <Dashboard />
+      </ProtectedRoute>
+    );
+  }
+
+  // Regular users - check onboarding status
+  if (needsOnboarding) {
+    return <Onboarding />;
+  }
+
+  return (
+    <ProtectedRoute>
+      <Dashboard />
+    </ProtectedRoute>
   );
 };
 
