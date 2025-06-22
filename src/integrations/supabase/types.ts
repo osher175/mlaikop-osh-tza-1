@@ -22,6 +22,7 @@ export type Database = {
           official_email: string | null
           owner_id: string
           phone: string | null
+          plan_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -36,6 +37,7 @@ export type Database = {
           official_email?: string | null
           owner_id: string
           phone?: string | null
+          plan_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -50,12 +52,22 @@ export type Database = {
           official_email?: string | null
           owner_id?: string
           phone?: string | null
+          plan_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "businesses_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans_new"
+            referencedColumns: ["plan"]
+          },
+        ]
       }
       categories: {
         Row: {
+          business_id: string | null
           created_at: string | null
           description: string | null
           id: string
@@ -63,6 +75,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          business_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -70,13 +83,22 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          business_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           name?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categories_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       emails: {
         Row: {
@@ -395,52 +417,42 @@ export type Database = {
       }
       profiles: {
         Row: {
+          business_id: string | null
           created_at: string
           first_name: string | null
           id: string
           is_active: boolean
           last_name: string | null
-          owned_business_id: string | null
           role: string | null
-          selected_plan_id: string | null
           updated_at: string
         }
         Insert: {
+          business_id?: string | null
           created_at?: string
           first_name?: string | null
           id: string
           is_active?: boolean
           last_name?: string | null
-          owned_business_id?: string | null
           role?: string | null
-          selected_plan_id?: string | null
           updated_at?: string
         }
         Update: {
+          business_id?: string | null
           created_at?: string
           first_name?: string | null
           id?: string
           is_active?: boolean
           last_name?: string | null
-          owned_business_id?: string | null
           role?: string | null
-          selected_plan_id?: string | null
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "profiles_owned_business_id_fkey"
-            columns: ["owned_business_id"]
+            columns: ["business_id"]
             isOneToOne: true
             referencedRelation: "businesses"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profiles_selected_plan_id_fkey"
-            columns: ["selected_plan_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_plans_new"
-            referencedColumns: ["plan"]
           },
         ]
       }
@@ -660,6 +672,7 @@ export type Database = {
       }
       suppliers: {
         Row: {
+          business_id: string | null
           contact_email: string | null
           created_at: string | null
           id: string
@@ -668,6 +681,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          business_id?: string | null
           contact_email?: string | null
           created_at?: string | null
           id?: string
@@ -676,6 +690,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          business_id?: string | null
           contact_email?: string | null
           created_at?: string | null
           id?: string
@@ -683,7 +698,41 @@ export type Database = {
           phone?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_businesses: {
+        Row: {
+          business_id: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          business_id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Update: {
+          business_id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_businesses_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
