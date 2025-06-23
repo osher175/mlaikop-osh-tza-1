@@ -37,8 +37,33 @@ export const useBusinessAccess = () => {
     enabled: !!user?.id && !roleLoading,
   });
 
+  const { data: businessContext } = useQuery({
+    queryKey: ['business-context', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      
+      // Admin users don't need business context
+      if (userRole === 'admin') {
+        return null;
+      }
+      
+      const { data, error } = await supabase.rpc('get_user_business_context', {
+        user_uuid: user.id
+      });
+      
+      if (error) {
+        console.error('Error getting business context:', error);
+        return null;
+      }
+      
+      return data?.[0] || null;
+    },
+    enabled: !!user?.id && hasAccess && !roleLoading,
+  });
+
   return {
     hasAccess: hasAccess ?? false,
+    businessContext,
     isLoading: accessLoading || roleLoading,
   };
 };
