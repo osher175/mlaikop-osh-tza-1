@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
+import { useUserRole } from '@/hooks/useUserRole';
 import { OnboardingDecision } from '@/pages/OnboardingDecision';
 import { Loader2 } from 'lucide-react';
 
@@ -9,7 +10,10 @@ interface OnboardingGuardProps {
 }
 
 export const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) => {
-  const { hasAccess, isLoading } = useBusinessAccess();
+  const { hasAccess, isLoading: businessAccessLoading } = useBusinessAccess();
+  const { userRole, isLoading: roleLoading } = useUserRole();
+
+  const isLoading = businessAccessLoading || roleLoading;
 
   if (isLoading) {
     return (
@@ -22,6 +26,13 @@ export const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) =>
     );
   }
 
+  // Admin users should go directly to admin panel
+  if (userRole === 'admin') {
+    console.log('Admin user detected, allowing access to admin panel');
+    return <>{children}</>;
+  }
+
+  // Non-admin users need business access
   if (!hasAccess) {
     return <OnboardingDecision />;
   }
