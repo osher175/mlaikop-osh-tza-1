@@ -9,14 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useBusiness } from '@/hooks/useBusiness';
-import { useOwnerRole } from '@/hooks/useOwnerRole';
+import { useAuth } from '@/hooks/useAuth';
 import { Settings, Building, Bell, Shield, Palette, Save, Lock } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export const BusinessSettings: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const { business, updateBusiness } = useBusiness();
-  const { isOwner, isLoading: ownershipLoading } = useOwnerRole();
+  
+  // Check if current user is the owner of the business
+  const isBusinessOwner = business && user && business.owner_id === user.id;
   
   const [settings, setSettings] = useState({
     businessName: '',
@@ -53,7 +56,7 @@ export const BusinessSettings: React.FC = () => {
   }, [business]);
 
   const handleSave = async () => {
-    if (!isOwner) {
+    if (!isBusinessOwner) {
       toast({
         title: "אין הרשאה",
         description: "אין לך הרשאה לעדכן את הגדרות העסק. רק בעלי עסק יכולים לבצע עדכונים אלה.",
@@ -74,7 +77,7 @@ export const BusinessSettings: React.FC = () => {
       if (error?.message?.includes('policy')) {
         toast({
           title: "שגיאת הרשאה",
-          description: "אין לך הרשאה לעדכן את הגדרות העסק. נדרש תפקיד OWNER.",
+          description: "אין לך הרשאה לעדכן את הגדרות העסק. נדרש להיות בעלים של העסק.",
           variant: "destructive",
         });
       }
@@ -82,7 +85,7 @@ export const BusinessSettings: React.FC = () => {
   };
 
   const updateSetting = (path: string, value: any) => {
-    if (!isOwner && ['businessName', 'businessType', 'address', 'phone'].includes(path)) {
+    if (!isBusinessOwner && ['businessName', 'businessType', 'address', 'phone'].includes(path)) {
       return; // Don't allow updates for non-owners
     }
     
@@ -100,7 +103,7 @@ export const BusinessSettings: React.FC = () => {
     });
   };
 
-  if (ownershipLoading) {
+  if (!business) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center min-h-[400px]" dir="rtl">
@@ -125,11 +128,11 @@ export const BusinessSettings: React.FC = () => {
           </div>
         </div>
 
-        {!isOwner && (
+        {!isBusinessOwner && (
           <Alert>
             <Lock className="h-4 w-4" />
             <AlertDescription>
-              הגדרות העסק זמינות לעריכה רק לבעלי עסק עם תפקיד OWNER. אתה יכול לצפות בהגדרות אבל לא לערוך אותן.
+              הגדרות העסק זמינות לעריכה רק לבעלי עסק. אתה יכול לצפות בהגדרות אבל לא לערוך אותן.
             </AlertDescription>
           </Alert>
         )}
@@ -142,7 +145,7 @@ export const BusinessSettings: React.FC = () => {
                 <CardTitle className="flex items-center gap-2">
                   <Building className="w-5 h-5" />
                   פרטי העסק
-                  {!isOwner && <Lock className="w-4 h-4 text-gray-400" />}
+                  {!isBusinessOwner && <Lock className="w-4 h-4 text-gray-400" />}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -153,8 +156,8 @@ export const BusinessSettings: React.FC = () => {
                       id="businessName"
                       value={settings.businessName}
                       onChange={(e) => updateSetting('businessName', e.target.value)}
-                      disabled={!isOwner}
-                      className={!isOwner ? 'bg-gray-100' : ''}
+                      disabled={!isBusinessOwner}
+                      className={!isBusinessOwner ? 'bg-gray-100' : ''}
                     />
                   </div>
                   
@@ -163,9 +166,9 @@ export const BusinessSettings: React.FC = () => {
                     <Select 
                       value={settings.businessType}
                       onValueChange={(value) => updateSetting('businessType', value)}
-                      disabled={!isOwner}
+                      disabled={!isBusinessOwner}
                     >
-                      <SelectTrigger className={!isOwner ? 'bg-gray-100' : ''}>
+                      <SelectTrigger className={!isBusinessOwner ? 'bg-gray-100' : ''}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -187,8 +190,8 @@ export const BusinessSettings: React.FC = () => {
                     id="address"
                     value={settings.address}
                     onChange={(e) => updateSetting('address', e.target.value)}
-                    disabled={!isOwner}
-                    className={!isOwner ? 'bg-gray-100' : ''}
+                    disabled={!isBusinessOwner}
+                    className={!isBusinessOwner ? 'bg-gray-100' : ''}
                   />
                 </div>
 
@@ -199,8 +202,8 @@ export const BusinessSettings: React.FC = () => {
                       id="phone"
                       value={settings.phone}
                       onChange={(e) => updateSetting('phone', e.target.value)}
-                      disabled={!isOwner}
-                      className={!isOwner ? 'bg-gray-100' : ''}
+                      disabled={!isBusinessOwner}
+                      className={!isBusinessOwner ? 'bg-gray-100' : ''}
                     />
                   </div>
                   
@@ -383,14 +386,14 @@ export const BusinessSettings: React.FC = () => {
                 <Button 
                   onClick={handleSave} 
                   className="w-full bg-primary hover:bg-primary-600"
-                  disabled={!isOwner || updateBusiness.isPending}
+                  disabled={!isBusinessOwner || updateBusiness.isPending}
                 >
                   <Save className="w-4 h-4 ml-2" />
                   {updateBusiness.isPending ? 'שומר...' : 'שמור הגדרות'}
                 </Button>
-                {!isOwner && (
+                {!isBusinessOwner && (
                   <p className="text-xs text-gray-500 mt-2 text-center">
-                    רק בעלי עסק עם תפקיד OWNER יכולים לשמור שינויים
+                    רק בעלי עסק יכולים לשמור שינויים
                   </p>
                 )}
               </CardContent>
