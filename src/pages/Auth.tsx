@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Package, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
 
 export const Auth = () => {
   const { signIn, signUp, user, loading } = useAuth();
@@ -203,6 +204,17 @@ export const Auth = () => {
                       </Button>
                     </div>
                   </div>
+                  
+                  {/* Forgot Password Link */}
+                  <div className="text-right">
+                    <Link 
+                      to="/forgot-password" 
+                      className="text-sm text-primary hover:text-primary-600 transition-colors"
+                    >
+                      שכחתי את הסיסמה
+                    </Link>
+                  </div>
+                  
                   <Button 
                     type="submit" 
                     className="w-full bg-primary hover:bg-primary-600 text-white font-medium py-2.5"
