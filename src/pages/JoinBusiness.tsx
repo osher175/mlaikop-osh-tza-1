@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -39,11 +38,11 @@ export const JoinBusiness: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Find business by name (case-insensitive)
+      // Find business by name using ilike for flexible matching
       const { data: businesses, error: searchError } = await supabase
         .from('businesses')
         .select('id, name')
-        .ilike('name', data.businessName);
+        .ilike('name', `%${data.businessName}%`);
 
       if (searchError) {
         throw searchError;
@@ -177,12 +176,12 @@ export const JoinBusiness: React.FC = () => {
                 <Label htmlFor="businessName">שם העסק *</Label>
                 <Input
                   id="businessName"
-                  placeholder="הכנס שם העסק בדיוק כפי שמופיע במערכת"
+                  placeholder="הכנס שם העסק או חלק ממנו"
                   {...register('businessName', { required: 'שם העסק חובה' })}
                   className="text-right"
                 />
                 {errors.businessName && <p className="text-sm text-red-600">{errors.businessName.message}</p>}
-                <p className="text-xs text-gray-500">השם חייב להתאים בדיוק לשם העסק במערכת</p>
+                <p className="text-xs text-gray-500">ניתן להקליד חלק משם העסק - המערכת תמצא התאמות דומות</p>
               </div>
 
               {/* Full Name */}
