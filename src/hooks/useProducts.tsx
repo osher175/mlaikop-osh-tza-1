@@ -61,6 +61,7 @@ export const useProducts = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-activity'] });
       toast({
         title: "מוצר נוצר בהצלחה",
         description: "המוצר נוסף למערכת",
@@ -95,6 +96,7 @@ export const useProducts = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-activity'] });
       toast({
         title: "מוצר עודכן בהצלחה",
         description: "השינויים נשמרו במערכת",
@@ -126,6 +128,7 @@ export const useProducts = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-activity'] });
       toast({
         title: "מוצר נמחק בהצלחה",
         description: "המוצר הוסר מהמערכת",

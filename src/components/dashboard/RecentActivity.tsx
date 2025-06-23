@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,59 +8,35 @@ import { useRealtimeActivity } from '@/hooks/useRealtimeActivity';
 import { format, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
 
-// Action type mappings for Hebrew display
-const getActionDisplay = (actionType: string, quantityChanged: number | null) => {
-  switch (actionType) {
-    case 'add':
-      return {
-        label: 'הוסף למלאי',
-        color: 'bg-green-100 text-green-800'
-      };
-    case 'remove':
-      return {
-        label: 'הוצא מהמלאי',
-        color: 'bg-red-100 text-red-800'
-      };
-    case 'adjust':
-      return {
-        label: 'התאמת מלאי',
-        color: 'bg-blue-100 text-blue-800'
-      };
-    case 'sale':
-      return {
-        label: 'מכירה',
-        color: 'bg-purple-100 text-purple-800'
-      };
-    case 'return':
-      return {
-        label: 'החזרה',
-        color: 'bg-orange-100 text-orange-800'
-      };
-    case 'product_added':
-      return {
-        label: 'מוצר חדש',
-        color: 'bg-emerald-100 text-emerald-800'
-      };
-    case 'product_deleted':
-      return {
-        label: 'מחיקת מוצר',
-        color: 'bg-red-100 text-red-800'
-      };
+// Status color mappings for badges
+const getStatusColorClass = (statusColor: string) => {
+  switch (statusColor) {
+    case 'success':
+      return 'bg-green-100 text-green-800';
+    case 'warning':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'error':
+      return 'bg-red-100 text-red-800';
+    case 'info':
+      return 'bg-blue-100 text-blue-800';
     default:
-      return {
-        label: actionType,
-        color: 'bg-gray-100 text-gray-800'
-      };
+      return 'bg-gray-100 text-gray-800';
   }
 };
 
-const formatQuantityText = (actionType: string, quantityChanged: number | null) => {
-  if (!quantityChanged) return '';
-  
-  const absQuantity = Math.abs(quantityChanged);
-  const sign = quantityChanged > 0 ? '+' : '-';
-  
-  return ` (${sign}${absQuantity} יח')`;
+// Priority level mappings
+const getPriorityIcon = (priorityLevel: string, isCritical: boolean) => {
+  if (isCritical) return '🚨';
+  switch (priorityLevel) {
+    case 'high':
+      return '⚠️';
+    case 'medium':
+      return 'ℹ️';
+    case 'low':
+      return '📝';
+    default:
+      return 'ℹ️';
+  }
 };
 
 export const RecentActivity: React.FC = () => {
@@ -137,8 +114,8 @@ export const RecentActivity: React.FC = () => {
       <CardContent>
         <div className="space-y-4">
           {activities.map((activity) => {
-            const actionDisplay = getActionDisplay(activity.action_type, activity.quantity_changed);
-            const quantityText = formatQuantityText(activity.action_type, activity.quantity_changed);
+            const statusColorClass = getStatusColorClass(activity.status_color);
+            const priorityIcon = getPriorityIcon(activity.priority_level, activity.is_critical);
             
             // Format timestamp to Hebrew locale
             const formattedDate = format(
@@ -148,22 +125,34 @@ export const RecentActivity: React.FC = () => {
             );
 
             return (
-              <div key={activity.id} className="flex items-start justify-between border-b border-gray-100 pb-3 last:border-b-0">
+              <div 
+                key={activity.id} 
+                className={`flex items-start justify-between border-b border-gray-100 pb-3 last:border-b-0 ${
+                  activity.is_critical ? 'bg-red-50 rounded-lg p-3' : ''
+                }`}
+              >
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <Badge variant="secondary" className={actionDisplay.color}>
-                      {actionDisplay.label}
+                    <span className="text-sm">{priorityIcon}</span>
+                    <Badge variant="secondary" className={statusColorClass}>
+                      {activity.priority_level === 'high' ? 'חשוב' : 
+                       activity.priority_level === 'medium' ? 'בינוני' : 'רגיל'}
                     </Badge>
+                    {activity.is_system_generated && (
+                      <Badge variant="outline" className="text-xs">
+                        מערכת
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-sm font-medium text-gray-900 mb-1">
-                    {activity.product_name || 'מוצר לא ידוע'}{quantityText}
+                    {activity.title}
                   </p>
                   <p className="text-xs text-gray-500">
                     {formattedDate}
                   </p>
-                  {activity.notes && (
+                  {activity.quantity_changed && (
                     <p className="text-xs text-gray-600 mt-1">
-                      {activity.notes}
+                      שינוי כמות: {activity.quantity_changed > 0 ? '+' : ''}{activity.quantity_changed}
                     </p>
                   )}
                 </div>

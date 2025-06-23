@@ -11,20 +11,41 @@ export const useRealtimeActivity = () => {
   useEffect(() => {
     if (!businessContext?.business_id) return;
 
-    // Subscribe to inventory_actions table changes
+    // Subscribe to recent_activity table changes
     const channel = supabase
-      .channel('inventory-activity-changes')
+      .channel('recent-activity-changes')
       .on(
         'postgres_changes',
         {
           event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public',
-          table: 'inventory_actions',
+          table: 'recent_activity',
           filter: `business_id=eq.${businessContext.business_id}`
         },
         (payload) => {
-          console.log('Real-time inventory activity update:', payload);
+          console.log('Real-time recent activity update:', payload);
           // Invalidate and refetch the recent activity query
+          queryClient.invalidateQueries({ 
+            queryKey: ['recent-activity', businessContext.business_id] 
+          });
+        }
+      )
+      .subscribe();
+
+    // Also subscribe to products table changes to update activity when products change
+    const productsChannel = supabase
+      .channel('products-activity-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'products',
+          filter: `business_id=eq.${businessContext.business_id}`
+        },
+        (payload) => {
+          console.log('Real-time product update affecting activity:', payload);
+          // Invalidate and refetch the recent activity query when products change
           queryClient.invalidateQueries({ 
             queryKey: ['recent-activity', businessContext.business_id] 
           });
@@ -34,6 +55,7 @@ export const useRealtimeActivity = () => {
 
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(productsChannel);
     };
   }, [businessContext?.business_id, queryClient]);
 };
