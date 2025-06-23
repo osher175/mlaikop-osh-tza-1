@@ -11,7 +11,8 @@ import {
   Trash2, 
   UserCheck, 
   UserX,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -50,6 +51,7 @@ export const UserCard: React.FC<UserCardProps> = ({
   };
 
   const handleDelete = () => {
+    console.log('Confirming deletion for user:', user.user_id, user.email);
     onDelete(user.user_id);
     setShowDeleteDialog(false);
   };
@@ -67,6 +69,9 @@ export const UserCard: React.FC<UserCardProps> = ({
               <div className="flex items-center gap-1 text-sm text-gray-600">
                 <Mail className="h-3 w-3" />
                 <span>{user.email}</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                ID: {user.user_id}
               </div>
             </div>
           </div>
@@ -104,14 +109,16 @@ export const UserCard: React.FC<UserCardProps> = ({
             size="sm"
             variant="outline"
             onClick={handleToggleStatus}
-            disabled={isToggling}
+            disabled={isToggling || isDeleting}
             className={`flex items-center gap-1 ${
               user.is_active 
                 ? 'text-red-600 hover:text-red-700' 
                 : 'text-green-600 hover:text-green-700'
             }`}
           >
-            {user.is_active ? (
+            {isToggling ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : user.is_active ? (
               <>
                 <UserX className="h-3 w-3" />
                 השבתה
@@ -129,9 +136,14 @@ export const UserCard: React.FC<UserCardProps> = ({
               <Button
                 size="sm"
                 variant="outline"
+                disabled={isDeleting || isToggling}
                 className="flex items-center gap-1 text-red-600 hover:text-red-700"
               >
-                <Trash2 className="h-3 w-3" />
+                {isDeleting ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3 w-3" />
+                )}
                 מחיקה
               </Button>
             </AlertDialogTrigger>
@@ -142,9 +154,15 @@ export const UserCard: React.FC<UserCardProps> = ({
                   אישור מחיקת משתמש
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  האם אתה בטוח שברצונך למחוק את המשתמש {fullName}?
+                  האם אתה בטוח שברצונך למחוק את המשתמש {fullName} ({user.email})?
                   <br />
-                  פעולה זו לא ניתנת לביטול ותמחק את כל הנתונים הקשורים למשתמש.
+                  <br />
+                  <strong>פעולה זו לא ניתנת לביטול ותמחק:</strong>
+                  <ul className="list-disc list-inside mt-2 text-sm">
+                    <li>את המשתמש מכל מערכות האימות</li>
+                    <li>את כל הנתונים הקשורים למשתמש</li>
+                    <li>את הפרופיל והגדרות המשתמש</li>
+                  </ul>
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -154,7 +172,14 @@ export const UserCard: React.FC<UserCardProps> = ({
                   disabled={isDeleting}
                   className="bg-red-600 hover:bg-red-700"
                 >
-                  מחק משתמש
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                      מוחק...
+                    </>
+                  ) : (
+                    'מחק משתמש'
+                  )}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

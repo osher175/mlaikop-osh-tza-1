@@ -79,6 +79,8 @@ export const useAdminUserSearch = () => {
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
+      console.log('Starting user deletion for user ID:', userId);
+      
       const { data, error } = await supabase.rpc('delete_user_by_admin', {
         target_user_id: userId
       });
@@ -88,20 +90,34 @@ export const useAdminUserSearch = () => {
         throw error;
       }
 
+      console.log('User deletion response:', data);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data, userId) => {
+      console.log('User deletion successful for user ID:', userId);
       queryClient.invalidateQueries({ queryKey: ['admin-user-search'] });
       toast({
         title: "הצלחה",
-        description: "המשתמש נמחק בהצלחה",
+        description: "המשתמש נמחק בהצלחה מכל המערכות",
       });
     },
-    onError: (error: any) => {
-      console.error('Error deleting user:', error);
+    onError: (error: any, userId) => {
+      console.error('Error deleting user:', error, 'User ID:', userId);
+      
+      // Provide more specific error messages
+      let errorMessage = "שגיאה במחיקת המשתמש";
+      
+      if (error.message?.includes('Access denied')) {
+        errorMessage = "אין הרשאה למחיקת המשתמש";
+      } else if (error.message?.includes('not found')) {
+        errorMessage = "המשתמש לא נמצא במערכת";
+      } else if (error.message) {
+        errorMessage = `שגיאה: ${error.message}`;
+      }
+      
       toast({
         title: "שגיאה",
-        description: "שגיאה במחיקת המשתמש",
+        description: errorMessage,
         variant: "destructive",
       });
     },
