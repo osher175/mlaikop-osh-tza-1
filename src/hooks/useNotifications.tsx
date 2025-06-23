@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useBusiness } from './useBusiness';
+import { useBusinessAccess } from './useBusinessAccess';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -12,14 +12,14 @@ type Notification = Database['public']['Tables']['notifications']['Row'] & {
 
 export const useNotifications = () => {
   const { user } = useAuth();
-  const { business } = useBusiness();
+  const { businessContext } = useBusinessAccess();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ['notifications', user?.id, business?.id],
+    queryKey: ['notifications', user?.id, businessContext?.business_id],
     queryFn: async () => {
-      if (!user?.id || !business?.id) return [];
+      if (!user?.id || !businessContext?.business_id) return [];
       
       const { data, error } = await supabase
         .from('notifications')
@@ -27,7 +27,7 @@ export const useNotifications = () => {
           *,
           products:product_id(name)
         `)
-        .eq('business_id', business.id)
+        .eq('business_id', businessContext.business_id)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -39,7 +39,7 @@ export const useNotifications = () => {
       
       return data as Notification[];
     },
-    enabled: !!user?.id && !!business?.id,
+    enabled: !!user?.id && !!businessContext?.business_id,
   });
 
   const markAsRead = useMutation({
@@ -67,12 +67,12 @@ export const useNotifications = () => {
 
   const markAllAsRead = useMutation({
     mutationFn: async () => {
-      if (!business?.id || !user?.id) throw new Error('No business or user found');
+      if (!businessContext?.business_id || !user?.id) throw new Error('No business or user found');
       
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true, updated_at: new Date().toISOString() })
-        .eq('business_id', business.id)
+        .eq('business_id', businessContext.business_id)
         .eq('user_id', user.id)
         .eq('is_read', false);
       

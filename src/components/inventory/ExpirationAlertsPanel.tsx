@@ -8,19 +8,19 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { useBusiness } from '@/hooks/useBusiness';
+import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 
 export const ExpirationAlertsPanel: React.FC = () => {
   const { user } = useAuth();
-  const { business } = useBusiness();
+  const { businessContext } = useBusinessAccess();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dismissingIds, setDismissingIds] = useState<Set<string>>(new Set());
 
   const { data: expiringProducts = [], isLoading } = useQuery({
-    queryKey: ['expiring-products', business?.id],
+    queryKey: ['expiring-products', businessContext?.business_id],
     queryFn: async () => {
-      if (!business?.id) return [];
+      if (!businessContext?.business_id) return [];
 
       const sevenDaysFromNow = new Date();
       sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
@@ -28,7 +28,7 @@ export const ExpirationAlertsPanel: React.FC = () => {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('business_id', business.id)
+        .eq('business_id', businessContext.business_id)
         .eq('alert_dismissed', false)
         .not('expiration_date', 'is', null)
         .lte('expiration_date', sevenDaysFromNow.toISOString().split('T')[0])
@@ -37,7 +37,7 @@ export const ExpirationAlertsPanel: React.FC = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!business?.id,
+    enabled: !!businessContext?.business_id,
   });
 
   const handleDismissAlert = async (productId: string) => {

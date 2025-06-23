@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications } from '@/hooks/useNotifications';
+import { useNotificationChecker } from '@/hooks/useNotificationChecker';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 
@@ -33,6 +34,9 @@ const getNotificationIcon = (type: string) => {
 
 export const NotificationDropdown: React.FC = () => {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  
+  // Enable automatic notification checking
+  useNotificationChecker();
 
   const handleNotificationClick = (notificationId: string, isRead: boolean) => {
     if (!isRead) {
