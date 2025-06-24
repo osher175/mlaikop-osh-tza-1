@@ -6,22 +6,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Save } from 'lucide-react';
+import { Package, Save, Plus } from 'lucide-react';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { useProducts } from '@/hooks/useProducts';
-import { useCategories } from '@/hooks/useCategories';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useAuth } from '@/hooks/useAuth';
 import { CreateBusinessDialog } from '@/components/CreateBusinessDialog';
+import { useProductCategories } from '@/hooks/useProductCategories';
+import { useBusiness } from '@/hooks/useBusiness';
+import { AddProductCategoryDialog } from '@/components/inventory/AddProductCategoryDialog';
 
 export const AddProduct: React.FC = () => {
   const { user } = useAuth();
   const { businessContext } = useBusinessAccess();
-  const { categories } = useCategories();
+  const { business } = useBusiness();
   const { suppliers } = useSuppliers();
   const { createProduct } = useProducts();
+  const { productCategories } = useProductCategories(business?.business_category_id);
   const [showCreateBusiness, setShowCreateBusiness] = useState(false);
+  const [showAddCategory, setShowAddCategory] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -157,21 +161,34 @@ export const AddProduct: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="category">קטגוריה</Label>
-                    <Select
-                      value={formData.category_id}
-                      onValueChange={(value) => handleInputChange('category_id', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="בחר קטגוריה" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-2">
+                      <Select
+                        value={formData.category_id}
+                        onValueChange={(value) => handleInputChange('category_id', value)}
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="בחר קטגוריה" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {productCategories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {business?.business_category_id && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowAddCategory(true)}
+                          className="px-2"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   <div>
@@ -300,6 +317,15 @@ export const AddProduct: React.FC = () => {
             </Button>
           </div>
         </form>
+
+        {/* Add Category Dialog */}
+        {business?.business_category_id && (
+          <AddProductCategoryDialog
+            open={showAddCategory}
+            onOpenChange={setShowAddCategory}
+            businessCategoryId={business.business_category_id}
+          />
+        )}
       </div>
     </MainLayout>
   );

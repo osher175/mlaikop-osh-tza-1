@@ -4,9 +4,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useProductCategories } from '@/hooks/useProductCategories';
+import { useBusiness } from '@/hooks/useBusiness';
+import { AddProductCategoryDialog } from '@/components/inventory/AddProductCategoryDialog';
+import { Plus } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'];
@@ -25,7 +30,10 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   onProductUpdated,
 }) => {
   const { toast } = useToast();
+  const { business } = useBusiness();
+  const { productCategories } = useProductCategories(business?.business_category_id);
   const [loading, setLoading] = useState(false);
+  const [showAddCategory, setShowAddCategory] = useState(false);
   const [formData, setFormData] = useState({
     name: product?.name || '',
     barcode: product?.barcode || '',
@@ -35,6 +43,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     location: product?.location || '',
     expiration_date: product?.expiration_date || '',
     image: product?.image || '',
+    category_id: product?.category_id || '',
   });
 
   React.useEffect(() => {
@@ -48,6 +57,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         location: product.location || '',
         expiration_date: product.expiration_date || '',
         image: product.image || '',
+        category_id: product.category_id || '',
       });
     }
   }, [product]);
@@ -69,6 +79,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
           location: formData.location || null,
           expiration_date: formData.expiration_date || null,
           image: formData.image || null,
+          category_id: formData.category_id || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', product.id);
@@ -103,116 +114,159 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
-        <DialogHeader>
-          <DialogTitle>עריכת מוצר - {product?.name}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="name">שם המוצר *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="barcode">ברקוד</Label>
-                <Input
-                  id="barcode"
-                  value={formData.barcode}
-                  onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>עריכת מוצר - {product?.name}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="quantity">כמות *</Label>
+                  <Label htmlFor="name">שם המוצר *</Label>
                   <Input
-                    id="quantity"
-                    type="number"
-                    min="0"
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
                   />
                 </div>
+                
                 <div>
-                  <Label htmlFor="location">מיקום</Label>
+                  <Label htmlFor="barcode">ברקוד</Label>
                   <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    id="barcode"
+                    value={formData.barcode}
+                    onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="cost">עלות</Label>
-                  <Input
-                    id="cost"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.cost}
-                    onChange={(e) => setFormData({ ...formData, cost: Number(e.target.value) })}
-                  />
+                  <Label htmlFor="category">קטגוריה</Label>
+                  <div className="flex gap-2">
+                    <Select
+                      value={formData.category_id}
+                      onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="בחר קטגוריה" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {productCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {business?.business_category_id && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddCategory(true)}
+                        className="px-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="quantity">כמות *</Label>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      min="0"
+                      value={formData.quantity}
+                      onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="location">מיקום</Label>
+                    <Input
+                      id="location"
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="cost">עלות</Label>
+                    <Input
+                      id="cost"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.cost}
+                      onChange={(e) => setFormData({ ...formData, cost: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="price">מחיר מכירה</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <Label htmlFor="price">מחיר מכירה</Label>
+                  <Label htmlFor="expiration_date">תאריך פג תוקף</Label>
                   <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                    id="expiration_date"
+                    type="date"
+                    value={formData.expiration_date}
+                    onChange={(e) => setFormData({ ...formData, expiration_date: e.target.value })}
                   />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="expiration_date">תאריך פג תוקף</Label>
-                <Input
-                  id="expiration_date"
-                  type="date"
-                  value={formData.expiration_date}
-                  onChange={(e) => setFormData({ ...formData, expiration_date: e.target.value })}
+                <Label>תמונת מוצר</Label>
+                <ImageUpload
+                  currentImageUrl={formData.image}
+                  onImageUpload={handleImageUpload}
+                  onImageRemove={handleImageRemove}
                 />
               </div>
             </div>
 
-            <div>
-              <Label>תמונת מוצר</Label>
-              <ImageUpload
-                currentImageUrl={formData.image}
-                onImageUpload={handleImageUpload}
-                onImageRemove={handleImageRemove}
-              />
+            <div className="flex gap-2 pt-4">
+              <Button type="submit" disabled={loading} className="flex-1">
+                {loading ? 'שומר...' : 'שמור שינויים'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="flex-1"
+              >
+                ביטול
+              </Button>
             </div>
-          </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-          <div className="flex gap-2 pt-4">
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? 'שומר...' : 'שמור שינויים'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="flex-1"
-            >
-              ביטול
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+      {/* Add Category Dialog */}
+      {business?.business_category_id && (
+        <AddProductCategoryDialog
+          open={showAddCategory}
+          onOpenChange={setShowAddCategory}
+          businessCategoryId={business.business_category_id}
+        />
+      )}
+    </>
   );
 };

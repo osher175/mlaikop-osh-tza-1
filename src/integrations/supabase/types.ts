@@ -9,6 +9,27 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      business_categories: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       business_users: {
         Row: {
           business_id: string
@@ -48,6 +69,7 @@ export type Database = {
         Row: {
           address: string | null
           avg_monthly_revenue: number | null
+          business_category_id: string | null
           business_type: string | null
           created_at: string | null
           employee_count: number | null
@@ -63,6 +85,7 @@ export type Database = {
         Insert: {
           address?: string | null
           avg_monthly_revenue?: number | null
+          business_category_id?: string | null
           business_type?: string | null
           created_at?: string | null
           employee_count?: number | null
@@ -78,6 +101,7 @@ export type Database = {
         Update: {
           address?: string | null
           avg_monthly_revenue?: number | null
+          business_category_id?: string | null
           business_type?: string | null
           created_at?: string | null
           employee_count?: number | null
@@ -91,6 +115,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "businesses_business_category_id_fkey"
+            columns: ["business_category_id"]
+            isOneToOne: false
+            referencedRelation: "business_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "businesses_plan_id_fkey"
             columns: ["plan_id"]
@@ -328,6 +359,38 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
         }
         Relationships: []
+      }
+      product_categories: {
+        Row: {
+          business_category_id: string
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          business_category_id: string
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          business_category_id?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_categories_business_category_id_fkey"
+            columns: ["business_category_id"]
+            isOneToOne: false
+            referencedRelation: "business_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_thresholds: {
         Row: {
