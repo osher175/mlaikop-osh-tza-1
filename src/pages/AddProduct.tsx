@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +16,7 @@ import { CreateBusinessDialog } from '@/components/CreateBusinessDialog';
 import { useCategories } from '@/hooks/useCategories';
 import { useBusiness } from '@/hooks/useBusiness';
 import { AddProductCategoryDialog } from '@/components/inventory/AddProductCategoryDialog';
+import { supabase } from '@/integrations/supabase/client';
 
 export const AddProduct: React.FC = () => {
   const { user } = useAuth();
@@ -25,12 +27,15 @@ export const AddProduct: React.FC = () => {
   const { categories } = useCategories();
   const [showCreateBusiness, setShowCreateBusiness] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
+  const [supplierInput, setSupplierInput] = useState('');
+  const [showSupplierSuggestions, setShowSupplierSuggestions] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
     barcode: '',
     category_id: '',
     supplier_id: '',
+    supplier_name: '',
     quantity: 0,
     expiration_date: '',
     location: '',
@@ -38,6 +43,54 @@ export const AddProduct: React.FC = () => {
     price: 0,
     image: '',
   });
+
+  // Filter suppliers based on input
+  const filteredSuppliers = suppliers.filter(supplier =>
+    supplier.name.toLowerCase().includes(supplierInput.toLowerCase())
+  );
+
+  const handleSupplierInputChange = (value: string) => {
+    setSupplierInput(value);
+    setFormData(prev => ({ ...prev, supplier_name: value, supplier_id: '' }));
+    setShowSupplierSuggestions(value.length > 0);
+  };
+
+  const handleSupplierSelect = (supplier: any) => {
+    setSupplierInput(supplier.name);
+    setFormData(prev => ({ ...prev, supplier_id: supplier.id, supplier_name: supplier.name }));
+    setShowSupplierSuggestions(false);
+  };
+
+  const findOrCreateSupplier = async (supplierName: string) => {
+    if (!supplierName.trim() || !businessContext?.business_id) return null;
+
+    // Check if supplier already exists
+    const existingSupplier = suppliers.find(s => 
+      s.name.toLowerCase() === supplierName.toLowerCase()
+    );
+
+    if (existingSupplier) {
+      return existingSupplier.id;
+    }
+
+    // Create new supplier
+    try {
+      const { data, error } = await supabase
+        .from('suppliers')
+        .insert({
+          name: supplierName.trim(),
+          business_id: businessContext.business_id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data.id;
+    } catch (error) {
+      console.error('Error creating supplier:', error);
+      return null;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,11 +101,24 @@ export const AddProduct: React.FC = () => {
     }
 
     try {
+      let supplierId = formData.supplier_id;
+      
+      // If supplier name is provided but no ID, find or create supplier
+      if (formData.supplier_name && !formData.supplier_id) {
+        supplierId = await findOrCreateSupplier(formData.supplier_name);
+      }
+
       await createProduct.mutateAsync({
-        ...formData,
+        name: formData.name,
+        barcode: formData.barcode || null,
         category_id: formData.category_id || null,
-        supplier_id: formData.supplier_id || null,
+        supplier_id: supplierId || null,
+        quantity: formData.quantity,
         expiration_date: formData.expiration_date || null,
+        location: formData.location,
+        cost: formData.cost,
+        price: formData.price,
+        image: formData.image,
       });
       
       // Reset form
@@ -61,6 +127,7 @@ export const AddProduct: React.FC = () => {
         barcode: '',
         category_id: '',
         supplier_id: '',
+        supplier_name: '',
         quantity: 0,
         expiration_date: '',
         location: '',
@@ -68,6 +135,7 @@ export const AddProduct: React.FC = () => {
         price: 0,
         image: '',
       });
+      setSupplierInput('');
     } catch (error) {
       console.error('Error creating product:', error);
     }
@@ -192,21 +260,29 @@ export const AddProduct: React.FC = () => {
 
                   <div>
                     <Label htmlFor="supplier">ספק</Label>
-                    <Select
-                      value={formData.supplier_id}
-                      onValueChange={(value) => handleInputChange('supplier_id', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="בחר ספק" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {suppliers.map((supplier) => (
-                          <SelectItem key={supplier.id} value={supplier.id}>
-                            {supplier.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="relative">
+                      <Input
+                        id="supplier"
+                        value={supplierInput}
+                        onChange={(e) => handleSupplierInputChange(e.target.value)}
+                        onFocus={() => setShowSupplierSuggestions(supplierInput.length > 0)}
+                        onBlur={() => setTimeout(() => setShowSupplierSuggestions(false), 200)}
+                        placeholder="הקלד או בחר ספק..."
+                      />
+                      {showSupplierSuggestions && filteredSuppliers.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                          {filteredSuppliers.map((supplier) => (
+                            <div
+                              key={supplier.id}
+                              className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-right"
+                              onClick={() => handleSupplierSelect(supplier)}
+                            >
+                              {supplier.name}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
