@@ -449,6 +449,7 @@ export type Database = {
           location: string | null
           name: string
           price: number | null
+          product_category_id: string | null
           quantity: number
           supplier_id: string | null
           updated_at: string | null
@@ -467,6 +468,7 @@ export type Database = {
           location?: string | null
           name: string
           price?: number | null
+          product_category_id?: string | null
           quantity?: number
           supplier_id?: string | null
           updated_at?: string | null
@@ -485,6 +487,7 @@ export type Database = {
           location?: string | null
           name?: string
           price?: number | null
+          product_category_id?: string | null
           quantity?: number
           supplier_id?: string | null
           updated_at?: string | null
@@ -502,6 +505,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_product_category_id_fkey"
+            columns: ["product_category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
             referencedColumns: ["id"]
           },
           {

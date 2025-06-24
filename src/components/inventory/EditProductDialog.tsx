@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,7 @@ import { useProductCategories } from '@/hooks/useProductCategories';
 import { useBusiness } from '@/hooks/useBusiness';
 import { AddProductCategoryDialog } from '@/components/inventory/AddProductCategoryDialog';
 import { Plus } from 'lucide-react';
+import { useCategories } from '@/hooks/useCategories';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'];
@@ -31,7 +31,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 }) => {
   const { toast } = useToast();
   const { business } = useBusiness();
-  const { productCategories } = useProductCategories(business?.business_category_id);
+  const { categories } = useCategories();
   const [loading, setLoading] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [formData, setFormData] = useState({
@@ -43,7 +43,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     location: product?.location || '',
     expiration_date: product?.expiration_date || '',
     image: product?.image || '',
-    category_id: product?.category_id || '',
+    category_id: product?.category_id || product?.product_category_id || '',
   });
 
   React.useEffect(() => {
@@ -57,7 +57,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         location: product.location || '',
         expiration_date: product.expiration_date || '',
         image: product.image || '',
-        category_id: product.category_id || '',
+        category_id: product.category_id || product.product_category_id || '',
       });
     }
   }, [product]);
@@ -68,20 +68,39 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
     setLoading(true);
     try {
+      // Prepare update data
+      const updateData: any = {
+        name: formData.name,
+        barcode: formData.barcode || null,
+        quantity: formData.quantity,
+        price: formData.price || null,
+        cost: formData.cost || null,
+        location: formData.location || null,
+        expiration_date: formData.expiration_date || null,
+        image: formData.image || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Set the correct category field based on business type
+      if (formData.category_id) {
+        if (business?.business_category_id) {
+          // For businesses with business_category_id, use product_category_id
+          updateData.product_category_id = formData.category_id;
+          updateData.category_id = null; // Clear legacy field
+        } else {
+          // For legacy businesses, use category_id
+          updateData.category_id = formData.category_id;
+          updateData.product_category_id = null; // Clear new field
+        }
+      } else {
+        // Clear both category fields if no category selected
+        updateData.category_id = null;
+        updateData.product_category_id = null;
+      }
+
       const { error } = await supabase
         .from('products')
-        .update({
-          name: formData.name,
-          barcode: formData.barcode || null,
-          quantity: formData.quantity,
-          price: formData.price || null,
-          cost: formData.cost || null,
-          location: formData.location || null,
-          expiration_date: formData.expiration_date || null,
-          image: formData.image || null,
-          category_id: formData.category_id || null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', product.id);
 
       if (error) throw error;
@@ -153,7 +172,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                         <SelectValue placeholder="בחר קטגוריה" />
                       </SelectTrigger>
                       <SelectContent>
-                        {productCategories.map((category) => (
+                        {categories.map((category) => (
                           <SelectItem key={category.id} value={category.id}>
                             {category.name}
                           </SelectItem>

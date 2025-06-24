@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -108,25 +107,10 @@ export const AddProduct: React.FC = () => {
         supplierId = await findOrCreateSupplier(formData.supplier_name);
       }
 
-      // Determine the correct category_id based on business setup
-      let categoryId = null;
-      
-      if (formData.category_id) {
-        // If business has business_category_id, the category_id should be from product_categories
-        // If not, it should be from the old categories table
-        if (business?.business_category_id) {
-          // For businesses with business_category_id, formData.category_id is already correct (from product_categories)
-          categoryId = formData.category_id;
-        } else {
-          // For businesses without business_category_id, formData.category_id is from old categories table
-          categoryId = formData.category_id;
-        }
-      }
-
-      await createProduct.mutateAsync({
+      // Prepare product data with correct category field
+      const productData: any = {
         name: formData.name,
         barcode: formData.barcode || null,
-        category_id: categoryId,
         supplier_id: supplierId || null,
         quantity: formData.quantity,
         expiration_date: formData.expiration_date || null,
@@ -134,7 +118,20 @@ export const AddProduct: React.FC = () => {
         cost: formData.cost,
         price: formData.price,
         image: formData.image,
-      });
+      };
+
+      // Set the correct category field based on business type
+      if (formData.category_id) {
+        if (business?.business_category_id) {
+          // For businesses with business_category_id, use product_category_id
+          productData.product_category_id = formData.category_id;
+        } else {
+          // For legacy businesses, use category_id
+          productData.category_id = formData.category_id;
+        }
+      }
+
+      await createProduct.mutateAsync(productData);
       
       // Reset form
       setFormData({
