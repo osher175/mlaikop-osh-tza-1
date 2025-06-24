@@ -16,6 +16,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReader = useRef<BrowserMultiFormatReader | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const controlsRef = useRef<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
       const firstDeviceId = videoInputDevices[0].deviceId;
 
       if (videoRef.current) {
-        await codeReader.current.decodeFromVideoDevice(
+        controlsRef.current = await codeReader.current.decodeFromVideoDevice(
           firstDeviceId,
           videoRef.current,
           (result, error) => {
@@ -75,8 +76,14 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
   };
 
   const stopScanning = () => {
-    if (codeReader.current) {
-      codeReader.current.reset();
+    // Stop the decoder controls if they exist
+    if (controlsRef.current) {
+      try {
+        controlsRef.current.stop();
+      } catch (error) {
+        console.error('Error stopping controls:', error);
+      }
+      controlsRef.current = null;
     }
     
     // Stop video stream manually
