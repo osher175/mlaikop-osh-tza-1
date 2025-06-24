@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +25,6 @@ export const BusinessSettings: React.FC = () => {
   
   const [settings, setSettings] = useState({
     businessName: '',
-    businessType: '',
     businessCategoryId: '',
     address: '',
     phone: '',
@@ -50,7 +50,6 @@ export const BusinessSettings: React.FC = () => {
       setSettings(prev => ({
         ...prev,
         businessName: business.name || '',
-        businessType: business.business_type || '',
         businessCategoryId: business.business_category_id || '',
         address: business.address || '',
         phone: business.phone || '',
@@ -71,7 +70,6 @@ export const BusinessSettings: React.FC = () => {
     try {
       await updateBusiness.mutateAsync({
         name: settings.businessName,
-        business_type: settings.businessType,
         business_category_id: settings.businessCategoryId || null,
         address: settings.address,
         phone: settings.phone,
@@ -89,7 +87,7 @@ export const BusinessSettings: React.FC = () => {
   };
 
   const updateSetting = (path: string, value: any) => {
-    if (!isBusinessOwner && ['businessName', 'businessType', 'businessCategoryId', 'address', 'phone'].includes(path)) {
+    if (!isBusinessOwner && ['businessName', 'businessCategoryId', 'address', 'phone'].includes(path)) {
       return; // Don't allow updates for non-owners
     }
     
@@ -184,28 +182,6 @@ export const BusinessSettings: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="businessType">סוג עסק</Label>
-                  <Select 
-                    value={settings.businessType}
-                    onValueChange={(value) => updateSetting('businessType', value)}
-                    disabled={!isBusinessOwner}
-                  >
-                    <SelectTrigger className={!isBusinessOwner ? 'bg-gray-100' : ''}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="retail">קמעונאות</SelectItem>
-                      <SelectItem value="wholesale">סיטונאות</SelectItem>
-                      <SelectItem value="restaurant">מסעדה</SelectItem>
-                      <SelectItem value="garage">מוסך</SelectItem>
-                      <SelectItem value="clothing">ביגוד</SelectItem>
-                      <SelectItem value="electronics">אלקטרוניקה</SelectItem>
-                      <SelectItem value="other">אחר</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 <div>
