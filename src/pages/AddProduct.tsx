@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Package, Save, Plus } from 'lucide-react';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { BarcodeScanner } from '@/components/ui/barcode-scanner';
 import { useProducts } from '@/hooks/useProducts';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
@@ -159,6 +160,10 @@ export const AddProduct: React.FC = () => {
     handleInputChange('image', '');
   };
 
+  const handleBarcodeScanned = (barcode: string) => {
+    handleInputChange('barcode', barcode);
+  };
+
   if (!businessContext) {
     return (
       <MainLayout>
@@ -220,12 +225,16 @@ export const AddProduct: React.FC = () => {
 
                 <div>
                   <Label htmlFor="barcode">ברקוד</Label>
-                  <Input
-                    id="barcode"
-                    value={formData.barcode}
-                    onChange={(e) => handleInputChange('barcode', e.target.value)}
-                    placeholder="הכנס ברקוד..."
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="barcode"
+                      value={formData.barcode}
+                      onChange={(e) => handleInputChange('barcode', e.target.value)}
+                      placeholder="הכנס ברקוד..."
+                      className="flex-1"
+                    />
+                    <BarcodeScanner onScanSuccess={handleBarcodeScanned} />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
