@@ -108,10 +108,25 @@ export const AddProduct: React.FC = () => {
         supplierId = await findOrCreateSupplier(formData.supplier_name);
       }
 
+      // Determine the correct category_id based on business setup
+      let categoryId = null;
+      
+      if (formData.category_id) {
+        // If business has business_category_id, the category_id should be from product_categories
+        // If not, it should be from the old categories table
+        if (business?.business_category_id) {
+          // For businesses with business_category_id, formData.category_id is already correct (from product_categories)
+          categoryId = formData.category_id;
+        } else {
+          // For businesses without business_category_id, formData.category_id is from old categories table
+          categoryId = formData.category_id;
+        }
+      }
+
       await createProduct.mutateAsync({
         name: formData.name,
         barcode: formData.barcode || null,
-        category_id: formData.category_id || null,
+        category_id: categoryId,
         supplier_id: supplierId || null,
         quantity: formData.quantity,
         expiration_date: formData.expiration_date || null,
