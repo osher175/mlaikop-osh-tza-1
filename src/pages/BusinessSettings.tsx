@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useBusiness } from '@/hooks/useBusiness';
 import { useAuth } from '@/hooks/useAuth';
+import { useBusinessCategories } from '@/hooks/useBusinessCategories';
 import { Settings, Building, Bell, Shield, Palette, Save, Lock } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -17,6 +17,7 @@ export const BusinessSettings: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { business, updateBusiness } = useBusiness();
+  const { businessCategories } = useBusinessCategories();
   
   // Check if current user is the owner of the business
   const isBusinessOwner = business && user && business.owner_id === user.id;
@@ -24,6 +25,7 @@ export const BusinessSettings: React.FC = () => {
   const [settings, setSettings] = useState({
     businessName: '',
     businessType: '',
+    businessCategoryId: '',
     address: '',
     phone: '',
     email: '',
@@ -49,6 +51,7 @@ export const BusinessSettings: React.FC = () => {
         ...prev,
         businessName: business.name || '',
         businessType: business.business_type || '',
+        businessCategoryId: business.business_category_id || '',
         address: business.address || '',
         phone: business.phone || '',
       }));
@@ -69,6 +72,7 @@ export const BusinessSettings: React.FC = () => {
       await updateBusiness.mutateAsync({
         name: settings.businessName,
         business_type: settings.businessType,
+        business_category_id: settings.businessCategoryId || null,
         address: settings.address,
         phone: settings.phone,
       });
@@ -85,7 +89,7 @@ export const BusinessSettings: React.FC = () => {
   };
 
   const updateSetting = (path: string, value: any) => {
-    if (!isBusinessOwner && ['businessName', 'businessType', 'address', 'phone'].includes(path)) {
+    if (!isBusinessOwner && ['businessName', 'businessType', 'businessCategoryId', 'address', 'phone'].includes(path)) {
       return; // Don't allow updates for non-owners
     }
     
@@ -162,26 +166,46 @@ export const BusinessSettings: React.FC = () => {
                   </div>
                   
                   <div>
-                    <Label htmlFor="businessType">סוג עסק</Label>
+                    <Label htmlFor="businessCategory">תחום העסק</Label>
                     <Select 
-                      value={settings.businessType}
-                      onValueChange={(value) => updateSetting('businessType', value)}
+                      value={settings.businessCategoryId}
+                      onValueChange={(value) => updateSetting('businessCategoryId', value)}
                       disabled={!isBusinessOwner}
                     >
                       <SelectTrigger className={!isBusinessOwner ? 'bg-gray-100' : ''}>
-                        <SelectValue />
+                        <SelectValue placeholder="בחר תחום עסק" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="retail">קמעונאות</SelectItem>
-                        <SelectItem value="wholesale">סיטונאות</SelectItem>
-                        <SelectItem value="restaurant">מסעדה</SelectItem>
-                        <SelectItem value="garage">מוסך</SelectItem>
-                        <SelectItem value="clothing">ביגוד</SelectItem>
-                        <SelectItem value="electronics">אלקטרוניקה</SelectItem>
-                        <SelectItem value="other">אחר</SelectItem>
+                        {businessCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="businessType">סוג עסק</Label>
+                  <Select 
+                    value={settings.businessType}
+                    onValueChange={(value) => updateSetting('businessType', value)}
+                    disabled={!isBusinessOwner}
+                  >
+                    <SelectTrigger className={!isBusinessOwner ? 'bg-gray-100' : ''}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="retail">קמעונאות</SelectItem>
+                      <SelectItem value="wholesale">סיטונאות</SelectItem>
+                      <SelectItem value="restaurant">מסעדה</SelectItem>
+                      <SelectItem value="garage">מוסך</SelectItem>
+                      <SelectItem value="clothing">ביגוד</SelectItem>
+                      <SelectItem value="electronics">אלקטרוניקה</SelectItem>
+                      <SelectItem value="other">אחר</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
@@ -286,7 +310,7 @@ export const BusinessSettings: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="autoReorder">הזמנה אוטומטית</Label>
-                    <p className="text-sm text-gray-600">הזמן אוטומטית כשהמלאי נמוך</p>
+                    <p className="text-sm text-gray-600">הזמן אוטומatically כשהמלאי נמוך</p>
                   </div>
                   <Switch
                     id="autoReorder"

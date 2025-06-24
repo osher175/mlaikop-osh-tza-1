@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +12,7 @@ import { useSuppliers } from '@/hooks/useSuppliers';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useAuth } from '@/hooks/useAuth';
 import { CreateBusinessDialog } from '@/components/CreateBusinessDialog';
-import { useProductCategories } from '@/hooks/useProductCategories';
+import { useCategories } from '@/hooks/useCategories';
 import { useBusiness } from '@/hooks/useBusiness';
 import { AddProductCategoryDialog } from '@/components/inventory/AddProductCategoryDialog';
 
@@ -23,7 +22,7 @@ export const AddProduct: React.FC = () => {
   const { business } = useBusiness();
   const { suppliers } = useSuppliers();
   const { createProduct } = useProducts();
-  const { productCategories } = useProductCategories(business?.business_category_id);
+  const { categories } = useCategories();
   const [showCreateBusiness, setShowCreateBusiness] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
 
@@ -170,7 +169,7 @@ export const AddProduct: React.FC = () => {
                           <SelectValue placeholder="בחר קטגוריה" />
                         </SelectTrigger>
                         <SelectContent>
-                          {productCategories.map((category) => (
+                          {categories.map((category) => (
                             <SelectItem key={category.id} value={category.id}>
                               {category.name}
                             </SelectItem>
