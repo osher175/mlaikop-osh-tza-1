@@ -13,9 +13,9 @@ interface BarcodeScannerProps {
 export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReader = useRef<BrowserMultiFormatReader | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const controlsRef = useRef<any>(null);
   const { toast } = useToast();
 
@@ -29,6 +29,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
   const startScanning = async () => {
     try {
       setIsScanning(true);
+      setCameraReady(false);
       
       if (!codeReader.current) {
         codeReader.current = new BrowserMultiFormatReader();
@@ -44,25 +45,40 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
       const firstDeviceId = videoInputDevices[0].deviceId;
 
       if (videoRef.current) {
-        controlsRef.current = await codeReader.current.decodeFromVideoDevice(
-          firstDeviceId,
-          videoRef.current,
-          (result, error) => {
-            if (result) {
-              const barcodeText = result.getText();
-              onScanSuccess(barcodeText);
-              toast({
-                title: "ברקוד נסרק בהצלחה!",
-                description: `ברקוד: ${barcodeText}`,
-              });
-              stopScanning();
-              setIsOpen(false);
-            }
-            if (error && !(error.name === 'NotFoundException')) {
-              console.error('Scanning error:', error);
-            }
+        // Wait a bit for the video element to be ready
+        setTimeout(async () => {
+          try {
+            controlsRef.current = await codeReader.current.decodeFromVideoDevice(
+              firstDeviceId,
+              videoRef.current,
+              (result, error) => {
+                if (result) {
+                  const barcodeText = result.getText();
+                  console.log('Barcode scanned:', barcodeText);
+                  onScanSuccess(barcodeText);
+                  toast({
+                    title: "ברקוד נסרק בהצלחה!",
+                    description: `ברקוד: ${barcodeText}`,
+                  });
+                  stopScanning();
+                  setIsOpen(false);
+                }
+                if (error && !(error.name === 'NotFoundException')) {
+                  console.error('Scanning error:', error);
+                }
+              }
+            );
+            setCameraReady(true);
+          } catch (error) {
+            console.error('Error starting decoder:', error);
+            toast({
+              title: "שגיאה בהפעלת הסריקה",
+              description: "נסה שוב או בדוק הרשאות המצלמה",
+              variant: "destructive",
+            });
+            setIsScanning(false);
           }
-        );
+        }, 300);
       }
     } catch (error) {
       console.error('Error starting camera:', error);
@@ -86,18 +102,13 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
       controlsRef.current = null;
     }
     
-    // Stop video stream manually
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    
     // Clear video element
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
     
     setIsScanning(false);
+    setCameraReady(false);
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -105,7 +116,10 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
     if (!open) {
       stopScanning();
     } else if (open) {
-      startScanning();
+      // Small delay to ensure dialog is fully rendered
+      setTimeout(() => {
+        startScanning();
+      }, 100);
     }
   };
 
@@ -131,23 +145,27 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
             <div className="relative bg-black rounded-lg overflow-hidden">
               <video
                 ref={videoRef}
+                id="video-preview"
                 className="w-full h-64 object-cover"
                 playsInline
                 muted
+                autoPlay
               />
-              {!isScanning && (
+              {!cameraReady && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                   <div className="text-white text-center">
                     <Camera className="w-12 h-12 mx-auto mb-2" />
-                    <p>מכין מצלמה...</p>
+                    <p>{isScanning ? 'מכין מצלמה...' : 'לחץ כדי להתחיל'}</p>
                   </div>
                 </div>
               )}
             </div>
             
-            <div className="text-center text-sm text-gray-600">
-              כוון את המצלמה לכיוון הברקוד
-            </div>
+            {cameraReady && (
+              <div className="text-center text-sm text-gray-600">
+                כוון את המצלמה לכיוון הברקוד
+              </div>
+            )}
             
             <Button
               onClick={() => handleOpenChange(false)}
