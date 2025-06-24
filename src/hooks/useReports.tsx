@@ -6,7 +6,7 @@ import { useBusiness } from './useBusiness';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'] & {
-  categories: { name: string } | null;
+  product_categories: { name: string } | null;
   suppliers: { name: string } | null;
 };
 
@@ -27,19 +27,19 @@ export const useReports = (filters: ReportsFilters) => {
     queryFn: async () => {
       if (!user?.id || !business?.id) return null;
 
-      // Get products with categories and suppliers
+      // Get products with product_categories and suppliers
       let query = supabase
         .from('products')
         .select(`
           *,
-          categories:category_id(name),
+          product_categories:product_category_id(name),
           suppliers:supplier_id(name)
         `)
         .eq('business_id', business.id);
 
       // Apply filters
       if (filters.categoryId) {
-        query = query.eq('category_id', filters.categoryId);
+        query = query.eq('product_category_id', filters.categoryId);
       }
       if (filters.supplierId) {
         query = query.eq('supplier_id', filters.supplierId);
@@ -91,7 +91,7 @@ export const useReports = (filters: ReportsFilters) => {
 
       // Category breakdown
       const categoryBreakdown = mockSalesData.reduce((acc, item) => {
-        const categoryName = item.categories?.name || 'ללא קטגוריה';
+        const categoryName = item.product_categories?.name || 'ללא קטגוריה';
         if (!acc[categoryName]) {
           acc[categoryName] = { revenue: 0, quantity: 0 };
         }

@@ -439,7 +439,6 @@ export type Database = {
           alert_dismissed: boolean
           barcode: string | null
           business_id: string
-          category_id: string | null
           cost: number | null
           created_at: string | null
           created_by: string
@@ -458,7 +457,6 @@ export type Database = {
           alert_dismissed?: boolean
           barcode?: string | null
           business_id: string
-          category_id?: string | null
           cost?: number | null
           created_at?: string | null
           created_by: string
@@ -477,7 +475,6 @@ export type Database = {
           alert_dismissed?: boolean
           barcode?: string | null
           business_id?: string
-          category_id?: string | null
           cost?: number | null
           created_at?: string | null
           created_by?: string
@@ -498,13 +495,6 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
             referencedColumns: ["id"]
           },
           {
@@ -568,7 +558,6 @@ export type Database = {
         Row: {
           action_type: string
           business_id: string
-          category_id: string | null
           created_at: string
           description: string | null
           icon_name: string | null
@@ -589,7 +578,6 @@ export type Database = {
         Insert: {
           action_type: string
           business_id: string
-          category_id?: string | null
           created_at?: string
           description?: string | null
           icon_name?: string | null
@@ -610,7 +598,6 @@ export type Database = {
         Update: {
           action_type?: string
           business_id?: string
-          category_id?: string | null
           created_at?: string
           description?: string | null
           icon_name?: string | null
@@ -634,13 +621,6 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recent_activity_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
             referencedColumns: ["id"]
           },
           {

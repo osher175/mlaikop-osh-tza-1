@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,7 +33,7 @@ export const AddProduct: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     barcode: '',
-    category_id: '',
+    product_category_id: '',
     supplier_id: '',
     supplier_name: '',
     quantity: 0,
@@ -107,7 +108,7 @@ export const AddProduct: React.FC = () => {
         supplierId = await findOrCreateSupplier(formData.supplier_name);
       }
 
-      // Prepare product data with correct category field
+      // Prepare product data - only use product_category_id
       const productData: any = {
         name: formData.name,
         barcode: formData.barcode || null,
@@ -118,18 +119,8 @@ export const AddProduct: React.FC = () => {
         cost: formData.cost,
         price: formData.price,
         image: formData.image,
+        product_category_id: formData.product_category_id || null,
       };
-
-      // Set the correct category field based on business type
-      if (formData.category_id) {
-        if (business?.business_category_id) {
-          // For businesses with business_category_id, use product_category_id
-          productData.product_category_id = formData.category_id;
-        } else {
-          // For legacy businesses, use category_id
-          productData.category_id = formData.category_id;
-        }
-      }
 
       await createProduct.mutateAsync(productData);
       
@@ -137,7 +128,7 @@ export const AddProduct: React.FC = () => {
       setFormData({
         name: '',
         barcode: '',
-        category_id: '',
+        product_category_id: '',
         supplier_id: '',
         supplier_name: '',
         quantity: 0,
@@ -242,8 +233,8 @@ export const AddProduct: React.FC = () => {
                     <Label htmlFor="category">קטגוריה</Label>
                     <div className="flex gap-2">
                       <Select
-                        value={formData.category_id}
-                        onValueChange={(value) => handleInputChange('category_id', value)}
+                        value={formData.product_category_id}
+                        onValueChange={(value) => handleInputChange('product_category_id', value)}
                       >
                         <SelectTrigger className="flex-1">
                           <SelectValue placeholder="בחר קטגוריה" />

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -43,7 +44,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     location: product?.location || '',
     expiration_date: product?.expiration_date || '',
     image: product?.image || '',
-    category_id: product?.category_id || product?.product_category_id || '',
+    product_category_id: product?.product_category_id || '',
   });
 
   React.useEffect(() => {
@@ -57,7 +58,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         location: product.location || '',
         expiration_date: product.expiration_date || '',
         image: product.image || '',
-        category_id: product.category_id || product.product_category_id || '',
+        product_category_id: product.product_category_id || '',
       });
     }
   }, [product]);
@@ -68,7 +69,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
     setLoading(true);
     try {
-      // Prepare update data
+      // Prepare update data - only use product_category_id
       const updateData: any = {
         name: formData.name,
         barcode: formData.barcode || null,
@@ -78,25 +79,9 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         location: formData.location || null,
         expiration_date: formData.expiration_date || null,
         image: formData.image || null,
+        product_category_id: formData.product_category_id || null,
         updated_at: new Date().toISOString(),
       };
-
-      // Set the correct category field based on business type
-      if (formData.category_id) {
-        if (business?.business_category_id) {
-          // For businesses with business_category_id, use product_category_id
-          updateData.product_category_id = formData.category_id;
-          updateData.category_id = null; // Clear legacy field
-        } else {
-          // For legacy businesses, use category_id
-          updateData.category_id = formData.category_id;
-          updateData.product_category_id = null; // Clear new field
-        }
-      } else {
-        // Clear both category fields if no category selected
-        updateData.category_id = null;
-        updateData.product_category_id = null;
-      }
 
       const { error } = await supabase
         .from('products')
@@ -165,8 +150,8 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                   <Label htmlFor="category">קטגוריה</Label>
                   <div className="flex gap-2">
                     <Select
-                      value={formData.category_id}
-                      onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                      value={formData.product_category_id}
+                      onValueChange={(value) => setFormData({ ...formData, product_category_id: value })}
                     >
                       <SelectTrigger className="flex-1">
                         <SelectValue placeholder="בחר קטגוריה" />
