@@ -15,14 +15,13 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
   const [isScanning, setIsScanning] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReader = useRef<BrowserMultiFormatReader | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     return () => {
       // Cleanup on unmount
-      if (codeReader.current) {
-        codeReader.current.stopContinuousDecode();
-      }
+      stopScanning();
     };
   }, []);
 
@@ -77,8 +76,20 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
 
   const stopScanning = () => {
     if (codeReader.current) {
-      codeReader.current.stopContinuousDecode();
+      codeReader.current.reset();
     }
+    
+    // Stop video stream manually
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    // Clear video element
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    
     setIsScanning(false);
   };
 
