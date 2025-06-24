@@ -21,7 +21,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
     return () => {
       // Cleanup on unmount
       if (codeReader.current) {
-        codeReader.current.reset();
+        codeReader.current.stopContinuousDecode();
       }
     };
   }, []);
@@ -34,7 +34,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
         codeReader.current = new BrowserMultiFormatReader();
       }
 
-      const videoInputDevices = await codeReader.current.listVideoInputDevices();
+      const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
       
       if (videoInputDevices.length === 0) {
         throw new Error('לא נמצאה מצלמה במכשיר');
@@ -77,7 +77,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
 
   const stopScanning = () => {
     if (codeReader.current) {
-      codeReader.current.reset();
+      codeReader.current.stopContinuousDecode();
     }
     setIsScanning(false);
   };
