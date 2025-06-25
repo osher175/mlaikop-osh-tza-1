@@ -34,13 +34,40 @@ interface MonthlyPurchase {
   quantity: number;
 }
 
+const createEmptyAnalytics = () => {
+  const monthNames = [
+    'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+    'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
+  ];
+
+  const salesData: SalesData[] = monthNames.map(month => ({
+    month,
+    grossRevenue: 0,
+    netRevenue: 0
+  }));
+
+  const monthlyPurchases: MonthlyPurchase[] = monthNames.map(month => ({
+    month,
+    productName: '',
+    quantity: 0
+  }));
+
+  return {
+    salesData,
+    topProducts: [] as TopProduct[],
+    supplierData: [] as SupplierData[],
+    monthlyPurchases,
+    hasData: false
+  };
+};
+
 export const useBIAnalytics = () => {
   const { businessContext } = useBusinessAccess();
 
   const { data: analytics, isLoading } = useQuery({
     queryKey: ['bi-analytics', businessContext?.business_id],
     queryFn: async () => {
-      if (!businessContext?.business_id) return null;
+      if (!businessContext?.business_id) return createEmptyAnalytics();
 
       console.log('Fetching BI analytics for business:', businessContext.business_id);
 
@@ -60,18 +87,9 @@ export const useBIAnalytics = () => {
 
       console.log('Inventory actions fetched:', inventoryActions?.length || 0);
 
-      // Fetch all products for fallback data
-      const { data: products, error: productsError } = await supabase
-        .from('products')
-        .select(`
-          *,
-          suppliers(id, name)
-        `)
-        .eq('business_id', businessContext.business_id);
-
-      if (productsError) {
-        console.error('Error fetching products:', productsError);
-        throw productsError;
+      // If no data exists, return empty structure
+      if (!inventoryActions || inventoryActions.length === 0) {
+        return createEmptyAnalytics();
       }
 
       // Calculate monthly sales revenue (ברוטו ונטו)
@@ -86,11 +104,11 @@ export const useBIAnalytics = () => {
         const monthStart = new Date(currentYear, month, 1);
         const monthEnd = new Date(currentYear, month + 1, 0);
         
-        const monthlySales = inventoryActions?.filter(action => {
+        const monthlySales = inventoryActions.filter(action => {
           if (action.action_type !== 'sale') return false;
           const actionDate = new Date(action.timestamp);
           return actionDate >= monthStart && actionDate <= monthEnd;
-        }) || [];
+        });
 
         let grossRevenue = 0;
         monthlySales.forEach(sale => {
@@ -113,7 +131,7 @@ export const useBIAnalytics = () => {
       // Calculate top 5 products by sales
       const productSales: Record<string, { name: string; quantity: number; revenue: number }> = {};
       
-      inventoryActions?.forEach(action => {
+      inventoryActions.forEach(action => {
         if (action.action_type === 'sale' && action.quantity_changed) {
           const product = action.products as any;
           if (product) {
@@ -143,7 +161,7 @@ export const useBIAnalytics = () => {
       // Calculate supplier purchase data
       const supplierPurchases: Record<string, { name: string; volume: number }> = {};
       
-      inventoryActions?.forEach(action => {
+      inventoryActions.forEach(action => {
         if (action.action_type === 'add' && action.quantity_changed) {
           const product = action.products as any;
           const supplier = product?.suppliers;
@@ -177,11 +195,11 @@ export const useBIAnalytics = () => {
         const monthStart = new Date(currentYear, month, 1);
         const monthEnd = new Date(currentYear, month + 1, 0);
         
-        const monthlyAdditions = inventoryActions?.filter(action => {
+        const monthlyAdditions = inventoryActions.filter(action => {
           if (action.action_type !== 'add') return false;
           const actionDate = new Date(action.timestamp);
           return actionDate >= monthStart && actionDate <= monthEnd;
-        }) || [];
+        });
 
         // Find the product with highest purchase volume for this month
         const productPurchases: Record<string, { name: string; quantity: number }> = {};
@@ -211,7 +229,7 @@ export const useBIAnalytics = () => {
         } else {
           monthlyPurchases.push({
             month: monthNames[month],
-            productName: 'אין נתונים',
+            productName: '',
             quantity: 0
           });
         }
@@ -222,14 +240,14 @@ export const useBIAnalytics = () => {
         topProducts,
         supplierData,
         monthlyPurchases,
-        hasData: inventoryActions && inventoryActions.length > 0
+        hasData: true
       };
     },
     enabled: !!businessContext?.business_id,
   });
 
   return {
-    analytics,
+    analytics: analytics || createEmptyAnalytics(),
     isLoading,
   };
 };
