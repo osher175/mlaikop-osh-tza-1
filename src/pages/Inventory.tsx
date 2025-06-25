@@ -18,7 +18,6 @@ import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'] & {
   product_categories?: { name: string } | null;
-  categories?: { name: string } | null;
 };
 
 export const Inventory: React.FC = () => {
@@ -102,7 +101,7 @@ export const Inventory: React.FC = () => {
         />
 
         <InventoryTable
-          products={products as Product[]}
+          products={products}
           searchTerm={searchTerm}
           onEditProduct={setEditingProduct}
           onDeleteProduct={setDeletingProduct}

@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -24,8 +25,7 @@ export const useProducts = () => {
         .from('products')
         .select(`
           *,
-          product_categories(name),
-          categories(name)
+          product_categories(name)
         `)
         .eq('business_id', businessContext.business_id)
         .order('created_at', { ascending: false });

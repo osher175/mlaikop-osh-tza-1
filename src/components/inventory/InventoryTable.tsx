@@ -9,7 +9,6 @@ import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'] & {
   product_categories?: { name: string } | null;
-  categories?: { name: string } | null;
 };
 
 interface InventoryTableProps {
@@ -40,7 +39,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
   };
 
   const getCategoryName = (product: Product) => {
-    return product.product_categories?.name || product.categories?.name || '-';
+    return product.product_categories?.name || '-';
   };
 
   const filteredProducts = products.filter(product =>
