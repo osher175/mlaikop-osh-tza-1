@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +9,7 @@ import { ProtectedFeature } from '@/components/ProtectedFeature';
 import { CreateBusinessDialog } from '@/components/CreateBusinessDialog';
 import { EditProductDialog } from '@/components/inventory/EditProductDialog';
 import { DeleteProductDialog } from '@/components/inventory/DeleteProductDialog';
+import { ProductImageViewer } from '@/components/inventory/ProductImageViewer';
 import { ExpirationAlertsPanel } from '@/components/inventory/ExpirationAlertsPanel';
 import { useProducts } from '@/hooks/useProducts';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
@@ -23,6 +23,7 @@ export const Inventory: React.FC = () => {
   const [showCreateBusiness, setShowCreateBusiness] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [viewingProductImage, setViewingProductImage] = useState<Product | null>(null);
   const navigate = useNavigate();
   
   const { businessContext, isLoading: businessLoading } = useBusinessAccess();
@@ -231,7 +232,9 @@ export const Inventory: React.FC = () => {
                             <img
                               src={product.image}
                               alt={product.name}
-                              className="w-12 h-12 object-cover rounded-lg"
+                              className="w-12 h-12 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity"
+                              onClick={() => setViewingProductImage(product)}
+                              title="לחץ לצפייה בתמונה מוגדלת"
                             />
                           ) : (
                             <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -289,6 +292,13 @@ export const Inventory: React.FC = () => {
           open={!!deletingProduct}
           onOpenChange={(open) => !open && setDeletingProduct(null)}
           onProductDeleted={handleProductDeleted}
+        />
+
+        {/* Product Image Viewer */}
+        <ProductImageViewer
+          product={viewingProductImage}
+          open={!!viewingProductImage}
+          onOpenChange={(open) => !open && setViewingProductImage(null)}
         />
       </div>
     </MainLayout>
