@@ -27,26 +27,6 @@ export const TopProductsChart: React.FC = () => {
     );
   }
 
-  if (!analytics?.hasData || analytics.topProducts.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900" dir="rtl">
-            מוצרי המכירה המובילים
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 flex flex-col items-center justify-center text-center">
-            <div className="text-gray-500 mb-2">עדיין אין נתוני מכירות</div>
-            <div className="text-sm text-gray-400">
-              כאן יוצגו טופ 5 המוצרים הנמכרים ביותר
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card>
       <CardHeader>
@@ -58,32 +38,61 @@ export const TopProductsChart: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {analytics.topProducts.map((product, index) => {
-            const IconComponent = rankIcons[index];
-            const iconColor = rankColors[index];
-            
-            return (
-              <div key={product.productId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3" dir="rtl">
-                  <IconComponent className={`w-6 h-6 ${iconColor}`} />
-                  <div className="flex flex-col">
-                    <span className="font-medium text-gray-900">{product.productName}</span>
-                    <span className="text-sm text-gray-600">
-                      {product.quantity} יחידות • ₪{product.revenue.toLocaleString()}
-                    </span>
+        <div className="space-y-4 min-h-[16rem]">
+          {analytics.topProducts.length > 0 ? (
+            analytics.topProducts.map((product, index) => {
+              const IconComponent = rankIcons[index];
+              const iconColor = rankColors[index];
+              
+              return (
+                <div key={product.productId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3" dir="rtl">
+                    <IconComponent className={`w-6 h-6 ${iconColor}`} />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-gray-900">{product.productName}</span>
+                      <span className="text-sm text-gray-600">
+                        {product.quantity} יחידות • ₪{product.revenue.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-xl font-bold text-gray-700">
+                    #{index + 1}
                   </div>
                 </div>
-                <div className="text-xl font-bold text-gray-700">
-                  #{index + 1}
+              );
+            })
+          ) : (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+              <div className="space-y-4">
+                {/* Show empty ranking structure */}
+                {[1, 2, 3, 4, 5].map((rank) => {
+                  const IconComponent = rankIcons[rank - 1];
+                  const iconColor = rankColors[rank - 1];
+                  
+                  return (
+                    <div key={rank} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg opacity-50">
+                      <div className="flex items-center gap-3" dir="rtl">
+                        <IconComponent className={`w-6 h-6 ${iconColor}`} />
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-500">ממתין למוצר</span>
+                          <span className="text-sm text-gray-400">0 יחידות • ₪0</span>
+                        </div>
+                      </div>
+                      <div className="text-xl font-bold text-gray-400">
+                        #{rank}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 rounded-lg">
+                <div className="text-center">
+                  <div className="text-gray-500 mb-2">עדיין אין נתוני מכירות</div>
+                  <div className="text-sm text-gray-400">
+                    כאן יוצגו טופ 5 המוצרים הנמכרים ביותר
+                  </div>
                 </div>
               </div>
-            );
-          })}
-          
-          {analytics.topProducts.length === 0 && (
-            <div className="text-center text-gray-500 py-8">
-              עדיין אין מוצרים נמכרים לתצוגה
             </div>
           )}
         </div>
