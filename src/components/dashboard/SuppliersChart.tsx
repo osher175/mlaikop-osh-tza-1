@@ -31,23 +31,32 @@ export const SuppliersChart: React.FC = () => {
     );
   }
 
-  const hasSupplierData = analytics?.supplierData?.length > 0;
+  if (!analytics?.hasData || analytics.supplierData.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-900" dir="rtl">
+            פילוח רכישות לפי ספקים
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 flex flex-col items-center justify-center text-center">
+            <div className="text-gray-500 mb-2">עדיין אין נתוני רכישות</div>
+            <div className="text-sm text-gray-400">
+              תרשים זה יציג את פילוח הרכישות לפי ספקים שונים
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
-  // Create dummy data for empty state
-  const emptyData = [
-    { name: 'ספק א\'', value: 0, percentage: 0, fill: COLORS[0] },
-    { name: 'ספק ב\'', value: 0, percentage: 0, fill: COLORS[1] },
-    { name: 'ספק ג\'', value: 0, percentage: 0, fill: COLORS[2] }
-  ];
-
-  const chartData = hasSupplierData 
-    ? analytics.supplierData.map((supplier, index) => ({
-        name: supplier.supplierName,
-        value: supplier.purchaseVolume,
-        percentage: supplier.percentage,
-        fill: COLORS[index % COLORS.length]
-      }))
-    : emptyData;
+  const chartData = analytics.supplierData.map((supplier, index) => ({
+    name: supplier.supplierName,
+    value: supplier.purchaseVolume,
+    percentage: supplier.percentage,
+    fill: COLORS[index % COLORS.length]
+  }));
 
   return (
     <Card>
@@ -60,47 +69,34 @@ export const SuppliersChart: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={{}} className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                dataKey="value"
-                label={hasSupplierData ? ({ name, percentage }) => `${name} (${percentage}%)` : false}
-                labelLine={false}
-              >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} opacity={hasSupplierData ? 1 : 0.3} />
-                ))}
-              </Pie>
-              <ChartTooltip 
-                content={<ChartTooltipContent />}
-                formatter={(value, name) => [
-                  `${Number(value).toLocaleString()} יחידות`,
-                  name
-                ]}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+        <ChartContainer config={{}} className="h-64">
+          <PieChart>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              outerRadius={80}
+              dataKey="value"
+              label={({ name, percentage }) => `${name} (${percentage}%)`}
+              labelLine={false}
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.fill} />
+              ))}
+            </Pie>
+            <ChartTooltip 
+              content={<ChartTooltipContent />}
+              formatter={(value, name) => [
+                `${Number(value).toLocaleString()} יחידות`,
+                name
+              ]}
+            />
+          </PieChart>
         </ChartContainer>
-        
-        {!hasSupplierData && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-lg">
-            <div className="text-center">
-              <div className="text-gray-500 mb-2 font-medium">עדיין אין נתונים זמינים</div>
-              <div className="text-sm text-gray-400">
-                תרשים זה יציג את פילוח הרכישות לפי ספקים שונים
-              </div>
-            </div>
-          </div>
-        )}
         
         <div className="mt-4 space-y-2" dir="rtl">
           {chartData.map((supplier, index) => (
-            <div key={supplier.name} className={`flex items-center justify-between text-sm ${hasSupplierData ? '' : 'opacity-30'}`}>
+            <div key={supplier.name} className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <div 
                   className="w-3 h-3 rounded-full" 
@@ -109,10 +105,7 @@ export const SuppliersChart: React.FC = () => {
                 <span>{supplier.name}</span>
               </div>
               <span className="font-medium">
-                {hasSupplierData 
-                  ? `${supplier.value.toLocaleString()} יחידות (${supplier.percentage}%)`
-                  : 'מחכה לנתונים'
-                }
+                {supplier.value.toLocaleString()} יחידות ({supplier.percentage}%)
               </span>
             </div>
           ))}

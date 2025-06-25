@@ -40,7 +40,27 @@ export const RevenueChart: React.FC = () => {
     );
   }
 
-  const hasRevenue = analytics?.salesData?.some(data => data.grossRevenue > 0) || false;
+  if (!analytics?.hasData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-900" dir="rtl">
+            הכנסות חודשיות - שנת 2025
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 flex flex-col items-center justify-center text-center">
+            <div className="text-gray-500 mb-2">עדיין אין נתוני מכירות במערכת</div>
+            <div className="text-sm text-gray-400">
+              גרף זה יציג הכנסות ברוטו ונטו כאשר יתווספו מכירות
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const hasRevenue = analytics.salesData.some(data => data.grossRevenue > 0);
 
   return (
     <Card>
@@ -53,9 +73,16 @@ export const RevenueChart: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={analytics.salesData || []}>
+        {!hasRevenue ? (
+          <div className="h-64 flex flex-col items-center justify-center text-center">
+            <div className="text-gray-500 mb-2">עדיין אין מכירות רשומות לשנה זו</div>
+            <div className="text-sm text-gray-400">
+              הגרף יעודכן אוטומטית כאשר יתווספו נתוני מכירות
+            </div>
+          </div>
+        ) : (
+          <ChartContainer config={chartConfig} className="h-64">
+            <LineChart data={analytics.salesData}>
               <XAxis 
                 dataKey="month" 
                 tick={{ fontSize: 12 }}
@@ -91,18 +118,7 @@ export const RevenueChart: React.FC = () => {
                 name="הכנסות נטו"
               />
             </LineChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-        
-        {!hasRevenue && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-lg">
-            <div className="text-center">
-              <div className="text-gray-500 mb-2 font-medium">עדיין אין נתונים זמינים</div>
-              <div className="text-sm text-gray-400">
-                הנתונים יתעדכנו אוטומטית עם תחילת הפעילות
-              </div>
-            </div>
-          </div>
+          </ChartContainer>
         )}
       </CardContent>
     </Card>

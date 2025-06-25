@@ -14,7 +14,7 @@ import { AdminNavigationHelper } from '@/components/AdminNavigationHelper';
 export const Dashboard: React.FC = () => {
   return (
     <MainLayout>
-      <div className="space-y-6 p-4" dir="rtl">
+      <div className="space-y-6" dir="rtl">
         {/* Admin Navigation Helper */}
         <AdminNavigationHelper />
         
@@ -27,25 +27,15 @@ export const Dashboard: React.FC = () => {
         {/* Summary Cards */}
         <SummaryGrid />
 
-        {/* BI Analytics Charts - Fixed Grid Layout */}
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="w-full">
-              <RevenueChart />
-            </div>
-            <div className="w-full">
-              <TopProductsChart />
-            </div>
-          </div>
+        {/* BI Analytics Charts */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <RevenueChart />
+          <TopProductsChart />
+        </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="w-full">
-              <SuppliersChart />
-            </div>
-            <div className="w-full">
-              <MonthlyPurchasesChart />
-            </div>
-          </div>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <SuppliersChart />
+          <MonthlyPurchasesChart />
         </div>
 
         {/* Additional Dashboard Components */}
