@@ -40,9 +40,7 @@ export const useBIAnalytics = () => {
   const { data: analytics, isLoading } = useQuery({
     queryKey: ['bi-analytics', businessContext?.business_id],
     queryFn: async () => {
-      if (!businessContext?.business_id) {
-        return createEmptyAnalytics();
-      }
+      if (!businessContext?.business_id) return null;
 
       console.log('Fetching BI analytics for business:', businessContext.business_id);
 
@@ -57,10 +55,24 @@ export const useBIAnalytics = () => {
 
       if (actionsError) {
         console.error('Error fetching inventory actions:', actionsError);
-        return createEmptyAnalytics();
+        throw actionsError;
       }
 
       console.log('Inventory actions fetched:', inventoryActions?.length || 0);
+
+      // Fetch all products for fallback data
+      const { data: products, error: productsError } = await supabase
+        .from('products')
+        .select(`
+          *,
+          suppliers(id, name)
+        `)
+        .eq('business_id', businessContext.business_id);
+
+      if (productsError) {
+        console.error('Error fetching products:', productsError);
+        throw productsError;
+      }
 
       // Calculate monthly sales revenue (ברוטו ונטו)
       const salesData: SalesData[] = [];
@@ -216,33 +228,8 @@ export const useBIAnalytics = () => {
     enabled: !!businessContext?.business_id,
   });
 
-  // Always return analytics data, even if empty
   return {
-    analytics: analytics || createEmptyAnalytics(),
+    analytics,
     isLoading,
   };
 };
-
-// Helper function to create empty analytics structure
-function createEmptyAnalytics() {
-  const monthNames = [
-    'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-    'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
-  ];
-
-  return {
-    salesData: monthNames.map(month => ({
-      month,
-      grossRevenue: 0,
-      netRevenue: 0
-    })),
-    topProducts: [],
-    supplierData: [],
-    monthlyPurchases: monthNames.map(month => ({
-      month,
-      productName: 'אין נתונים',
-      quantity: 0
-    })),
-    hasData: false
-  };
-}

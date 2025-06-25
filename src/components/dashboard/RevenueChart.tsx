@@ -40,6 +40,26 @@ export const RevenueChart: React.FC = () => {
     );
   }
 
+  if (!analytics?.hasData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-900" dir="rtl">
+            הכנסות חודשיות - שנת 2025
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 flex flex-col items-center justify-center text-center">
+            <div className="text-gray-500 mb-2">עדיין אין נתוני מכירות במערכת</div>
+            <div className="text-sm text-gray-400">
+              גרף זה יציג הכנסות ברוטו ונטו כאשר יתווספו מכירות
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const hasRevenue = analytics.salesData.some(data => data.grossRevenue > 0);
 
   return (
@@ -53,54 +73,52 @@ export const RevenueChart: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-64">
-          <LineChart data={analytics.salesData}>
-            <XAxis 
-              dataKey="month" 
-              tick={{ fontSize: 12 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis 
-              tick={{ fontSize: 12 }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(value) => `₪${value.toLocaleString()}`}
-            />
-            <ChartTooltip 
-              content={<ChartTooltipContent />}
-              formatter={(value, name) => [
-                `₪${Number(value).toLocaleString()}`, 
-                name === 'grossRevenue' ? 'ברוטו (כולל מע"מ)' : 'נטו (ללא מע"מ)'
-              ]}
-            />
-            <Legend />
-            <Line 
-              dataKey="grossRevenue" 
-              stroke="#00BFBF" 
-              strokeWidth={3}
-              dot={{ fill: '#00BFBF', strokeWidth: 2, r: 4 }}
-              name="הכנסות ברוטו"
-            />
-            <Line 
-              dataKey="netRevenue" 
-              stroke="#FFA940" 
-              strokeWidth={3}
-              dot={{ fill: '#FFA940', strokeWidth: 2, r: 4 }}
-              name="הכנסות נטו"
-            />
-          </LineChart>
-        </ChartContainer>
-        
-        {!hasRevenue && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 rounded-lg">
-            <div className="text-center">
-              <div className="text-gray-500 mb-2">עדיין אין מכירות רשומות לשנה זו</div>
-              <div className="text-sm text-gray-400">
-                הגרף יעודכן אוטומטית כאשר יתווספו נתוני מכירות
-              </div>
+        {!hasRevenue ? (
+          <div className="h-64 flex flex-col items-center justify-center text-center">
+            <div className="text-gray-500 mb-2">עדיין אין מכירות רשומות לשנה זו</div>
+            <div className="text-sm text-gray-400">
+              הגרף יעודכן אוטומטית כאשר יתווספו נתוני מכירות
             </div>
           </div>
+        ) : (
+          <ChartContainer config={chartConfig} className="h-64">
+            <LineChart data={analytics.salesData}>
+              <XAxis 
+                dataKey="month" 
+                tick={{ fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis 
+                tick={{ fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(value) => `₪${value.toLocaleString()}`}
+              />
+              <ChartTooltip 
+                content={<ChartTooltipContent />}
+                formatter={(value, name) => [
+                  `₪${Number(value).toLocaleString()}`, 
+                  name === 'grossRevenue' ? 'ברוטו (כולל מע"מ)' : 'נטו (ללא מע"מ)'
+                ]}
+              />
+              <Legend />
+              <Line 
+                dataKey="grossRevenue" 
+                stroke="#00BFBF" 
+                strokeWidth={3}
+                dot={{ fill: '#00BFBF', strokeWidth: 2, r: 4 }}
+                name="הכנסות ברוטו"
+              />
+              <Line 
+                dataKey="netRevenue" 
+                stroke="#FFA940" 
+                strokeWidth={3}
+                dot={{ fill: '#FFA940', strokeWidth: 2, r: 4 }}
+                name="הכנסות נטו"
+              />
+            </LineChart>
+          </ChartContainer>
         )}
       </CardContent>
     </Card>

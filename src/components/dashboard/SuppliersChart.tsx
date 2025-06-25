@@ -31,19 +31,32 @@ export const SuppliersChart: React.FC = () => {
     );
   }
 
-  const hasData = analytics.supplierData.length > 0;
-  
-  // Create chart data - use real data if available, otherwise show placeholder
-  const chartData = hasData 
-    ? analytics.supplierData.map((supplier, index) => ({
-        name: supplier.supplierName,
-        value: supplier.purchaseVolume,
-        percentage: supplier.percentage,
-        fill: COLORS[index % COLORS.length]
-      }))
-    : [
-        { name: 'אין נתונים', value: 1, percentage: 100, fill: '#E5E7EB' }
-      ];
+  if (!analytics?.hasData || analytics.supplierData.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-900" dir="rtl">
+            פילוח רכישות לפי ספקים
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 flex flex-col items-center justify-center text-center">
+            <div className="text-gray-500 mb-2">עדיין אין נתוני רכישות</div>
+            <div className="text-sm text-gray-400">
+              תרשים זה יציג את פילוח הרכישות לפי ספקים שונים
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const chartData = analytics.supplierData.map((supplier, index) => ({
+    name: supplier.supplierName,
+    value: supplier.purchaseVolume,
+    percentage: supplier.percentage,
+    fill: COLORS[index % COLORS.length]
+  }));
 
   return (
     <Card>
@@ -64,7 +77,7 @@ export const SuppliersChart: React.FC = () => {
               cy="50%"
               outerRadius={80}
               dataKey="value"
-              label={hasData ? ({ name, percentage }) => `${name} (${percentage}%)` : false}
+              label={({ name, percentage }) => `${name} (${percentage}%)`}
               labelLine={false}
             >
               {chartData.map((entry, index) => (
@@ -74,42 +87,29 @@ export const SuppliersChart: React.FC = () => {
             <ChartTooltip 
               content={<ChartTooltipContent />}
               formatter={(value, name) => [
-                hasData ? `${Number(value).toLocaleString()} יחידות` : 'אין נתונים',
+                `${Number(value).toLocaleString()} יחידות`,
                 name
               ]}
             />
           </PieChart>
         </ChartContainer>
         
-        {!hasData && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 rounded-lg">
-            <div className="text-center">
-              <div className="text-gray-500 mb-2">עדיין אין נתוני רכישות</div>
-              <div className="text-sm text-gray-400">
-                תרשים זה יציג את פילוח הרכישות לפי ספקים שונים
+        <div className="mt-4 space-y-2" dir="rtl">
+          {chartData.map((supplier, index) => (
+            <div key={supplier.name} className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <div 
+                  className="w-3 h-3 rounded-full" 
+                  style={{ backgroundColor: supplier.fill }}
+                />
+                <span>{supplier.name}</span>
               </div>
+              <span className="font-medium">
+                {supplier.value.toLocaleString()} יחידות ({supplier.percentage}%)
+              </span>
             </div>
-          </div>
-        )}
-        
-        {hasData && (
-          <div className="mt-4 space-y-2" dir="rtl">
-            {chartData.map((supplier, index) => (
-              <div key={supplier.name} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: supplier.fill }}
-                  />
-                  <span>{supplier.name}</span>
-                </div>
-                <span className="font-medium">
-                  {supplier.value.toLocaleString()} יחידות ({supplier.percentage}%)
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
