@@ -31,18 +31,18 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
   const waitForVideoReady = (video: HTMLVideoElement): Promise<void> => {
     return new Promise((resolve) => {
       if (video.readyState >= 2) {
-        console.log('Video already ready, readyState:', video.readyState);
+        console.log('🎥 Video already ready, readyState:', video.readyState);
         resolve();
       } else {
-        console.log('Waiting for video loadedmetadata event...');
+        console.log('⏳ Waiting for video loadedmetadata event...');
         const handleLoadedMetadata = () => {
-          console.log('Video loadedmetadata fired, readyState:', video.readyState);
+          console.log('✅ Video loadedmetadata fired, readyState:', video.readyState);
           video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-          // Additional delay to ensure camera is fully stabilized
+          // Additional stabilization delay
           setTimeout(() => {
-            console.log('Video stabilization delay completed');
+            console.log('🎯 Video stabilization completed');
             resolve();
-          }, 1000);
+          }, 1500);
         };
         video.addEventListener('loadedmetadata', handleLoadedMetadata);
       }
@@ -51,65 +51,72 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
 
   const startScanning = async () => {
     try {
-      console.log('Starting barcode scanning process...');
+      console.log('🚀 Starting barcode scanning process...');
       setIsScanning(true);
       setCameraReady(false);
       setError(null);
       scanningActiveRef.current = true;
       
-      // Request camera permissions with optimal settings for barcode scanning
-      console.log('Requesting camera access...');
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment', // Use back camera
-          width: { ideal: 1920, max: 1920 },
-          height: { ideal: 1080, max: 1080 },
-          focusMode: 'continuous',
-          torch: false
-        } 
-      });
+      // Enhanced camera constraints for better barcode recognition
+      const constraints = {
+        video: {
+          facingMode: 'environment', // Use back camera for better scanning
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          frameRate: { ideal: 30, max: 60 }
+        }
+      };
+      
+      console.log('📷 Requesting camera access with constraints:', constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
       streamRef.current = stream;
-      console.log('Camera stream obtained successfully');
+      console.log('✅ Camera stream obtained successfully');
       
       if (videoRef.current && scanningActiveRef.current) {
-        console.log('Connecting stream to video element...');
+        console.log('🔗 Connecting stream to video element...');
         videoRef.current.srcObject = stream;
         
-        // Wait for video to be ready
+        // Remove any transforms that might interfere with barcode detection
+        videoRef.current.style.transform = 'none';
+        
+        // Wait for video to be fully ready
         await waitForVideoReady(videoRef.current);
         
         if (!scanningActiveRef.current) {
-          console.log('Scanning cancelled during video setup');
+          console.log('⚠️ Scanning cancelled during video setup');
           return;
         }
 
         setCameraReady(true);
-        console.log('Camera is ready, initializing barcode reader...');
+        console.log('🎬 Camera is ready, initializing barcode reader...');
         
-        // Initialize the barcode reader with specific formats
+        // Initialize the barcode reader
         if (!codeReader.current) {
           codeReader.current = new BrowserMultiFormatReader();
-          console.log('BrowserMultiFormatReader created');
+          console.log('📚 BrowserMultiFormatReader created');
         }
 
-        // Add another small delay to ensure everything is stable
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Additional stability delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         if (!scanningActiveRef.current) {
-          console.log('Scanning cancelled during final setup');
+          console.log('⚠️ Scanning cancelled during final setup');
           return;
         }
 
-        console.log('Starting barcode detection...');
-        // Start decoding with improved error handling
+        console.log('🔍 Starting barcode detection with enhanced settings...');
+        
+        // Start decoding with comprehensive error handling
         controlsRef.current = await codeReader.current.decodeFromVideoDevice(
           undefined,
           videoRef.current,
           (result, error) => {
             if (result && scanningActiveRef.current) {
               const barcodeText = result.getText();
-              console.log('Barcode successfully scanned:', barcodeText);
+              console.log('🎉 Barcode successfully detected:', barcodeText);
+              console.log('📋 Barcode format:', result.getBarcodeFormat());
+              
               onScanSuccess(barcodeText);
               toast({
                 title: "ברקוד נסרק בהצלחה!",
@@ -118,17 +125,18 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
               stopScanning();
               setIsOpen(false);
             }
-            // Only log non-NotFoundException errors to avoid spam
+            
+            // Log only significant errors to avoid console spam
             if (error && error.name !== 'NotFoundException') {
-              console.log('Scanning error (non-critical):', error.name, error.message);
+              console.log('⚠️ Scanning error:', error.name, error.message);
             }
           }
         );
         
-        console.log('Barcode scanning loop started successfully');
+        console.log('🔄 Barcode scanning loop started successfully');
       }
     } catch (error: any) {
-      console.error('Error starting camera or barcode scanning:', error);
+      console.error('❌ Error starting camera or barcode scanning:', error);
       let errorMessage = 'שגיאה בפתיחת המצלמה';
       
       if (error.name === 'NotAllowedError') {
@@ -137,6 +145,8 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
         errorMessage = 'לא נמצאה מצלמה במכשיר';
       } else if (error.name === 'NotSupportedError') {
         errorMessage = 'הדפדפן אינו תומך בסריקת ברקוד';
+      } else if (error.name === 'OverconstrainedError') {
+        errorMessage = 'הגדרות המצלמה אינן נתמכות';
       }
       
       setError(errorMessage);
@@ -151,16 +161,16 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
   };
 
   const stopScanning = () => {
-    console.log('Stopping barcode scanning...');
+    console.log('🛑 Stopping barcode scanning...');
     scanningActiveRef.current = false;
     
     // Stop the decoder controls
     if (controlsRef.current) {
       try {
         controlsRef.current.stop();
-        console.log('Decoder controls stopped');
+        console.log('✅ Decoder controls stopped');
       } catch (error) {
-        console.error('Error stopping decoder controls:', error);
+        console.error('❌ Error stopping decoder controls:', error);
       }
       controlsRef.current = null;
     }
@@ -169,7 +179,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => {
         track.stop();
-        console.log('Camera track stopped:', track.kind);
+        console.log('📹 Camera track stopped:', track.kind);
       });
       streamRef.current = null;
     }
@@ -182,11 +192,11 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
     setIsScanning(false);
     setCameraReady(false);
     setError(null);
-    console.log('Barcode scanning cleanup completed');
+    console.log('🧹 Barcode scanning cleanup completed');
   };
 
   const handleOpenChange = (open: boolean) => {
-    console.log('Dialog open state changing to:', open);
+    console.log('🔄 Dialog open state changing to:', open);
     setIsOpen(open);
     if (!open) {
       stopScanning();
