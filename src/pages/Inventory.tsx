@@ -16,7 +16,10 @@ import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useNavigate } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
 
-type Product = Database['public']['Tables']['products']['Row'];
+type Product = Database['public']['Tables']['products']['Row'] & {
+  product_categories?: { name: string } | null;
+  categories?: { name: string } | null;
+};
 
 export const Inventory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -99,7 +102,7 @@ export const Inventory: React.FC = () => {
         />
 
         <InventoryTable
-          products={products}
+          products={products as Product[]}
           searchTerm={searchTerm}
           onEditProduct={setEditingProduct}
           onDeleteProduct={setDeletingProduct}
