@@ -36,7 +36,7 @@ export const MonthlyPurchasesChart: React.FC = () => {
     );
   }
 
-  const hasPurchases = analytics.monthlyPurchases.some(data => data.quantity > 0);
+  const hasPurchases = analytics?.monthlyPurchases?.some(data => data.quantity > 0) || false;
 
   return (
     <Card>
@@ -49,9 +49,9 @@ export const MonthlyPurchasesChart: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-64 relative">
-          <>
-            <BarChart data={analytics.monthlyPurchases}>
+        <ChartContainer config={chartConfig} className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={analytics.monthlyPurchases || []}>
               <XAxis 
                 dataKey="month" 
                 tick={{ fontSize: 12 }}
@@ -79,19 +79,19 @@ export const MonthlyPurchasesChart: React.FC = () => {
                 opacity={hasPurchases ? 1 : 0.3}
               />
             </BarChart>
-            
-            {!hasPurchases && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
-                <div className="text-center">
-                  <div className="text-gray-500 mb-2 font-medium">עדיין אין נתונים זמינים</div>
-                  <div className="text-sm text-gray-400">
-                    הגרף יעודכן כאשר יתווספו נתוני רכישות חדשים
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
+          </ResponsiveContainer>
         </ChartContainer>
+        
+        {!hasPurchases && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-lg">
+            <div className="text-center">
+              <div className="text-gray-500 mb-2 font-medium">עדיין אין נתונים זמינים</div>
+              <div className="text-sm text-gray-400">
+                הגרף יעודכן כאשר יתווספו נתוני רכישות חדשים
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

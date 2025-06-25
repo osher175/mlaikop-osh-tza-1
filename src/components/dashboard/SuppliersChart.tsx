@@ -31,7 +31,7 @@ export const SuppliersChart: React.FC = () => {
     );
   }
 
-  const hasSupplierData = analytics.supplierData.length > 0;
+  const hasSupplierData = analytics?.supplierData?.length > 0;
 
   // Create dummy data for empty state
   const emptyData = [
@@ -60,8 +60,8 @@ export const SuppliersChart: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={{}} className="h-64 relative">
-          <>
+        <ChartContainer config={{}} className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={chartData}
@@ -84,19 +84,19 @@ export const SuppliersChart: React.FC = () => {
                 ]}
               />
             </PieChart>
-            
-            {!hasSupplierData && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
-                <div className="text-center">
-                  <div className="text-gray-500 mb-2 font-medium">עדיין אין נתונים זמינים</div>
-                  <div className="text-sm text-gray-400">
-                    תרשים זה יציג את פילוח הרכישות לפי ספקים שונים
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
+          </ResponsiveContainer>
         </ChartContainer>
+        
+        {!hasSupplierData && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-lg">
+            <div className="text-center">
+              <div className="text-gray-500 mb-2 font-medium">עדיין אין נתונים זמינים</div>
+              <div className="text-sm text-gray-400">
+                תרשים זה יציג את פילוח הרכישות לפי ספקים שונים
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="mt-4 space-y-2" dir="rtl">
           {chartData.map((supplier, index) => (

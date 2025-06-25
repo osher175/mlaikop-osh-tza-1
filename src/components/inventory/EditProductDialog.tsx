@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import { useBusiness } from '@/hooks/useBusiness';
 import { AddProductCategoryDialog } from '@/components/inventory/AddProductCategoryDialog';
 import { Plus } from 'lucide-react';
 import { useCategories } from '@/hooks/useCategories';
+import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'];
@@ -33,6 +33,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   const { toast } = useToast();
   const { business } = useBusiness();
   const { categories } = useCategories();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [formData, setFormData] = useState({
@@ -65,11 +66,15 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!product) return;
+    if (!product || !user || !business) return;
 
     setLoading(true);
     try {
-      // Prepare update data - only use product_category_id
+      const oldQuantity = product.quantity || 0;
+      const newQuantity = formData.quantity;
+      const quantityDifference = newQuantity - oldQuantity;
+
+      // Update product first
       const updateData: any = {
         name: formData.name,
         barcode: formData.barcode || null,
@@ -83,16 +88,47 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         updated_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase
+      const { error: updateError } = await supabase
         .from('products')
         .update(updateData)
         .eq('id', product.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Record inventory action if quantity changed
+      if (quantityDifference !== 0) {
+        let actionType = '';
+        if (quantityDifference > 0) {
+          actionType = 'add'; // Added to inventory
+        } else {
+          actionType = 'sale'; // Reduced from inventory (sale)
+        }
+
+        const { error: actionError } = await supabase
+          .from('inventory_actions')
+          .insert({
+            product_id: product.id,
+            business_id: business.id,
+            user_id: user.id,
+            action_type: actionType,
+            quantity_changed: Math.abs(quantityDifference),
+            timestamp: new Date().toISOString(),
+            notes: actionType === 'sale' ? 'מכירה דרך עריכת מוצר' : 'הוספה למלאי דרך עריכת מוצר'
+          });
+
+        if (actionError) {
+          console.error('Error recording inventory action:', actionError);
+          // Don't fail the whole operation, just log the error
+        } else {
+          console.log(`Recorded ${actionType} action for product ${product.name}: ${Math.abs(quantityDifference)} units`);
+        }
+      }
 
       toast({
         title: "מוצר עודכן בהצלחה",
-        description: "הפרטים נשמרו במערכת",
+        description: quantityDifference !== 0 
+          ? `הפרטים נשמרו במערכת וכמות ${Math.abs(quantityDifference)} יחידות ${quantityDifference > 0 ? 'נוספה למלאי' : 'נמכרה'}`
+          : "הפרטים נשמרו במערכת",
       });
 
       onProductUpdated();
@@ -125,6 +161,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
             <DialogTitle>עריכת מוצר - {product?.name}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-4">
                 <div>
@@ -189,6 +226,14 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                       onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
                       required
                     />
+                    {product && formData.quantity !== product.quantity && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {formData.quantity > (product.quantity || 0) 
+                          ? `+${formData.quantity - (product.quantity || 0)} יחידות יתווספו למלאי`
+                          : `${(product.quantity || 0) - formData.quantity} יחידות יירשמו כמכירה`
+                        }
+                      </div>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="location">מיקום</Label>

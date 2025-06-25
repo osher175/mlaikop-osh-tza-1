@@ -40,7 +40,7 @@ export const RevenueChart: React.FC = () => {
     );
   }
 
-  const hasRevenue = analytics.salesData.some(data => data.grossRevenue > 0);
+  const hasRevenue = analytics?.salesData?.some(data => data.grossRevenue > 0) || false;
 
   return (
     <Card>
@@ -53,9 +53,9 @@ export const RevenueChart: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-64 relative">
-          <>
-            <LineChart data={analytics.salesData}>
+        <ChartContainer config={chartConfig} className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={analytics.salesData || []}>
               <XAxis 
                 dataKey="month" 
                 tick={{ fontSize: 12 }}
@@ -91,19 +91,19 @@ export const RevenueChart: React.FC = () => {
                 name="הכנסות נטו"
               />
             </LineChart>
-            
-            {!hasRevenue && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
-                <div className="text-center">
-                  <div className="text-gray-500 mb-2 font-medium">עדיין אין נתונים זמינים</div>
-                  <div className="text-sm text-gray-400">
-                    הנתונים יתעדכנו אוטומטית עם תחילת הפעילות
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
+          </ResponsiveContainer>
         </ChartContainer>
+        
+        {!hasRevenue && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-lg">
+            <div className="text-center">
+              <div className="text-gray-500 mb-2 font-medium">עדיין אין נתונים זמינים</div>
+              <div className="text-sm text-gray-400">
+                הנתונים יתעדכנו אוטומטית עם תחילת הפעילות
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
