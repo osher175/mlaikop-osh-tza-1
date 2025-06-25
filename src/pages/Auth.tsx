@@ -141,15 +141,12 @@ export const Auth = () => {
       <div className="w-full max-w-md">
         {/* Logo and Brand */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-32 h-24 mb-3 shadow-lg">
+          <div className="w-48 h-32 mb-6">
             <img 
-              src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png" 
+              src="/lovable-uploads/51522c64-2b7d-48b2-bc2a-0580f886b3cb.png" 
               alt="Mlaiko Logo" 
               className="w-full h-full object-contain"
             />
-          </div>
-          <div className="bg-accent px-4 py-2 rounded-full mb-4">
-            <p className="text-white font-medium text-sm text-center">מערכת ניהול מלאי מתקדמת</p>
           </div>
         </div>
 
