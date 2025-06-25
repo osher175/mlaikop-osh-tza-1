@@ -61,39 +61,41 @@ export const SuppliersChart: React.FC = () => {
       </CardHeader>
       <CardContent>
         <ChartContainer config={{}} className="h-64 relative">
-          <PieChart>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              outerRadius={80}
-              dataKey="value"
-              label={hasSupplierData ? ({ name, percentage }) => `${name} (${percentage}%)` : false}
-              labelLine={false}
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.fill} opacity={hasSupplierData ? 1 : 0.3} />
-              ))}
-            </Pie>
-            <ChartTooltip 
-              content={<ChartTooltipContent />}
-              formatter={(value, name) => [
-                `${Number(value).toLocaleString()} יחידות`,
-                name
-              ]}
-            />
-          </PieChart>
-          
-          {!hasSupplierData && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
-              <div className="text-center">
-                <div className="text-gray-500 mb-2 font-medium">עדיין אין נתונים זמינים</div>
-                <div className="text-sm text-gray-400">
-                  תרשים זה יציג את פילוח הרכישות לפי ספקים שונים
+          <>
+            <PieChart>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                dataKey="value"
+                label={hasSupplierData ? ({ name, percentage }) => `${name} (${percentage}%)` : false}
+                labelLine={false}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} opacity={hasSupplierData ? 1 : 0.3} />
+                ))}
+              </Pie>
+              <ChartTooltip 
+                content={<ChartTooltipContent />}
+                formatter={(value, name) => [
+                  `${Number(value).toLocaleString()} יחידות`,
+                  name
+                ]}
+              />
+            </PieChart>
+            
+            {!hasSupplierData && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+                <div className="text-center">
+                  <div className="text-gray-500 mb-2 font-medium">עדיין אין נתונים זמינים</div>
+                  <div className="text-sm text-gray-400">
+                    תרשים זה יציג את פילוח הרכישות לפי ספקים שונים
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </>
         </ChartContainer>
         
         <div className="mt-4 space-y-2" dir="rtl">

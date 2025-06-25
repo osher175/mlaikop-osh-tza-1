@@ -50,45 +50,47 @@ export const MonthlyPurchasesChart: React.FC = () => {
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-64 relative">
-          <BarChart data={analytics.monthlyPurchases}>
-            <XAxis 
-              dataKey="month" 
-              tick={{ fontSize: 12 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis 
-              tick={{ fontSize: 12 }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(value) => `${value} יח'`}
-            />
-            <ChartTooltip 
-              content={<ChartTooltipContent />}
-              formatter={(value, name, props) => [
-                `${Number(value).toLocaleString()} יחידות`,
-                props.payload.productName || 'ללא נתונים'
-              ]}
-              labelFormatter={(label) => `חודש ${label}`}
-            />
-            <Bar 
-              dataKey="quantity" 
-              fill="#00BFBF" 
-              radius={[4, 4, 0, 0]}
-              opacity={hasPurchases ? 1 : 0.3}
-            />
-          </BarChart>
-          
-          {!hasPurchases && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
-              <div className="text-center">
-                <div className="text-gray-500 mb-2 font-medium">עדיין אין נתונים זמינים</div>
-                <div className="text-sm text-gray-400">
-                  הגרף יעודכן כאשר יתווספו נתוני רכישות חדשים
+          <>
+            <BarChart data={analytics.monthlyPurchases}>
+              <XAxis 
+                dataKey="month" 
+                tick={{ fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis 
+                tick={{ fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(value) => `${value} יח'`}
+              />
+              <ChartTooltip 
+                content={<ChartTooltipContent />}
+                formatter={(value, name, props) => [
+                  `${Number(value).toLocaleString()} יחידות`,
+                  props.payload.productName || 'ללא נתונים'
+                ]}
+                labelFormatter={(label) => `חודש ${label}`}
+              />
+              <Bar 
+                dataKey="quantity" 
+                fill="#00BFBF" 
+                radius={[4, 4, 0, 0]}
+                opacity={hasPurchases ? 1 : 0.3}
+              />
+            </BarChart>
+            
+            {!hasPurchases && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+                <div className="text-center">
+                  <div className="text-gray-500 mb-2 font-medium">עדיין אין נתונים זמינים</div>
+                  <div className="text-sm text-gray-400">
+                    הגרף יעודכן כאשר יתווספו נתוני רכישות חדשים
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </>
         </ChartContainer>
       </CardContent>
     </Card>
