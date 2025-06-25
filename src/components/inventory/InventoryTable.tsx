@@ -7,7 +7,10 @@ import { Package, Edit, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
 
-type Product = Database['public']['Tables']['products']['Row'];
+type Product = Database['public']['Tables']['products']['Row'] & {
+  product_categories?: { name: string } | null;
+  categories?: { name: string } | null;
+};
 
 interface InventoryTableProps {
   products: Product[];
@@ -34,6 +37,10 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
     } else {
       return <Badge className="bg-green-500">במלאי</Badge>;
     }
+  };
+
+  const getCategoryName = (product: Product) => {
+    return product.product_categories?.name || product.categories?.name || '-';
   };
 
   const filteredProducts = products.filter(product =>
@@ -71,6 +78,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                   <th className="text-right p-4">תמונה</th>
                   <th className="text-right p-4">שם המוצר</th>
                   <th className="text-right p-4">ברקוד</th>
+                  <th className="text-right p-4">קטגוריה</th>
                   <th className="text-right p-4">כמות</th>
                   <th className="text-right p-4">מחיר</th>
                   <th className="text-right p-4">מיקום</th>
@@ -98,6 +106,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                     </td>
                     <td className="p-4 font-medium">{product.name}</td>
                     <td className="p-4 text-gray-600">{product.barcode || '-'}</td>
+                    <td className="p-4 text-gray-600">{getCategoryName(product)}</td>
                     <td className="p-4">{product.quantity}</td>
                     <td className="p-4">₪{product.price || '-'}</td>
                     <td className="p-4">{product.location || '-'}</td>
