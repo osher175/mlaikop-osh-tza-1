@@ -19,6 +19,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
   const codeReader = useRef<BrowserMultiFormatReader | null>(null);
   const controlsRef = useRef<any>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const scanningActiveRef = useRef<boolean>(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -27,41 +28,88 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
     };
   }, []);
 
+  const waitForVideoReady = (video: HTMLVideoElement): Promise<void> => {
+    return new Promise((resolve) => {
+      if (video.readyState >= 2) {
+        console.log('Video already ready, readyState:', video.readyState);
+        resolve();
+      } else {
+        console.log('Waiting for video loadedmetadata event...');
+        const handleLoadedMetadata = () => {
+          console.log('Video loadedmetadata fired, readyState:', video.readyState);
+          video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+          // Additional delay to ensure camera is fully stabilized
+          setTimeout(() => {
+            console.log('Video stabilization delay completed');
+            resolve();
+          }, 1000);
+        };
+        video.addEventListener('loadedmetadata', handleLoadedMetadata);
+      }
+    });
+  };
+
   const startScanning = async () => {
     try {
+      console.log('Starting barcode scanning process...');
       setIsScanning(true);
       setCameraReady(false);
       setError(null);
+      scanningActiveRef.current = true;
       
-      // First, request camera permissions
+      // Request camera permissions with optimal settings for barcode scanning
+      console.log('Requesting camera access...');
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          facingMode: 'environment', // Use back camera
+          width: { ideal: 1920, max: 1920 },
+          height: { ideal: 1080, max: 1080 },
+          focusMode: 'continuous',
+          torch: false
         } 
       });
       
       streamRef.current = stream;
+      console.log('Camera stream obtained successfully');
       
-      if (videoRef.current) {
+      if (videoRef.current && scanningActiveRef.current) {
+        console.log('Connecting stream to video element...');
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        setCameraReady(true);
         
-        // Initialize the barcode reader
-        if (!codeReader.current) {
-          codeReader.current = new BrowserMultiFormatReader();
+        // Wait for video to be ready
+        await waitForVideoReady(videoRef.current);
+        
+        if (!scanningActiveRef.current) {
+          console.log('Scanning cancelled during video setup');
+          return;
         }
 
-        // Start decoding
+        setCameraReady(true);
+        console.log('Camera is ready, initializing barcode reader...');
+        
+        // Initialize the barcode reader with specific formats
+        if (!codeReader.current) {
+          codeReader.current = new BrowserMultiFormatReader();
+          console.log('BrowserMultiFormatReader created');
+        }
+
+        // Add another small delay to ensure everything is stable
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        if (!scanningActiveRef.current) {
+          console.log('Scanning cancelled during final setup');
+          return;
+        }
+
+        console.log('Starting barcode detection...');
+        // Start decoding with improved error handling
         controlsRef.current = await codeReader.current.decodeFromVideoDevice(
           undefined,
           videoRef.current,
           (result, error) => {
-            if (result) {
+            if (result && scanningActiveRef.current) {
               const barcodeText = result.getText();
-              console.log('Barcode scanned:', barcodeText);
+              console.log('Barcode successfully scanned:', barcodeText);
               onScanSuccess(barcodeText);
               toast({
                 title: "ברקוד נסרק בהצלחה!",
@@ -70,39 +118,59 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
               stopScanning();
               setIsOpen(false);
             }
-            // Don't log NotFoundException as it's normal when no barcode is detected
+            // Only log non-NotFoundException errors to avoid spam
             if (error && error.name !== 'NotFoundException') {
-              console.error('Scanning error:', error);
+              console.log('Scanning error (non-critical):', error.name, error.message);
             }
           }
         );
+        
+        console.log('Barcode scanning loop started successfully');
       }
     } catch (error: any) {
-      console.error('Error starting camera:', error);
-      setError('שגיאה בפתיחת המצלמה');
+      console.error('Error starting camera or barcode scanning:', error);
+      let errorMessage = 'שגיאה בפתיחת המצלמה';
+      
+      if (error.name === 'NotAllowedError') {
+        errorMessage = 'נדרשת הרשאה לגישה למצלמה';
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = 'לא נמצאה מצלמה במכשיר';
+      } else if (error.name === 'NotSupportedError') {
+        errorMessage = 'הדפדפן אינו תומך בסריקת ברקוד';
+      }
+      
+      setError(errorMessage);
       toast({
         title: "שגיאה בפתיחת המצלמה",
-        description: "אנא ודא שנתת הרשאה לגישה למצלמה",
+        description: errorMessage,
         variant: "destructive",
       });
       setIsScanning(false);
+      scanningActiveRef.current = false;
     }
   };
 
   const stopScanning = () => {
+    console.log('Stopping barcode scanning...');
+    scanningActiveRef.current = false;
+    
     // Stop the decoder controls
     if (controlsRef.current) {
       try {
         controlsRef.current.stop();
+        console.log('Decoder controls stopped');
       } catch (error) {
-        console.error('Error stopping controls:', error);
+        console.error('Error stopping decoder controls:', error);
       }
       controlsRef.current = null;
     }
     
     // Stop video stream
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log('Camera track stopped:', track.kind);
+      });
       streamRef.current = null;
     }
     
@@ -114,9 +182,11 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
     setIsScanning(false);
     setCameraReady(false);
     setError(null);
+    console.log('Barcode scanning cleanup completed');
   };
 
   const handleOpenChange = (open: boolean) => {
+    console.log('Dialog open state changing to:', open);
     setIsOpen(open);
     if (!open) {
       stopScanning();
@@ -152,7 +222,6 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
                 playsInline
                 muted
                 autoPlay
-                style={{ transform: 'scaleX(-1)' }}
               />
               {!cameraReady && !error && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
@@ -173,8 +242,13 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
             </div>
             
             {cameraReady && !error && (
-              <div className="text-center text-sm text-gray-600">
-                כוון את המצלמה לכיוון הברקוד
+              <div className="text-center">
+                <div className="text-sm text-gray-600 mb-2">
+                  כוון את המצלמה לכיוון הברקוד
+                </div>
+                <div className="text-xs text-gray-500">
+                  תומך ב: EAN-13, Code128, QR Code ועוד
+                </div>
               </div>
             )}
             
