@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import { useBusiness } from '@/hooks/useBusiness';
 import { AddProductCategoryDialog } from '@/components/inventory/AddProductCategoryDialog';
 import { Plus } from 'lucide-react';
 import { useCategories } from '@/hooks/useCategories';
+import { useInventoryLogger } from '@/hooks/useInventoryLogger';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'];
@@ -33,6 +33,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   const { toast } = useToast();
   const { business } = useBusiness();
   const { categories } = useCategories();
+  const { logInventoryAction } = useInventoryLogger();
   const [loading, setLoading] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [formData, setFormData] = useState({
@@ -69,6 +70,10 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
     setLoading(true);
     try {
+      const oldQuantity = product.quantity || 0;
+      const newQuantity = formData.quantity;
+      const quantityDiff = newQuantity - oldQuantity;
+
       // Prepare update data - only use product_category_id
       const updateData: any = {
         name: formData.name,
@@ -89,6 +94,16 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         .eq('id', product.id);
 
       if (error) throw error;
+
+      // Log inventory action if quantity changed
+      if (quantityDiff !== 0) {
+        const actionType = quantityDiff > 0 ? 'add' : 'remove';
+        const notes = quantityDiff > 0 
+          ? `הוספת ${Math.abs(quantityDiff)} יחידות למלאי`
+          : `הפחתת ${Math.abs(quantityDiff)} יחידות מהמלאי`;
+        
+        await logInventoryAction(product.id, actionType, Math.abs(quantityDiff), notes);
+      }
 
       toast({
         title: "מוצר עודכן בהצלחה",
