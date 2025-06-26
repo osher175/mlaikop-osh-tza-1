@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useBusinessAccess } from './useBusinessAccess';
 import { useToast } from '@/hooks/use-toast';
+import { useInventoryLogger } from './useInventoryLogger';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'];
@@ -15,6 +16,7 @@ export const useProducts = () => {
   const { businessContext } = useBusinessAccess();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { logInventoryAction } = useInventoryLogger();
 
   const { data: products = [], isLoading, error, refetch } = useQuery({
     queryKey: ['products', businessContext?.business_id],
@@ -60,11 +62,23 @@ export const useProducts = () => {
         console.error('Error creating product:', error);
         throw error;
       }
+
+      // Log inventory action for initial stock
+      if (productData.quantity && productData.quantity > 0) {
+        await logInventoryAction(
+          data.id, 
+          'add', 
+          productData.quantity,
+          `הוספת מוצר חדש עם ${productData.quantity} יחידות ראשוניות`
+        );
+      }
+      
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['bi-analytics'] });
       toast({
         title: "מוצר נוצר בהצלחה",
         description: "המוצר נוסף למערכת",
@@ -84,6 +98,13 @@ export const useProducts = () => {
     mutationFn: async ({ id, ...productData }: ProductUpdate & { id: string }) => {
       if (!user?.id) throw new Error('User not authenticated');
       
+      // Get current product data to compare quantities
+      const { data: currentProduct } = await supabase
+        .from('products')
+        .select('quantity')
+        .eq('id', id)
+        .single();
+      
       const { data, error } = await supabase
         .from('products')
         .update(productData)
@@ -95,11 +116,24 @@ export const useProducts = () => {
         console.error('Error updating product:', error);
         throw error;
       }
+
+      // Log inventory action if quantity changed
+      if (currentProduct && productData.quantity !== undefined && productData.quantity !== currentProduct.quantity) {
+        const quantityDiff = productData.quantity - currentProduct.quantity;
+        const actionType = quantityDiff > 0 ? 'add' : 'remove';
+        const notes = quantityDiff > 0 
+          ? `הוספת ${Math.abs(quantityDiff)} יחידות למלאי`
+          : `הפחתת ${Math.abs(quantityDiff)} יחידות מהמלאי`;
+        
+        await logInventoryAction(id, actionType, Math.abs(quantityDiff), notes);
+      }
+      
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['bi-analytics'] });
       toast({
         title: "מוצר עודכן בהצלחה",
         description: "השינויים נשמרו במערכת",
@@ -132,6 +166,7 @@ export const useProducts = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['bi-analytics'] });
       toast({
         title: "מוצר נמחק בהצלחה",
         description: "המוצר הוסר מהמערכת",

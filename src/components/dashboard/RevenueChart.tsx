@@ -23,45 +23,6 @@ const chartConfig = {
 export const RevenueChart: React.FC = () => {
   const { analytics, isLoading } = useBIAnalytics();
 
-  if (isLoading) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900" dir="rtl">
-            הכנסות חודשיות - שנת 2025
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 flex items-center justify-center">
-            <div className="text-gray-500 animate-pulse">טוען נתונים...</div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!analytics?.hasData) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900" dir="rtl">
-            הכנסות חודשיות - שנת 2025
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 flex flex-col items-center justify-center text-center p-4">
-            <div className="text-gray-500 mb-2 text-lg">אין עדיין תנועות מלאי להצגה</div>
-            <div className="text-sm text-gray-400">
-              גרף זה יציג הכנסות ברוטו ונטו כאשר יתווספו פעולות מלאי
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const hasRevenue = analytics.salesData.some(data => data.grossRevenue > 0);
-
   return (
     <Card className="w-full">
       <CardHeader>
@@ -73,7 +34,18 @@ export const RevenueChart: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        {!hasRevenue ? (
+        {isLoading ? (
+          <div className="h-64 flex items-center justify-center">
+            <div className="text-gray-500 animate-pulse">טוען נתונים...</div>
+          </div>
+        ) : !analytics?.hasData ? (
+          <div className="h-64 flex flex-col items-center justify-center text-center p-4">
+            <div className="text-gray-500 mb-2 text-lg">אין עדיין תנועות מלאי להצגה</div>
+            <div className="text-sm text-gray-400">
+              גרף זה יציג הכנסות ברוטו ונטו כאשר יתווספו פעולות מלאי
+            </div>
+          </div>
+        ) : !analytics.salesData.some(data => data.grossRevenue > 0) ? (
           <div className="h-64 flex flex-col items-center justify-center text-center p-4">
             <div className="text-gray-500 mb-2">עדיין אין תנועות מלאי רשומות לשנה זו</div>
             <div className="text-sm text-gray-400">

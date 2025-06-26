@@ -19,45 +19,6 @@ const chartConfig = {
 export const MonthlyPurchasesChart: React.FC = () => {
   const { analytics, isLoading } = useBIAnalytics();
 
-  if (isLoading) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900" dir="rtl">
-            רכישות חודשיות לפי מוצר
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 flex items-center justify-center">
-            <div className="text-gray-500 animate-pulse">טוען נתונים...</div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!analytics?.hasData) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900" dir="rtl">
-            רכישות חודשיות לפי מוצר
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 flex flex-col items-center justify-center text-center p-4">
-            <div className="text-gray-500 mb-2 text-lg">עדיין אין נתוני רכישות</div>
-            <div className="text-sm text-gray-400">
-              גרף זה יציג את המוצר עם הכי הרבה הוספות מלאי בכל חודש
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const hasPurchases = analytics.monthlyPurchases.some(data => data.quantity > 0);
-
   return (
     <Card className="w-full">
       <CardHeader>
@@ -69,7 +30,18 @@ export const MonthlyPurchasesChart: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        {!hasPurchases ? (
+        {isLoading ? (
+          <div className="h-64 flex items-center justify-center">
+            <div className="text-gray-500 animate-pulse">טוען נתונים...</div>
+          </div>
+        ) : !analytics?.hasData ? (
+          <div className="h-64 flex flex-col items-center justify-center text-center p-4">
+            <div className="text-gray-500 mb-2 text-lg">עדיין אין נתוני רכישות</div>
+            <div className="text-sm text-gray-400">
+              גרף זה יציג את המוצר עם הכי הרבה הוספות מלאי בכל חודש
+            </div>
+          </div>
+        ) : !analytics.monthlyPurchases.some(data => data.quantity > 0) ? (
           <div className="h-64 flex flex-col items-center justify-center text-center p-4">
             <div className="text-gray-500 mb-2">עדיין אין פעולות הוספת מלאי רשומות</div>
             <div className="text-sm text-gray-400">
