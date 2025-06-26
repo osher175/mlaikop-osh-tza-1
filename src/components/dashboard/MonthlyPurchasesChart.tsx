@@ -36,14 +36,14 @@ export const MonthlyPurchasesChart: React.FC = () => {
           </div>
         ) : !analytics?.hasData ? (
           <div className="h-64 flex flex-col items-center justify-center text-center p-4">
-            <div className="text-gray-500 mb-2 text-lg">עדיין אין נתוני רכישות</div>
+            <div className="text-gray-500 mb-2 text-lg">אין נתוני רכישות להצגה כרגע</div>
             <div className="text-sm text-gray-400">
               גרף זה יציג את המוצר עם הכי הרבה הוספות מלאי בכל חודש
             </div>
           </div>
         ) : !analytics.monthlyPurchases.some(data => data.quantity > 0) ? (
           <div className="h-64 flex flex-col items-center justify-center text-center p-4">
-            <div className="text-gray-500 mb-2">עדיין אין פעולות הוספת מלאי רשומות</div>
+            <div className="text-gray-500 mb-2">אין פעולות הוספת מלאי רשומות עדיין</div>
             <div className="text-sm text-gray-400">
               הגרף יעודכן כאשר יתווספו פעולות הוספת מלאי חדשות
             </div>

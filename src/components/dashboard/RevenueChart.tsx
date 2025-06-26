@@ -47,7 +47,7 @@ export const RevenueChart: React.FC = () => {
           </div>
         ) : !analytics.salesData.some(data => data.grossRevenue > 0) ? (
           <div className="h-64 flex flex-col items-center justify-center text-center p-4">
-            <div className="text-gray-500 mb-2">עדיין אין תנועות מלאי רשומות לשנה זו</div>
+            <div className="text-gray-500 mb-2">אין עדיין תנועות מלאי רשומות לשנה זו</div>
             <div className="text-sm text-gray-400">
               הגרף יעודכן אוטומטית כאשר יתווספו פעולות הוספת מלאי
             </div>

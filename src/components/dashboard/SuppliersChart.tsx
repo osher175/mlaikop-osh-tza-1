@@ -31,7 +31,7 @@ export const SuppliersChart: React.FC = () => {
           </div>
         ) : !analytics?.hasData || analytics.supplierData.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center text-center p-4">
-            <div className="text-gray-500 mb-2 text-lg">עדיין אין נתוני רכישות</div>
+            <div className="text-gray-500 mb-2 text-lg">אין נתוני רכישות להצגה כרגע</div>
             <div className="text-sm text-gray-400">
               תרשים זה יציג את פילוח פעולות הוספת המלאי לפי ספקים שונים
             </div>
