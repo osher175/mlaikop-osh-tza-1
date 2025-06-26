@@ -6,7 +6,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { useBIAnalytics } from '@/hooks/useBIAnalytics';
 
 const COLORS = ['#00BFBF', '#FFA940', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'];
@@ -16,7 +16,7 @@ export const SuppliersChart: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-gray-900" dir="rtl">
             פילוח רכישות לפי ספקים
@@ -24,7 +24,7 @@ export const SuppliersChart: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center">
-            <div className="text-gray-500">טוען נתונים...</div>
+            <div className="text-gray-500 animate-pulse">טוען נתונים...</div>
           </div>
         </CardContent>
       </Card>
@@ -33,17 +33,17 @@ export const SuppliersChart: React.FC = () => {
 
   if (!analytics?.hasData || analytics.supplierData.length === 0) {
     return (
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-gray-900" dir="rtl">
             פילוח רכישות לפי ספקים
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-64 flex flex-col items-center justify-center text-center">
-            <div className="text-gray-500 mb-2">עדיין אין נתוני רכישות</div>
+          <div className="h-64 flex flex-col items-center justify-center text-center p-4">
+            <div className="text-gray-500 mb-2 text-lg">עדיין אין נתוני רכישות</div>
             <div className="text-sm text-gray-400">
-              תרשים זה יציג את פילוח הרכישות לפי ספקים שונים
+              תרשים זה יציג את פילוח פעולות הוספת המלאי לפי ספקים שונים
             </div>
           </div>
         </CardContent>
@@ -59,40 +59,42 @@ export const SuppliersChart: React.FC = () => {
   }));
 
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-gray-900" dir="rtl">
           פילוח רכישות לפי ספקים
         </CardTitle>
         <div className="text-sm text-gray-600" dir="rtl">
-          לפי כמות יחידות שנרכשו
+          לפי כמות יחידות שהתווספו למלאי
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={{}} className="h-64">
-          <PieChart>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              outerRadius={80}
-              dataKey="value"
-              label={({ name, percentage }) => `${name} (${percentage}%)`}
-              labelLine={false}
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.fill} />
-              ))}
-            </Pie>
-            <ChartTooltip 
-              content={<ChartTooltipContent />}
-              formatter={(value, name) => [
-                `${Number(value).toLocaleString()} יחידות`,
-                name
-              ]}
-            />
-          </PieChart>
-        </ChartContainer>
+        <div className="w-full">
+          <ChartContainer config={{}} className="h-64 w-full">
+            <PieChart>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                dataKey="value"
+                label={({ name, percentage }) => `${name} (${percentage}%)`}
+                labelLine={false}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Pie>
+              <ChartTooltip 
+                content={<ChartTooltipContent />}
+                formatter={(value, name) => [
+                  `${Number(value).toLocaleString()} יחידות`,
+                  name
+                ]}
+              />
+            </PieChart>
+          </ChartContainer>
+        </div>
         
         <div className="mt-4 space-y-2" dir="rtl">
           {chartData.map((supplier, index) => (
