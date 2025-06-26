@@ -5,12 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { BarcodeScanner } from '@/components/ui/barcode-scanner';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useProductCategories } from '@/hooks/useProductCategories';
 import { useBusiness } from '@/hooks/useBusiness';
 import { AddProductCategoryDialog } from '@/components/inventory/AddProductCategoryDialog';
-import { Plus } from 'lucide-react';
+import { Plus, Scan } from 'lucide-react';
 import { useCategories } from '@/hooks/useCategories';
 import { useInventoryLogger } from '@/hooks/useInventoryLogger';
 import type { Database } from '@/integrations/supabase/types';
@@ -36,6 +37,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   const { logInventoryAction } = useInventoryLogger();
   const [loading, setLoading] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [formData, setFormData] = useState({
     name: product?.name || '',
     barcode: product?.barcode || '',
@@ -63,6 +65,15 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       });
     }
   }, [product]);
+
+  const handleBarcodeScanned = (barcode: string) => {
+    setFormData(prev => ({ ...prev, barcode }));
+    setShowBarcodeScanner(false);
+    toast({
+      title: "ברקוד נסרק בהצלחה",
+      description: `ברקוד: ${barcode}`,
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,11 +165,23 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                 
                 <div>
                   <Label htmlFor="barcode">ברקוד</Label>
-                  <Input
-                    id="barcode"
-                    value={formData.barcode}
-                    onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="barcode"
+                      value={formData.barcode}
+                      onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                      placeholder="הזן ברקוד או סרוק"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowBarcodeScanner(true)}
+                      className="px-3"
+                    >
+                      <Scan className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 <div>
@@ -277,6 +300,13 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Barcode Scanner Dialog */}
+      <BarcodeScanner
+        open={showBarcodeScanner}
+        onClose={() => setShowBarcodeScanner(false)}
+        onBarcodeScanned={handleBarcodeScanned}
+      />
 
       {/* Add Category Dialog */}
       {business?.business_category_id && (
