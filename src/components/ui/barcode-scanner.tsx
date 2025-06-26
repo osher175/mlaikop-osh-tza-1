@@ -2,16 +2,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Camera, X } from 'lucide-react';
+import { Camera, X, Scan } from 'lucide-react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { useToast } from '@/hooks/use-toast';
 
 interface BarcodeScannerProps {
-  onScanSuccess: (barcode: string) => void;
+  open: boolean;
+  onClose: () => void;
+  onBarcodeScanned: (barcode: string) => void;
 }
 
-export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess }) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ 
+  open, 
+  onClose, 
+  onBarcodeScanned 
+}) => {
   const [isScanning, setIsScanning] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +32,14 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
       stopScanning();
     };
   }, []);
+
+  useEffect(() => {
+    if (open) {
+      startScanning();
+    } else {
+      stopScanning();
+    }
+  }, [open]);
 
   const waitForVideoReady = (video: HTMLVideoElement): Promise<void> => {
     return new Promise((resolve) => {
@@ -117,13 +130,13 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
               console.log('🎉 Barcode successfully detected:', barcodeText);
               console.log('📋 Barcode format:', result.getBarcodeFormat());
               
-              onScanSuccess(barcodeText);
+              onBarcodeScanned(barcodeText);
               toast({
                 title: "ברקוד נסרק בהצלחה!",
                 description: `ברקוד: ${barcodeText}`,
               });
               stopScanning();
-              setIsOpen(false);
+              onClose();
             }
             
             // Log only significant errors to avoid console spam
@@ -195,96 +208,73 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess })
     console.log('🧹 Barcode scanning cleanup completed');
   };
 
-  const handleOpenChange = (open: boolean) => {
-    console.log('🔄 Dialog open state changing to:', open);
-    setIsOpen(open);
-    if (!open) {
-      stopScanning();
-    } else if (open) {
-      // Start scanning immediately when dialog opens
-      startScanning();
-    }
-  };
-
   return (
-    <>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => setIsOpen(true)}
-        className="px-2"
-      >
-        <Camera className="h-4 w-4" />
-      </Button>
-
-      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>סריקת ברקוד</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="relative bg-black rounded-lg overflow-hidden">
-              <video
-                ref={videoRef}
-                className="w-full h-64 object-cover"
-                playsInline
-                muted
-                autoPlay
-              />
-              {!cameraReady && !error && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                  <div className="text-white text-center">
-                    <Camera className="w-12 h-12 mx-auto mb-2 animate-pulse" />
-                    <p>{isScanning ? 'מכין מצלמה...' : 'לחץ כדי להתחיל'}</p>
-                  </div>
-                </div>
-              )}
-              {error && (
-                <div className="absolute inset-0 flex items-center justify-center bg-red-500 bg-opacity-75">
-                  <div className="text-white text-center">
-                    <X className="w-12 h-12 mx-auto mb-2" />
-                    <p>{error}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            {cameraReady && !error && (
-              <div className="text-center">
-                <div className="text-sm text-gray-600 mb-2">
-                  כוון את המצלמה לכיוון הברקוד
-                </div>
-                <div className="text-xs text-gray-500">
-                  תומך ב: EAN-13, Code128, QR Code ועוד
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>סריקת ברקוד</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="relative bg-black rounded-lg overflow-hidden">
+            <video
+              ref={videoRef}
+              className="w-full h-64 object-cover"
+              playsInline
+              muted
+              autoPlay
+            />
+            {!cameraReady && !error && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                <div className="text-white text-center">
+                  <Camera className="w-12 h-12 mx-auto mb-2 animate-pulse" />
+                  <p>{isScanning ? 'מכין מצלמה...' : 'לחץ כדי להתחיל'}</p>
                 </div>
               </div>
             )}
-            
-            <div className="flex gap-2">
-              {error && (
-                <Button
-                  onClick={startScanning}
-                  variant="outline"
-                  className="flex-1"
-                  disabled={isScanning}
-                >
-                  נסה שוב
-                </Button>
-              )}
+            {error && (
+              <div className="absolute inset-0 flex items-center justify-center bg-red-500 bg-opacity-75">
+                <div className="text-white text-center">
+                  <X className="w-12 h-12 mx-auto mb-2" />
+                  <p>{error}</p>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {cameraReady && !error && (
+            <div className="text-center">
+              <div className="text-sm text-gray-600 mb-2">
+                כוון את המצלמה לכיוון הברקוד
+              </div>
+              <div className="text-xs text-gray-500">
+                תומך ב: EAN-13, Code128, QR Code ועוד
+              </div>
+            </div>
+          )}
+          
+          <div className="flex gap-2">
+            {error && (
               <Button
-                onClick={() => handleOpenChange(false)}
+                onClick={startScanning}
                 variant="outline"
                 className="flex-1"
+                disabled={isScanning}
               >
-                <X className="w-4 h-4 ml-2" />
-                סגור
+                נסה שוב
               </Button>
-            </div>
+            )}
+            <Button
+              onClick={onClose}
+              variant="outline"
+              className="flex-1"
+            >
+              <X className="w-4 h-4 ml-2" />
+              סגור
+            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
