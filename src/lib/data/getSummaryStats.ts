@@ -13,11 +13,25 @@ export const useSummaryStats = () => {
     queryFn: async () => {
       if (!user?.id || !business?.id) return null;
 
-      // Get total products count
+      // Get all products count (including those with quantity 0 or negative)
       const { count: totalProducts } = await supabase
         .from('products')
         .select('*', { count: 'exact', head: true })
         .eq('business_id', business.id);
+
+      // Get products currently in stock (quantity > 0)
+      const { count: inStockCount } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('business_id', business.id)
+        .gt('quantity', 0);
+
+      // Get out of stock products (quantity <= 0)
+      const { count: outOfStockCount } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('business_id', business.id)
+        .lte('quantity', 0);
 
       // Get notification settings for thresholds
       const { data: notificationSettings } = await supabase
@@ -28,20 +42,13 @@ export const useSummaryStats = () => {
 
       const threshold = notificationSettings?.low_stock_threshold || 5;
 
-      // Get low stock products count
+      // Get low stock products count (quantity > 0 but <= threshold)
       const { count: lowStockCount } = await supabase
         .from('products')
         .select('*', { count: 'exact', head: true })
         .eq('business_id', business.id)
+        .gt('quantity', 0)
         .lte('quantity', threshold);
-
-      // Get expired products count
-      const { count: expiredCount } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .eq('business_id', business.id)
-        .not('expiration_date', 'is', null)
-        .lt('expiration_date', new Date().toISOString().split('T')[0]);
 
       // Get latest monthly profit (placeholder calculation)
       const { data: salesData } = await supabase
@@ -54,8 +61,9 @@ export const useSummaryStats = () => {
 
       return {
         totalProducts: totalProducts || 0,
+        inStockCount: inStockCount || 0,
         lowStockCount: lowStockCount || 0,
-        expiredCount: expiredCount || 0,
+        outOfStockCount: outOfStockCount || 0,
         monthlyProfit: salesData?.profit || 0,
       };
     },
@@ -64,8 +72,9 @@ export const useSummaryStats = () => {
 
   return {
     totalProducts: data?.totalProducts || 0,
+    inStockCount: data?.inStockCount || 0,
     lowStockCount: data?.lowStockCount || 0,
-    expiredCount: data?.expiredCount || 0,
+    outOfStockCount: data?.outOfStockCount || 0,
     monthlyProfit: data?.monthlyProfit || 0,
     isLoading,
   };

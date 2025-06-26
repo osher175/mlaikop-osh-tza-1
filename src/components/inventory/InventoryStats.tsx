@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Package, AlertCircle } from 'lucide-react';
+import { Package, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 
 interface InventoryStatsProps {
   totalProducts: number;
@@ -21,10 +21,10 @@ export const InventoryStats: React.FC<InventoryStatsProps> = ({
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center">
-            <Package className="h-8 w-8 text-primary" />
+            <Package className="h-8 w-8 text-blue-600" />
             <div className="mr-4">
               <p className="text-sm font-medium text-gray-600">סה״כ מוצרים</p>
-              <p className="text-2xl font-bold">{totalProducts}</p>
+              <p className="text-2xl font-bold text-blue-600">{totalProducts}</p>
             </div>
           </div>
         </CardContent>
@@ -33,7 +33,7 @@ export const InventoryStats: React.FC<InventoryStatsProps> = ({
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center">
-            <Package className="h-8 w-8 text-green-500" />
+            <CheckCircle className="h-8 w-8 text-green-500" />
             <div className="mr-4">
               <p className="text-sm font-medium text-gray-600">במלאי</p>
               <p className="text-2xl font-bold text-green-600">{inStock}</p>
@@ -57,7 +57,7 @@ export const InventoryStats: React.FC<InventoryStatsProps> = ({
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center">
-            <AlertCircle className="h-8 w-8 text-red-500" />
+            <XCircle className="h-8 w-8 text-red-500" />
             <div className="mr-4">
               <p className="text-sm font-medium text-gray-600">אזל מהמלאי</p>
               <p className="text-2xl font-bold text-red-600">{outOfStock}</p>

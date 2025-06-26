@@ -1,40 +1,40 @@
 
 import React from 'react';
 import { DashboardCard } from './DashboardCard';
-import { Package, AlertTriangle, Calendar, DollarSign } from 'lucide-react';
+import { Package, AlertTriangle, Calendar, DollarSign, CheckCircle } from 'lucide-react';
 import { useSummaryStats } from '@/lib/data/getSummaryStats';
 
 export const SummaryGrid: React.FC = () => {
-  const { totalProducts, lowStockCount, expiredCount, monthlyProfit, isLoading } = useSummaryStats();
+  const { totalProducts, inStockCount, lowStockCount, outOfStockCount, monthlyProfit, isLoading } = useSummaryStats();
 
   const summaryCards = [
     {
-      title: 'סך כל המוצרים במלאי',
+      title: 'סך כל המוצרים',
       value: totalProducts,
       icon: Package,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
     },
     {
-      title: 'מוצרים מתחת לסף',
-      value: lowStockCount,
-      icon: AlertTriangle,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
-    },
-    {
-      title: 'מוצרים שפג תוקפם',
-      value: expiredCount,
-      icon: Calendar,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
-    },
-    {
-      title: 'רווח חודשי אחרון',
-      value: monthlyProfit ? `₪${monthlyProfit.toLocaleString()}` : '₪0',
-      icon: DollarSign,
+      title: 'במלאי',
+      value: inStockCount,
+      icon: CheckCircle,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
+    },
+    {
+      title: 'מלאי נמוך',
+      value: lowStockCount,
+      icon: AlertTriangle,
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-50',
+    },
+    {
+      title: 'אזל מהמלאי',
+      value: outOfStockCount,
+      icon: Calendar,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
     },
   ];
 
