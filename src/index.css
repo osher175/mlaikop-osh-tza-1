@@ -61,6 +61,50 @@
   }
 }
 
+@layer components {
+  /* Custom search input styles for perfect responsiveness */
+  .mlaiko-search-input {
+    /* Mobile first approach */
+    @apply w-full px-4 py-3 text-base;
+    
+    /* Tablet styles */
+    @media (min-width: 600px) and (max-width: 1024px) {
+      @apply text-lg py-4;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    
+    /* Desktop styles */
+    @media (min-width: 1024px) {
+      @apply text-lg py-4;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    /* Enhanced focus state for accessibility */
+    &:focus {
+      @apply outline-none ring-2 ring-primary/20 border-primary;
+      box-shadow: 0 0 0 3px rgba(0, 191, 191, 0.1);
+    }
+    
+    /* Prevent zoom on iOS */
+    &:focus {
+      font-size: max(16px, 1em);
+    }
+  }
+  
+  /* RTL specific adjustments */
+  [dir="rtl"] .mlaiko-search-input {
+    padding-right: 3rem;
+    padding-left: 1rem;
+  }
+  
+  [dir="ltr"] .mlaiko-search-input {
+    padding-left: 3rem;
+    padding-right: 1rem;
+  }
+}
+
 .mlaiko-gradient {
   background: linear-gradient(135deg, #00BFBF 0%, #FFA940 100%);
 }
@@ -72,4 +116,24 @@
 
 [dir="rtl"] .space-x-reverse > :not([hidden]) ~ :not([hidden]) {
   --tw-space-x-reverse: 1;
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .mlaiko-search-input {
+    transition: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .mlaiko-search-input {
+    border-width: 2px;
+    border-color: #000;
+  }
+  
+  .mlaiko-search-input:focus {
+    border-color: #00BFBF;
+    box-shadow: 0 0 0 3px #00BFBF;
+  }
 }
