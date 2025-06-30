@@ -58,50 +58,78 @@
   body {
     @apply bg-background text-foreground font-sans;
     direction: rtl;
+    /* Improve mobile performance */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Prevent horizontal scroll on mobile */
+    overflow-x: hidden;
+    /* Better touch scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
   }
 }
 
 @layer components {
-  /* Custom search input styles for perfect responsiveness */
-  .mlaiko-search-input {
-    /* Mobile first approach */
-    @apply w-full px-4 py-3 text-base;
+  /* Optimized search input for mobile performance */
+  .mlaiko-search-optimized {
+    /* Mobile first - prevent zoom on iOS */
+    font-size: max(16px, 1rem);
     
-    /* Tablet styles */
-    @media (min-width: 600px) and (max-width: 1024px) {
-      @apply text-lg py-4;
-      max-width: 500px;
-      margin: 0 auto;
-    }
+    /* Smooth transitions but respect reduced motion */
+    transition: all 0.2s ease-in-out;
     
-    /* Desktop styles */
-    @media (min-width: 1024px) {
-      @apply text-lg py-4;
-      max-width: 600px;
-      margin: 0 auto;
-    }
+    /* Enhanced touch target for mobile */
+    min-height: 48px;
     
-    /* Enhanced focus state for accessibility */
+    /* Better focus state for accessibility */
     &:focus {
-      @apply outline-none ring-2 ring-primary/20 border-primary;
-      box-shadow: 0 0 0 3px rgba(0, 191, 191, 0.1);
+      outline: none;
+      border-color: hsl(var(--primary));
+      box-shadow: 
+        0 0 0 2px hsl(var(--primary) / 0.2),
+        0 1px 3px 0 rgb(0 0 0 / 0.1);
+      transform: scale(1.005);
     }
     
-    /* Prevent zoom on iOS */
-    &:focus {
-      font-size: max(16px, 1em);
+    /* Improve performance on mobile */
+    &:focus, &:active {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+    
+    /* RTL specific optimizations */
+    [dir="rtl"] & {
+      padding-right: 3rem;
+      padding-left: 1rem;
+    }
+    
+    [dir="ltr"] & {
+      padding-left: 3rem;
+      padding-right: 1rem;
     }
   }
   
-  /* RTL specific adjustments */
-  [dir="rtl"] .mlaiko-search-input {
-    padding-right: 3rem;
-    padding-left: 1rem;
+  /* Mobile-optimized container */
+  .mlaiko-mobile-container {
+    /* Prevent layout shift */
+    contain: layout style;
+    
+    /* Safe area handling for notched devices */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    
+    /* Performance optimization */
+    will-change: transform;
   }
   
-  [dir="ltr"] .mlaiko-search-input {
-    padding-left: 3rem;
-    padding-right: 1rem;
+  /* Optimized table for mobile */
+  .mlaiko-table-mobile {
+    /* Better scrolling on mobile */
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+    
+    /* Prevent content jumping */
+    min-height: 200px;
+    contain: layout;
   }
 }
 
@@ -109,31 +137,89 @@
   background: linear-gradient(135deg, #00BFBF 0%, #FFA940 100%);
 }
 
-/* RTL Support */
+/* RTL Support with performance optimization */
 [dir="rtl"] {
   direction: rtl;
+  /* Optimize text rendering */
+  text-rendering: optimizeSpeed;
 }
 
 [dir="rtl"] .space-x-reverse > :not([hidden]) ~ :not([hidden]) {
   --tw-space-x-reverse: 1;
 }
 
+/* Performance optimizations for mobile */
+@media (max-width: 768px) {
+  /* Reduce animations on mobile for better performance */
+  .mlaiko-search-optimized {
+    transition: border-color 0.15s ease;
+  }
+  
+  /* Optimize touch interactions */
+  .mlaiko-touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Prevent zoom on form focus (iOS Safari) */
+  input[type="text"],
+  input[type="search"],
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Accessibility improvements */
 @media (prefers-reduced-motion: reduce) {
-  .mlaiko-search-input {
-    transition: none;
+  .mlaiko-search-optimized,
+  * {
+    transition: none !important;
+    animation: none !important;
   }
 }
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {
-  .mlaiko-search-input {
+  .mlaiko-search-optimized {
     border-width: 2px;
     border-color: #000;
   }
   
-  .mlaiko-search-input:focus {
+  .mlaiko-search-optimized:focus {
     border-color: #00BFBF;
     box-shadow: 0 0 0 3px #00BFBF;
+  }
+}
+
+/* Keyboard navigation improvements */
+.mlaiko-search-optimized:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* Loading states optimization */
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+.mlaiko-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Viewport handling for mobile keyboards */
+@supports (height: 100dvh) {
+  .mlaiko-mobile-container {
+    min-height: 100dvh;
+  }
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+  .mlaiko-search-optimized {
+    /* Prevent iOS zoom */
+    -webkit-text-size-adjust: 100%;
   }
 }
