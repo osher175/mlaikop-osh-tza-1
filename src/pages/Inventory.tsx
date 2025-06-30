@@ -10,6 +10,7 @@ import { ExpirationAlertsPanel } from '@/components/inventory/ExpirationAlertsPa
 import { InventoryHeader } from '@/components/inventory/InventoryHeader';
 import { InventoryStats } from '@/components/inventory/InventoryStats';
 import { InventoryFilters } from '@/components/inventory/InventoryFilters';
+import { MobileSearchBar } from '@/components/inventory/MobileSearchBar';
 import { InventoryTable } from '@/components/inventory/InventoryTable';
 import { useProducts } from '@/hooks/useProducts';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
@@ -80,19 +81,26 @@ export const Inventory: React.FC = () => {
   return (
     <MainLayout>
       <div className="space-y-4" dir="rtl">
+        {/* כותרת הדף */}
         <InventoryHeader
           businessName={businessContext.business_name}
           userRole={businessContext.user_role}
           isOwner={businessContext.is_owner}
         />
 
+        {/* התראות תפוגה */}
         <ExpirationAlertsPanel />
 
-        <InventoryFilters
+        {/* שורת החיפוש החדשה - ממוקמת מתחת לכותרת ומעל הפילטרים */}
+        <MobileSearchBar
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
         />
 
+        {/* פילטרים - ללא החיפוש שעבר לקומפוננטה החדשה */}
+        <InventoryFilters />
+
+        {/* סטטיסטיקות המלאי */}
         <InventoryStats
           totalProducts={products.length}
           inStock={inStock}
@@ -100,6 +108,7 @@ export const Inventory: React.FC = () => {
           outOfStock={outOfStock}
         />
 
+        {/* טבלת המוצרים */}
         <InventoryTable
           products={products}
           searchTerm={searchTerm}
@@ -108,6 +117,7 @@ export const Inventory: React.FC = () => {
           onViewProductImage={setViewingProductImage}
         />
 
+        {/* דיאלוגים */}
         <EditProductDialog
           product={editingProduct}
           open={!!editingProduct}
