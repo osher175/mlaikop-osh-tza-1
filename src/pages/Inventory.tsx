@@ -9,7 +9,6 @@ import { ProductImageViewer } from '@/components/inventory/ProductImageViewer';
 import { ExpirationAlertsPanel } from '@/components/inventory/ExpirationAlertsPanel';
 import { InventoryHeader } from '@/components/inventory/InventoryHeader';
 import { InventoryStats } from '@/components/inventory/InventoryStats';
-import { InventoryFilters } from '@/components/inventory/InventoryFilters';
 import { MobileSearchBar } from '@/components/inventory/MobileSearchBar';
 import { InventoryTable } from '@/components/inventory/InventoryTable';
 import { useProducts } from '@/hooks/useProducts';
@@ -91,14 +90,11 @@ export const Inventory: React.FC = () => {
         {/* התראות תפוגה */}
         <ExpirationAlertsPanel />
 
-        {/* שורת החיפוש החדשה - ממוקמת מתחת לכותרת ומעל הפילטרים */}
+        {/* שורת החיפוש */}
         <MobileSearchBar
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
         />
-
-        {/* פילטרים - ללא החיפוש שעבר לקומפוננטה החדשה */}
-        <InventoryFilters />
 
         {/* סטטיסטיקות המלאי */}
         <InventoryStats
