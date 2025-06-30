@@ -114,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
           <img 
             src="/lovable-uploads/350d6f82-170a-4eef-816c-1e0d30c9f352.png" 
             alt="Mlaiko Logo" 
-            className="h-16 w-auto object-contain max-w-full sm:h-20 md:h-24"
+            className="h-20 w-auto object-contain max-w-full sm:h-24 md:h-28 lg:h-32"
           />
         </div>
       </div>
