@@ -139,17 +139,14 @@ export const Auth = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center p-4" dir="rtl">
       <div className="w-full max-w-md">
-        {/* Logo and Brand */}
+        {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-32 h-24 mb-3 shadow-lg">
+          <div className="w-full mb-6">
             <img 
               src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png" 
               alt="Mlaiko Logo" 
-              className="w-full h-full object-contain"
+              className="w-full h-auto object-contain mx-auto max-h-32"
             />
-          </div>
-          <div className="bg-accent px-4 py-2 rounded-full mb-4">
-            <p className="text-white font-medium text-sm text-center">מערכת ניהול מלאי מתקדמת</p>
           </div>
         </div>
 
@@ -354,7 +351,7 @@ export const Auth = () => {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-500">
-          <p>פלטפורמת Mlaiko - ניהול מלאי מתקדם</p>
+          <p>פלטפורמת Mlaiko – ניהול מלאי מתקדם | כל הזכויות שמורות</p>
         </div>
       </div>
     </div>
