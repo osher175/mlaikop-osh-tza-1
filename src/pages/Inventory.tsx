@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Package, Loader2 } from 'lucide-react';
@@ -10,9 +10,9 @@ import { ExpirationAlertsPanel } from '@/components/inventory/ExpirationAlertsPa
 import { InventoryHeader } from '@/components/inventory/InventoryHeader';
 import { InventoryStats } from '@/components/inventory/InventoryStats';
 import { InventoryFilters } from '@/components/inventory/InventoryFilters';
-import { OptimizedSearchBar } from '@/components/inventory/OptimizedSearchBar';
-import { OptimizedInventoryTable } from '@/components/inventory/OptimizedInventoryTable';
-import { useProductSearch } from '@/hooks/useProductSearch';
+import { MobileSearchBar } from '@/components/inventory/MobileSearchBar';
+import { InventoryTable } from '@/components/inventory/InventoryTable';
+import { useProducts } from '@/hooks/useProducts';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useNavigate } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
@@ -29,7 +29,7 @@ export const Inventory: React.FC = () => {
   const navigate = useNavigate();
   
   const { businessContext, isLoading: businessLoading } = useBusinessAccess();
-  const { products, isLoading: searchLoading, error, isEmpty } = useProductSearch(searchTerm);
+  const { products, isLoading: productsLoading, refetch } = useProducts();
 
   const getStatusCounts = React.useMemo(() => {
     const inStock = products.filter(p => p.quantity > 5).length;
@@ -39,20 +39,17 @@ export const Inventory: React.FC = () => {
     return { inStock, lowStock, outOfStock };
   }, [products]);
 
+  const handleProductUpdated = React.useCallback(() => {
+    refetch();
+  }, [refetch]);
+
+  const handleProductDeleted = React.useCallback(() => {
+    refetch();
+  }, [refetch]);
+
   const { inStock, lowStock, outOfStock } = getStatusCounts;
 
-  // Retry search functionality
-  const handleRetrySearch = useCallback(() => {
-    console.log('Retrying search...');
-    // Force a re-search by clearing and setting the search term again
-    const currentTerm = searchTerm;
-    setSearchTerm('');
-    setTimeout(() => {
-      setSearchTerm(currentTerm);
-    }, 100);
-  }, [searchTerm]);
-
-  if (businessLoading) {
+  if (businessLoading || productsLoading) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center min-h-[50vh]">
@@ -94,14 +91,13 @@ export const Inventory: React.FC = () => {
         {/* התראות תפוגה */}
         <ExpirationAlertsPanel />
 
-        {/* שורת החיפוש המאופטמת */}
-        <OptimizedSearchBar
+        {/* שורת החיפוש החדשה - ממוקמת מתחת לכותרת ומעל הפילטרים */}
+        <MobileSearchBar
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
-          isLoading={searchLoading}
         />
 
-        {/* פילטרים */}
+        {/* פילטרים - ללא החיפוש שעבר לקומפוננטה החדשה */}
         <InventoryFilters />
 
         {/* סטטיסטיקות המלאי */}
@@ -112,18 +108,13 @@ export const Inventory: React.FC = () => {
           outOfStock={outOfStock}
         />
 
-        {/* טבלת המוצרים המאופטמת */}
-        <OptimizedInventoryTable
+        {/* טבלת המוצרים */}
+        <InventoryTable
           products={products}
-          isLoading={searchLoading}
-          isEmpty={isEmpty}
-          hasError={!!error}
           searchTerm={searchTerm}
-          error={error}
           onEditProduct={setEditingProduct}
           onDeleteProduct={setDeletingProduct}
           onViewProductImage={setViewingProductImage}
-          onRetrySearch={handleRetrySearch}
         />
 
         {/* דיאלוגים */}
@@ -131,18 +122,14 @@ export const Inventory: React.FC = () => {
           product={editingProduct}
           open={!!editingProduct}
           onOpenChange={(open) => !open && setEditingProduct(null)}
-          onProductUpdated={() => {
-            // הרענון יתבצע אוטומטית דרך useProductSearch
-          }}
+          onProductUpdated={handleProductUpdated}
         />
 
         <DeleteProductDialog
           product={deletingProduct}
           open={!!deletingProduct}
           onOpenChange={(open) => !open && setDeletingProduct(null)}
-          onProductDeleted={() => {
-            // הרענון יתבצע אוטומטית דרך useProductSearch
-          }}
+          onProductDeleted={handleProductDeleted}
         />
 
         <ProductImageViewer
