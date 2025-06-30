@@ -36,14 +36,14 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
     const threshold = product.product_thresholds?.low_stock_threshold || 5;
     
     if (quantity === 0) {
-      return <Badge className="bg-red-500 text-white">אזל מהמלאי</Badge>;
+      return <Badge className="bg-red-500 text-white text-xs">אזל</Badge>;
     } else if (quantity <= threshold && quantity > 0) {
-      return <Badge className="bg-yellow-500 text-white flex items-center gap-1">
+      return <Badge className="bg-yellow-500 text-white flex items-center gap-1 text-xs">
         <AlertTriangle className="w-3 h-3" />
-        מלאי נמוך
+        נמוך
       </Badge>;
     } else {
-      return <Badge className="bg-green-500 text-white">במלאי</Badge>;
+      return <Badge className="bg-green-500 text-white text-xs">במלאי</Badge>;
     }
   };
 
@@ -63,18 +63,18 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
     (product.location && product.location.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Mobile card view
+  // Mobile optimized card view
   if (isMobile) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>רשימת מוצרים ({filteredProducts.length})</CardTitle>
+      <Card className="w-full">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">רשימת מוצרים ({filteredProducts.length})</CardTitle>
         </CardHeader>
         <CardContent className="p-2">
           {filteredProducts.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 mb-4">
+              <p className="text-gray-500 mb-4 text-sm">
                 {searchTerm ? 'לא נמצאו מוצרים מתאימים' : 'עדיין לא נוספו מוצרים'}
               </p>
               {!searchTerm && (
@@ -87,59 +87,59 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
               )}
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
               {filteredProducts.map((product) => (
                 <Card 
                   key={product.id} 
-                  className={`${isLowStock(product) ? 'border-l-4 border-l-yellow-500 shadow-md' : ''}`}
+                  className={`${isLowStock(product) ? 'border-l-4 border-l-yellow-500 shadow-sm' : 'shadow-sm'}`}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3 mb-3">
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-3 mb-3">
                       {product.image ? (
                         <img
                           src={product.image}
                           alt={product.name}
-                          className="w-16 h-16 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity"
+                          className="w-12 h-12 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity flex-shrink-0"
                           onClick={() => onViewProductImage(product)}
                           title="לחץ לצפייה בתמונה מוגדלת"
                         />
                       ) : (
-                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <Package className="w-8 h-8 text-gray-400" />
+                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Package className="w-6 h-6 text-gray-400" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-semibold text-gray-900 truncate">
+                        <h3 className="text-sm font-semibold text-gray-900 truncate">
                           {product.name}
                         </h3>
-                        <p className="text-sm text-gray-600">
-                          קטגוריה: {getCategoryName(product)}
+                        <p className="text-xs text-gray-600 truncate">
+                          {getCategoryName(product)}
                         </p>
                         {product.barcode && (
-                          <p className="text-xs text-gray-500">
-                            ברקוד: {product.barcode}
+                          <p className="text-xs text-gray-500 truncate">
+                            {product.barcode}
                           </p>
                         )}
                       </div>
-                      <div className="text-right">
+                      <div className="flex-shrink-0">
                         {getStatusBadge(product)}
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                      <div>
+                    <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                      <div className="truncate">
                         <span className="text-gray-600">כמות: </span>
                         <span className="font-medium">{product.quantity}</span>
                       </div>
-                      <div>
+                      <div className="truncate">
                         <span className="text-gray-600">מחיר: </span>
                         <span className="font-medium">₪{product.price || '-'}</span>
                       </div>
-                      <div>
+                      <div className="truncate">
                         <span className="text-gray-600">מיקום: </span>
                         <span className="font-medium">{product.location || '-'}</span>
                       </div>
-                      <div>
+                      <div className="truncate">
                         <span className="text-gray-600">עלות: </span>
                         <span className="font-medium">₪{product.cost || '-'}</span>
                       </div>
@@ -150,20 +150,20 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                         size="sm" 
                         variant="outline"
                         onClick={() => onEditProduct(product)}
-                        className="flex-1 h-10"
+                        className="flex-1 h-8 text-xs"
                         title="ערוך מוצר"
                       >
-                        <Edit className="w-4 h-4 ml-1" />
+                        <Edit className="w-3 h-3 ml-1" />
                         ערוך
                       </Button>
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        className="text-red-600 hover:text-red-700 h-10 px-3"
+                        className="text-red-600 hover:text-red-700 h-8 px-2"
                         onClick={() => onDeleteProduct(product)}
                         title="מחק מוצר"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
                   </CardContent>
@@ -176,9 +176,9 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
     );
   }
 
-  // Desktop table view
+  // Desktop table view - optimized
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
         <CardTitle>רשימת מוצרים ({filteredProducts.length})</CardTitle>
       </CardHeader>
@@ -199,19 +199,19 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="max-h-[70vh] overflow-auto">
             <table className="w-full">
-              <thead>
-                <tr className="border-b bg-gray-50">
-                  <th className="text-right p-4 font-medium">תמונה</th>
-                  <th className="text-right p-4 font-medium">שם המוצר</th>
-                  <th className="text-right p-4 font-medium">ברקוד</th>
-                  <th className="text-right p-4 font-medium">קטגוריה</th>
-                  <th className="text-right p-4 font-medium">כמות</th>
-                  <th className="text-right p-4 font-medium">מחיר</th>
-                  <th className="text-right p-4 font-medium">מיקום</th>
-                  <th className="text-right p-4 font-medium">סטטוס</th>
-                  <th className="text-right p-4 font-medium">פעולות</th>
+              <thead className="sticky top-0 bg-gray-50 z-10">
+                <tr className="border-b">
+                  <th className="text-right p-3 font-medium text-sm">תמונה</th>
+                  <th className="text-right p-3 font-medium text-sm">שם המוצר</th>
+                  <th className="text-right p-3 font-medium text-sm">ברקוד</th>
+                  <th className="text-right p-3 font-medium text-sm">קטגוריה</th>
+                  <th className="text-right p-3 font-medium text-sm">כמות</th>
+                  <th className="text-right p-3 font-medium text-sm">מחיר</th>
+                  <th className="text-right p-3 font-medium text-sm">מיקום</th>
+                  <th className="text-right p-3 font-medium text-sm">סטטוס</th>
+                  <th className="text-right p-3 font-medium text-sm">פעולות</th>
                 </tr>
               </thead>
               <tbody>
@@ -222,50 +222,50 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                       isLowStock(product) ? 'bg-yellow-50 border-l-4 border-l-yellow-400' : ''
                     }`}
                   >
-                    <td className="p-4">
+                    <td className="p-3">
                       {product.image ? (
                         <img
                           src={product.image}
                           alt={product.name}
-                          className="w-12 h-12 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity"
+                          className="w-10 h-10 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity"
                           onClick={() => onViewProductImage(product)}
                           title="לחץ לצפייה בתמונה מוגדלת"
                         />
                       ) : (
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <Package className="w-6 h-6 text-gray-400" />
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <Package className="w-5 h-5 text-gray-400" />
                         </div>
                       )}
                     </td>
-                    <td className="p-4 font-medium">
+                    <td className="p-3 font-medium text-sm max-w-[150px] truncate">
                       {isLowStock(product) && <AlertTriangle className="w-4 h-4 text-yellow-600 inline ml-2" />}
                       {product.name}
                     </td>
-                    <td className="p-4 text-gray-600">{product.barcode || '-'}</td>
-                    <td className="p-4 text-gray-600">{getCategoryName(product)}</td>
-                    <td className="p-4 font-medium">{product.quantity}</td>
-                    <td className="p-4">₪{product.price || '-'}</td>
-                    <td className="p-4">{product.location || '-'}</td>
-                    <td className="p-4">{getStatusBadge(product)}</td>
-                    <td className="p-4">
-                      <div className="flex gap-2">
+                    <td className="p-3 text-gray-600 text-sm max-w-[100px] truncate">{product.barcode || '-'}</td>
+                    <td className="p-3 text-gray-600 text-sm max-w-[100px] truncate">{getCategoryName(product)}</td>
+                    <td className="p-3 font-medium text-sm">{product.quantity}</td>
+                    <td className="p-3 text-sm">₪{product.price || '-'}</td>
+                    <td className="p-3 text-sm max-w-[100px] truncate">{product.location || '-'}</td>
+                    <td className="p-3">{getStatusBadge(product)}</td>
+                    <td className="p-3">
+                      <div className="flex gap-1">
                         <Button 
                           size="sm" 
                           variant="outline"
                           onClick={() => onEditProduct(product)}
                           title="ערוך מוצר"
-                          className="h-8 w-8 p-0"
+                          className="h-7 w-7 p-0"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-3 h-3" />
                         </Button>
                         <Button 
                           size="sm" 
                           variant="outline" 
-                          className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
+                          className="text-red-600 hover:text-red-700 h-7 w-7 p-0"
                           onClick={() => onDeleteProduct(product)}
                           title="מחק מוצר"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>
                     </td>

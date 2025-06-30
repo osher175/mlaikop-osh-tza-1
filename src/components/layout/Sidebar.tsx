@@ -33,7 +33,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, label, isActive, ba
     )}
   >
     {icon}
-    <span className="font-medium">{label}</span>
+    <span className="font-medium truncate">{label}</span>
     {badge && <span className="mr-auto">{badge}</span>}
   </Link>
 );
@@ -45,9 +45,6 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
   const location = useLocation();
   const { userRole, permissions } = useUserRole();
-
-  console.log('Sidebar - Current user role:', userRole);
-  console.log('Sidebar - Permissions:', permissions);
 
   const menuItems = [
     {
@@ -88,7 +85,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
     }
   ];
 
-  // Admin-specific menu items
   const adminMenuItems = [
     {
       to: '/admin',
@@ -111,14 +107,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-white overflow-hidden">
       {/* Header */}
-      <div className="p-6 border-b border-gray-100">
+      <div className="p-6 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
             <Package className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold text-gray-900">Mlaiko</span>
+          <span className="text-xl font-bold text-gray-900 truncate">Mlaiko</span>
         </div>
       </div>
 
@@ -151,7 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
                   icon={item.icon}
                   label={item.label}
                   isActive={location.pathname === item.to}
-                  badge={<Crown className="w-4 h-4 text-red-500" />}
+                  badge={<Crown className="w-4 h-4 text-red-500 flex-shrink-0" />}
                   onClick={onNavigate}
                 />
               ))}
@@ -175,7 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
       </div>
 
       {/* Footer - Always at bottom */}
-      <div className="p-4 border-t border-gray-100 bg-gray-50">
+      <div className="p-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
         <div className="text-xs text-gray-500 text-center">
           © 2024 Mlaiko
         </div>

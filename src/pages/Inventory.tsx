@@ -30,28 +30,28 @@ export const Inventory: React.FC = () => {
   const { businessContext, isLoading: businessLoading } = useBusinessAccess();
   const { products, isLoading: productsLoading, refetch } = useProducts();
 
-  const getStatusCounts = () => {
+  const getStatusCounts = React.useMemo(() => {
     const inStock = products.filter(p => p.quantity > 5).length;
     const lowStock = products.filter(p => p.quantity > 0 && p.quantity <= 5).length;
     const outOfStock = products.filter(p => p.quantity === 0).length;
     
     return { inStock, lowStock, outOfStock };
-  };
+  }, [products]);
 
-  const handleProductUpdated = () => {
+  const handleProductUpdated = React.useCallback(() => {
     refetch();
-  };
+  }, [refetch]);
 
-  const handleProductDeleted = () => {
+  const handleProductDeleted = React.useCallback(() => {
     refetch();
-  };
+  }, [refetch]);
 
-  const { inStock, lowStock, outOfStock } = getStatusCounts();
+  const { inStock, lowStock, outOfStock } = getStatusCounts;
 
   if (businessLoading || productsLoading) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center justify-center min-h-[50vh]">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       </MainLayout>
@@ -79,7 +79,7 @@ export const Inventory: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-6" dir="rtl">
+      <div className="space-y-4" dir="rtl">
         <InventoryHeader
           businessName={businessContext.business_name}
           userRole={businessContext.user_role}
