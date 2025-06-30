@@ -9,12 +9,14 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
 import { User, Mail, Phone, Calendar, Crown, Save, Camera, Shield } from 'lucide-react';
 
 export const UserProfile: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { userRole, getRoleDisplayName } = useUserRole();
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   
   const [profile, setProfile] = useState({
     firstName: 'יוסי',
@@ -159,7 +161,11 @@ export const UserProfile: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button variant="outline" className="w-full justify-start">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => setChangePasswordOpen(true)}
+                >
                   שינוי סיסמה
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
@@ -251,6 +257,12 @@ export const UserProfile: React.FC = () => {
             </Card>
           </div>
         </div>
+
+        {/* Change Password Dialog */}
+        <ChangePasswordDialog
+          open={changePasswordOpen}
+          onOpenChange={setChangePasswordOpen}
+        />
       </div>
     </MainLayout>
   );
