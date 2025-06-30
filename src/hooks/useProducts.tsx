@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -50,6 +51,8 @@ export const useProducts = () => {
       
       const { low_stock_threshold, ...productFields } = productData;
       
+      console.log('Creating product with threshold:', low_stock_threshold);
+      
       const { data, error } = await supabase
         .from('products')
         .insert({
@@ -67,13 +70,20 @@ export const useProducts = () => {
 
       // Insert threshold if provided
       if (low_stock_threshold !== undefined) {
-        await supabase
+        console.log('Inserting threshold for product:', data.id, 'with threshold:', low_stock_threshold);
+        
+        const { error: thresholdError } = await supabase
           .from('product_thresholds')
           .insert({
             product_id: data.id,
             business_id: businessContext.business_id,
             low_stock_threshold,
           });
+          
+        if (thresholdError) {
+          console.error('Error inserting threshold:', thresholdError);
+          // Don't fail the entire operation for threshold error
+        }
       }
 
       // Log inventory action for initial stock
@@ -110,6 +120,8 @@ export const useProducts = () => {
   const updateProduct = useMutation({
     mutationFn: async ({ id, ...productData }: ProductUpdate & { id: string }) => {
       if (!user?.id) throw new Error('User not authenticated');
+      
+      console.log('Updating product:', id, 'with data:', productData);
       
       // Get current product data to compare quantities
       const { data: currentProduct } = await supabase

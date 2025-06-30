@@ -94,6 +94,8 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     if (!product || !business?.id) return;
 
     setLoading(true);
+    console.log('Starting product update with data:', formData);
+    
     try {
       const oldQuantity = product.quantity || 0;
       const newQuantity = formData.quantity;
@@ -113,14 +115,21 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         updated_at: new Date().toISOString(),
       };
 
+      console.log('Updating product with data:', updateData);
+
       const { error: productError } = await supabase
         .from('products')
         .update(updateData)
         .eq('id', product.id);
 
-      if (productError) throw productError;
+      if (productError) {
+        console.error('Product update error:', productError);
+        throw productError;
+      }
 
-      // Update or insert threshold
+      console.log('Product updated successfully, now updating threshold:', formData.low_stock_threshold);
+
+      // Update or insert threshold - using upsert for better reliability
       const { error: thresholdError } = await supabase
         .from('product_thresholds')
         .upsert({
@@ -128,10 +137,20 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
           business_id: business.id,
           low_stock_threshold: formData.low_stock_threshold,
           updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'product_id'
         });
 
       if (thresholdError) {
         console.error('Threshold update error:', thresholdError);
+        // Don't throw error for threshold - it's not critical
+        toast({
+          title: "אזהרה",
+          description: "המוצר עודכן אך לא ניתן היה לשמור את סף המלאי הנמוך",
+          variant: "destructive",
+        });
+      } else {
+        console.log('Threshold updated successfully');
       }
 
       // Log inventory action if quantity changed
@@ -267,7 +286,11 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                       type="number"
                       min="0"
                       value={formData.low_stock_threshold}
-                      onChange={(e) => setFormData({ ...formData, low_stock_threshold: Number(e.target.value) })}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        console.log('Setting low_stock_threshold to:', value);
+                        setFormData({ ...formData, low_stock_threshold: value });
+                      }}
                       className="mt-1 h-10"
                       placeholder="5"
                     />
