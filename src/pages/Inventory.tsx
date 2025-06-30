@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Package, Loader2 } from 'lucide-react';
@@ -40,6 +40,17 @@ export const Inventory: React.FC = () => {
   }, [products]);
 
   const { inStock, lowStock, outOfStock } = getStatusCounts;
+
+  // Retry search functionality
+  const handleRetrySearch = useCallback(() => {
+    console.log('Retrying search...');
+    // Force a re-search by clearing and setting the search term again
+    const currentTerm = searchTerm;
+    setSearchTerm('');
+    setTimeout(() => {
+      setSearchTerm(currentTerm);
+    }, 100);
+  }, [searchTerm]);
 
   if (businessLoading) {
     return (
@@ -108,9 +119,11 @@ export const Inventory: React.FC = () => {
           isEmpty={isEmpty}
           hasError={!!error}
           searchTerm={searchTerm}
+          error={error}
           onEditProduct={setEditingProduct}
           onDeleteProduct={setDeletingProduct}
           onViewProductImage={setViewingProductImage}
+          onRetrySearch={handleRetrySearch}
         />
 
         {/* דיאלוגים */}

@@ -16,9 +16,11 @@ interface OptimizedInventoryTableProps {
   isEmpty: boolean;
   hasError: boolean;
   searchTerm: string;
+  error?: string | null;
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (product: Product) => void;
   onViewProductImage: (product: Product) => void;
+  onRetrySearch?: () => void;
 }
 
 const ProductRow = memo(({ 
@@ -119,9 +121,11 @@ export const OptimizedInventoryTable: React.FC<OptimizedInventoryTableProps> = m
   isEmpty,
   hasError,
   searchTerm,
+  error,
   onEditProduct,
   onDeleteProduct,
-  onViewProductImage
+  onViewProductImage,
+  onRetrySearch
 }) => {
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -145,6 +149,8 @@ export const OptimizedInventoryTable: React.FC<OptimizedInventoryTableProps> = m
           isEmpty={isEmpty}
           hasError={hasError}
           searchTerm={searchTerm}
+          error={error}
+          onRetry={onRetrySearch}
         />
 
         {!isLoading && !hasError && products.length > 0 && (

@@ -1,20 +1,25 @@
 
 import React from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, AlertCircle } from 'lucide-react';
+import { Search, AlertCircle, Wifi, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface SearchLoadingStateProps {
   isLoading: boolean;
   isEmpty: boolean;
   hasError: boolean;
   searchTerm: string;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 export const SearchLoadingState: React.FC<SearchLoadingStateProps> = ({
   isLoading,
   isEmpty,
   hasError,
-  searchTerm
+  searchTerm,
+  error,
+  onRetry
 }) => {
   if (isLoading) {
     return (
@@ -45,11 +50,29 @@ export const SearchLoadingState: React.FC<SearchLoadingStateProps> = ({
   }
 
   if (hasError) {
+    const isNetworkError = error?.includes('חיבור לרשת') || error?.includes('fetch');
+    
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
-        <AlertCircle className="h-12 w-12 text-red-400 mb-4" />
+        {isNetworkError ? (
+          <Wifi className="h-12 w-12 text-red-400 mb-4" />
+        ) : (
+          <AlertCircle className="h-12 w-12 text-red-400 mb-4" />
+        )}
         <h3 className="text-lg font-medium text-gray-900 mb-2">שגיאה בחיפוש</h3>
-        <p className="text-gray-500">נסה שוב או רענן את הדף</p>
+        <p className="text-gray-500 mb-4 max-w-sm">
+          {error || 'אירעה שגיאה בחיפוש המוצרים'}
+        </p>
+        {onRetry && (
+          <Button 
+            variant="outline" 
+            onClick={onRetry}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            נסה שוב
+          </Button>
+        )}
       </div>
     );
   }
