@@ -4,6 +4,28 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+// Auth state cleanup utility
+const cleanupAuthState = () => {
+  console.log('Cleaning up auth state...');
+  
+  // Remove standard auth tokens
+  localStorage.removeItem('supabase.auth.token');
+  
+  // Remove all Supabase auth keys from localStorage
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+      localStorage.removeItem(key);
+    }
+  });
+  
+  // Remove from sessionStorage if in use
+  Object.keys(sessionStorage || {}).forEach((key) => {
+    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+      sessionStorage.removeItem(key);
+    }
+  });
+};
+
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -71,6 +93,17 @@ export const useAuth = () => {
   };
 
   const signIn = async (email: string, password: string) => {
+    // Clean up existing state before signing in
+    cleanupAuthState();
+    
+    try {
+      // Attempt global sign out first
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch (err) {
+      // Continue even if this fails
+      console.log('Previous session cleanup attempt:', err);
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -104,11 +137,34 @@ export const useAuth = () => {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
+    try {
+      console.log('Starting sign out process...');
+      
+      // Clean up auth state first
+      cleanupAuthState();
+      
+      // Attempt global sign out
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      
+      if (error) {
+        console.error('Sign out error:', error);
+        // Don't throw error, continue with cleanup
+      }
+      
+      console.log('Sign out completed, redirecting...');
+      
+      // Force page reload to ensure clean state
       window.location.href = '/auth';
+      
+      return { error: null };
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      
+      // Force redirect even if sign out fails
+      window.location.href = '/auth';
+      
+      return { error };
     }
-    return { error };
   };
 
   return {

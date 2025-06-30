@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
+import { useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,9 +19,22 @@ import {
 export const Header: React.FC = () => {
   const { signOut, user } = useAuth();
   const { userRole, getRoleDisplayName, permissions } = useUserRole();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
-    await signOut();
+    try {
+      console.log('Starting logout process...');
+      await signOut();
+      console.log('Logout completed successfully');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Force navigation to auth page even if logout fails
+      window.location.href = '/auth';
+    }
+  };
+
+  const handleSubscriptionManagement = () => {
+    navigate('/subscriptions');
   };
 
   const getRoleBadgeColor = () => {
@@ -80,7 +94,10 @@ export const Header: React.FC = () => {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-right cursor-pointer">
+              <DropdownMenuItem 
+                onClick={handleSubscriptionManagement}
+                className="text-right cursor-pointer"
+              >
                 <Crown className="ml-2 h-4 w-4" />
                 ניהול מנוי
               </DropdownMenuItem>
