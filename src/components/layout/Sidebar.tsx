@@ -110,11 +110,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
     <div className="h-full flex flex-col bg-white overflow-hidden">
       {/* Header */}
       <div className="p-6 border-b border-gray-100 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-            <Package className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-xl font-bold text-gray-900 truncate">Mlaiko</span>
+        <div className="flex items-center justify-center">
+          <img 
+            src="/lovable-uploads/350d6f82-170a-4eef-816c-1e0d30c9f352.png" 
+            alt="Mlaiko Logo" 
+            className="h-12 w-auto object-contain max-w-full"
+          />
         </div>
       </div>
 
