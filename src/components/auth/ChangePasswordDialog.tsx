@@ -21,6 +21,8 @@ export const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
   open,
   onOpenChange,
 }) => {
+  console.log('ChangePasswordDialog rendered, open:', open);
+  
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
@@ -70,6 +72,8 @@ export const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
   };
 
   const handlePasswordChange = async () => {
+    console.log('handlePasswordChange called');
+    
     if (!validateForm()) return;
 
     setLoading(true);
