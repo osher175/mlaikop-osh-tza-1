@@ -28,6 +28,13 @@ export const useProductSearch = (searchTerm: string) => {
       setProducts([]);
       return;
     }
+
+    // Validate search term - minimum 2 characters for search
+    const trimmedTerm = term.trim();
+    if (trimmedTerm.length > 0 && trimmedTerm.length < 2) {
+      console.log('Search term too short, skipping search');
+      return;
+    }
     
     setIsLoading(true);
 
@@ -41,14 +48,16 @@ export const useProductSearch = (searchTerm: string) => {
         .eq('business_id', businessContext.business_id)
         .limit(30);
 
-      // Only add search filters if term is not empty
-      const trimmedTerm = term.trim();
-      if (trimmedTerm.length > 0) {
+      // Only add search filters if term is not empty and valid
+      if (trimmedTerm.length >= 2) {
         // Server-side search using ilike for case-insensitive search
+        // Escape special characters to prevent SQL injection
+        const safeTerm = trimmedTerm.replace(/[%_]/g, '\\$&');
+        
         query = query.or(`
-          name.ilike.%${trimmedTerm}%,
-          location.ilike.%${trimmedTerm}%,
-          barcode.ilike.%${trimmedTerm}%
+          name.ilike.%${safeTerm}%,
+          location.ilike.%${safeTerm}%,
+          barcode.ilike.%${safeTerm}%
         `);
       }
 
@@ -58,16 +67,22 @@ export const useProductSearch = (searchTerm: string) => {
         console.error('Search error details:', {
           error: searchError,
           business_id: businessContext.business_id,
-          search_term: trimmedTerm
+          search_term: trimmedTerm,
+          error_code: searchError.code,
+          error_message: searchError.message
         });
         
-        // More specific error handling
+        // More specific error handling based on error codes
         if (searchError.code === 'PGRST116') {
-          setError('שגיאה בפרמטרי החיפוש');
+          setError('פרמטרי החיפוש אינם תקינים');
         } else if (searchError.code === '42P01') {
           setError('שגיאה במבנה הנתונים');
+        } else if (searchError.code === 'PGRST301') {
+          setError('אין הרשאה לגשת לנתונים');
+        } else if (searchError.message?.includes('permission')) {
+          setError('אין הרשאה לחפש במוצרים');
         } else {
-          setError('שגיאה בחיפוש המוצרים - אנא נסה שוב');
+          setError('שגיאה בחיפוש המוצרים');
         }
         setProducts([]);
         return;
@@ -77,25 +92,29 @@ export const useProductSearch = (searchTerm: string) => {
       setProducts(data || []);
       console.log('Search completed successfully:', {
         term: trimmedTerm,
-        results: data?.length || 0
+        results: data?.length || 0,
+        business_id: businessContext.business_id
       });
 
     } catch (err) {
       console.error('Search exception details:', {
         error: err,
         business_id: businessContext?.business_id,
-        search_term: term.trim()
+        search_term: term.trim(),
+        stack: err instanceof Error ? err.stack : 'No stack trace'
       });
       
       // Network or other errors
       if (err instanceof Error) {
-        if (err.message.includes('fetch')) {
-          setError('בעיית חיבור לרשת - בדוק את החיבור שלך');
+        if (err.message.includes('fetch') || err.message.includes('network')) {
+          setError('בעיית חיבור - בדוק את החיבור לאינטרנט');
+        } else if (err.message.includes('timeout')) {
+          setError('החיפוש לוקח זמן רב מדי - נסה שוב');
         } else {
-          setError('שגיאה טכנית - אנא נסה שוב');
+          setError('שגיאה טכנית בחיפוש');
         }
       } else {
-        setError('שגיאה לא צפויה - אנא רענן את הדף');
+        setError('שגיאה לא צפויה');
       }
       setProducts([]);
     } finally {
@@ -125,13 +144,21 @@ export const useProductSearch = (searchTerm: string) => {
         .limit(30);
 
       if (loadError) {
-        console.error('Load all products error:', loadError);
+        console.error('Load all products error:', {
+          error: loadError,
+          business_id: businessContext.business_id,
+          error_code: loadError.code
+        });
         setError('שגיאה בטעינת המוצרים');
         setProducts([]);
         return;
       }
 
       setProducts(data || []);
+      console.log('All products loaded successfully:', {
+        count: data?.length || 0,
+        business_id: businessContext.business_id
+      });
     } catch (err) {
       console.error('Load all products exception:', err);
       setError('שגיאה בטעינת המוצרים');
@@ -147,10 +174,11 @@ export const useProductSearch = (searchTerm: string) => {
     if (trimmedTerm.length === 0) {
       // Load all products when search is empty
       loadAllProducts();
-    } else {
-      // Search for specific products
+    } else if (trimmedTerm.length >= 2) {
+      // Only search if term is at least 2 characters
       searchProducts(trimmedTerm);
     }
+    // If term is 1 character, do nothing (don't search, don't clear)
   }, [debouncedSearchTerm, businessContext?.business_id]);
 
   return {
@@ -158,6 +186,6 @@ export const useProductSearch = (searchTerm: string) => {
     isLoading,
     error,
     hasResults: products.length > 0,
-    isEmpty: !isLoading && products.length === 0 && debouncedSearchTerm.trim() !== ''
+    isEmpty: !isLoading && products.length === 0 && debouncedSearchTerm.trim().length >= 2
   };
 };
