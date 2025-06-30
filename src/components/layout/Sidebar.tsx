@@ -20,13 +20,15 @@ interface SidebarItemProps {
   label: string;
   isActive?: boolean;
   badge?: React.ReactNode;
+  onClick?: () => void;
 }
 
-const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, label, isActive, badge }) => (
+const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, label, isActive, badge, onClick }) => (
   <Link
     to={to}
+    onClick={onClick}
     className={cn(
-      "flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors rounded-lg",
+      "flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors rounded-lg mx-2",
       isActive && "bg-primary/10 text-primary border-l-4 border-primary"
     )}
   >
@@ -36,7 +38,11 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, label, isActive, ba
   </Link>
 );
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
   const location = useLocation();
   const { userRole, permissions } = useUserRole();
 
@@ -105,16 +111,20 @@ export const Sidebar: React.FC = () => {
   ];
 
   return (
-    <div className="w-64 bg-white border-l border-gray-200 h-full">
-      <div className="p-6">
-        <div className="flex items-center gap-2 mb-8">
+    <div className="h-full flex flex-col bg-white">
+      {/* Header */}
+      <div className="p-6 border-b border-gray-100">
+        <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <Package className="w-5 h-5 text-white" />
           </div>
           <span className="text-xl font-bold text-gray-900">Mlaiko</span>
         </div>
+      </div>
 
-        <nav className="space-y-2">
+      {/* Navigation Menu - Scrollable */}
+      <div className="flex-1 overflow-y-auto">
+        <nav className="space-y-1 py-4">
           {/* Regular menu items */}
           {menuItems.filter(item => item.show).map((item) => (
             <SidebarItem
@@ -123,14 +133,15 @@ export const Sidebar: React.FC = () => {
               icon={item.icon}
               label={item.label}
               isActive={location.pathname === item.to}
+              onClick={onNavigate}
             />
           ))}
 
           {/* Admin section */}
           {permissions.isPlatformAdmin && (
             <>
-              <div className="border-t border-gray-200 my-4"></div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-2">
+              <div className="border-t border-gray-200 my-4 mx-4"></div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-2">
                 ניהול מערכת
               </div>
               {adminMenuItems.filter(item => item.show).map((item) => (
@@ -141,6 +152,7 @@ export const Sidebar: React.FC = () => {
                   label={item.label}
                   isActive={location.pathname === item.to}
                   badge={<Crown className="w-4 h-4 text-red-500" />}
+                  onClick={onNavigate}
                 />
               ))}
             </>
@@ -149,16 +161,24 @@ export const Sidebar: React.FC = () => {
           {/* Subscription link for non-admin users */}
           {!permissions.isPlatformAdmin && (
             <>
-              <div className="border-t border-gray-200 my-4"></div>
+              <div className="border-t border-gray-200 my-4 mx-4"></div>
               <SidebarItem
                 to="/subscriptions"
                 icon={<Crown className="w-5 h-5" />}
                 label="ניהול מנוי"
                 isActive={location.pathname === '/subscriptions'}
+                onClick={onNavigate}
               />
             </>
           )}
         </nav>
+      </div>
+
+      {/* Footer - Always at bottom */}
+      <div className="p-4 border-t border-gray-100 bg-gray-50">
+        <div className="text-xs text-gray-500 text-center">
+          © 2024 Mlaiko
+        </div>
       </div>
     </div>
   );
