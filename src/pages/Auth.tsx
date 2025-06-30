@@ -145,7 +145,7 @@ export const Auth = () => {
             <img 
               src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png" 
               alt="Mlaiko Logo" 
-              className="w-full h-auto object-contain mx-auto max-h-32"
+              className="w-full h-auto object-contain mx-auto max-h-48 sm:max-h-56 md:max-h-64"
             />
           </div>
         </div>
