@@ -8,7 +8,6 @@ import type { Database } from '@/integrations/supabase/types';
 
 type NotificationSettings = Database['public']['Tables']['notification_settings']['Row'];
 type NotificationSettingsInsert = Database['public']['Tables']['notification_settings']['Insert'];
-type NotificationSettingsUpdate = Database['public']['Tables']['notification_settings']['Update'];
 
 export const useNotificationSettings = () => {
   const { user } = useAuth();
@@ -19,7 +18,12 @@ export const useNotificationSettings = () => {
   const { data: settings, isLoading } = useQuery({
     queryKey: ['notification-settings', user?.id, business?.id],
     queryFn: async () => {
-      if (!user?.id || !business?.id) return null;
+      if (!user?.id || !business?.id) {
+        console.log('Missing user or business for notification settings');
+        return null;
+      }
+      
+      console.log('Fetching notification settings for business:', business.id);
       
       const { data, error } = await supabase
         .from('notification_settings')
@@ -32,6 +36,7 @@ export const useNotificationSettings = () => {
         throw error;
       }
       
+      console.log('Fetched notification settings:', data);
       return data;
     },
     enabled: !!user?.id && !!business?.id,
@@ -39,7 +44,12 @@ export const useNotificationSettings = () => {
 
   const createOrUpdateSettings = useMutation({
     mutationFn: async (settingsData: Omit<NotificationSettingsInsert, 'business_id'>) => {
-      if (!business?.id) throw new Error('No business found');
+      if (!business?.id) {
+        console.error('No business found for notification settings');
+        throw new Error('No business found');
+      }
+      
+      console.log('Saving notification settings:', settingsData, 'for business:', business.id);
       
       // Try to update first
       const { data: existingData } = await supabase
@@ -48,8 +58,11 @@ export const useNotificationSettings = () => {
         .eq('business_id', business.id)
         .maybeSingle();
 
+      console.log('Existing settings:', existingData);
+
       if (existingData) {
         // Update existing settings
+        console.log('Updating existing notification settings');
         const { data, error } = await supabase
           .from('notification_settings')
           .update({
@@ -60,10 +73,16 @@ export const useNotificationSettings = () => {
           .select()
           .single();
         
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating notification settings:', error);
+          throw error;
+        }
+        
+        console.log('Updated notification settings:', data);
         return data;
       } else {
         // Create new settings
+        console.log('Creating new notification settings');
         const { data, error } = await supabase
           .from('notification_settings')
           .insert({
@@ -73,11 +92,17 @@ export const useNotificationSettings = () => {
           .select()
           .single();
         
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating notification settings:', error);
+          throw error;
+        }
+        
+        console.log('Created notification settings:', data);
         return data;
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Successfully saved notification settings:', data);
       queryClient.invalidateQueries({ queryKey: ['notification-settings'] });
       toast({
         title: "הגדרות נשמרו",
@@ -85,12 +110,12 @@ export const useNotificationSettings = () => {
       });
     },
     onError: (error) => {
+      console.error('Error saving notification settings:', error);
       toast({
         title: "שגיאה",
-        description: "שגיאה בשמירת ההגדרות",
+        description: "שגיאה בשמירת ההגדרות: " + error.message,
         variant: "destructive",
       });
-      console.error('Error saving notification settings:', error);
     },
   });
 
