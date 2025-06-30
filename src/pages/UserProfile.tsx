@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,6 +50,11 @@ export const UserProfile: React.FC = () => {
       default:
         return 'bg-gray-500';
     }
+  };
+
+  const handleChangePasswordClick = () => {
+    console.log('Opening change password dialog');
+    setChangePasswordOpen(true);
   };
 
   return (
@@ -164,7 +168,7 @@ export const UserProfile: React.FC = () => {
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
-                  onClick={() => setChangePasswordOpen(true)}
+                  onClick={handleChangePasswordClick}
                 >
                   שינוי סיסמה
                 </Button>
