@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -27,7 +26,8 @@ export const useProducts = () => {
         .from('products')
         .select(`
           *,
-          product_categories(name)
+          product_categories(name),
+          product_thresholds(low_stock_threshold)
         `)
         .eq('business_id', businessContext.business_id)
         .order('created_at', { ascending: false });
@@ -43,15 +43,17 @@ export const useProducts = () => {
   });
 
   const createProduct = useMutation({
-    mutationFn: async (productData: Omit<ProductInsert, 'business_id' | 'created_by'>) => {
+    mutationFn: async (productData: Omit<ProductInsert, 'business_id' | 'created_by'> & { low_stock_threshold?: number }) => {
       if (!user?.id || !businessContext?.business_id) {
         throw new Error('User or business not found');
       }
       
+      const { low_stock_threshold, ...productFields } = productData;
+      
       const { data, error } = await supabase
         .from('products')
         .insert({
-          ...productData,
+          ...productFields,
           business_id: businessContext.business_id,
           created_by: user.id,
         })
@@ -61,6 +63,17 @@ export const useProducts = () => {
       if (error) {
         console.error('Error creating product:', error);
         throw error;
+      }
+
+      // Insert threshold if provided
+      if (low_stock_threshold !== undefined) {
+        await supabase
+          .from('product_thresholds')
+          .insert({
+            product_id: data.id,
+            business_id: businessContext.business_id,
+            low_stock_threshold,
+          });
       }
 
       // Log inventory action for initial stock

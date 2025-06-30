@@ -5,6 +5,7 @@ import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { BarcodeVideoDisplay } from './barcode-video-display';
 import { BarcodeInstructions } from './barcode-instructions';
 import { BarcodeActions } from './barcode-actions';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface BarcodeScannerProps {
   open: boolean;
@@ -17,6 +18,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
   onClose, 
   onBarcodeScanned 
 }) => {
+  const isMobile = useIsMobile();
   const {
     isScanning,
     cameraReady,
@@ -39,9 +41,12 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md" dir="rtl">
+      <DialogContent 
+        className={`${isMobile ? 'max-w-[95vw] max-h-[90vh] p-4' : 'max-w-md'}`} 
+        dir="rtl"
+      >
         <DialogHeader>
-          <DialogTitle>סריקת ברקוד</DialogTitle>
+          <DialogTitle className="text-center">סריקת ברקוד</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">

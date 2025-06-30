@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -48,21 +49,34 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     expiration_date: product?.expiration_date || '',
     image: product?.image || '',
     product_category_id: product?.product_category_id || '',
+    low_stock_threshold: 5, // Default threshold
   });
 
   React.useEffect(() => {
     if (product) {
-      setFormData({
-        name: product.name || '',
-        barcode: product.barcode || '',
-        quantity: product.quantity || 0,
-        price: product.price || 0,
-        cost: product.cost || 0,
-        location: product.location || '',
-        expiration_date: product.expiration_date || '',
-        image: product.image || '',
-        product_category_id: product.product_category_id || '',
-      });
+      // Fetch threshold from product_thresholds table
+      const fetchThreshold = async () => {
+        const { data: thresholdData } = await supabase
+          .from('product_thresholds')
+          .select('low_stock_threshold')
+          .eq('product_id', product.id)
+          .single();
+
+        setFormData({
+          name: product.name || '',
+          barcode: product.barcode || '',
+          quantity: product.quantity || 0,
+          price: product.price || 0,
+          cost: product.cost || 0,
+          location: product.location || '',
+          expiration_date: product.expiration_date || '',
+          image: product.image || '',
+          product_category_id: product.product_category_id || '',
+          low_stock_threshold: thresholdData?.low_stock_threshold || 5,
+        });
+      };
+
+      fetchThreshold();
     }
   }, [product]);
 
@@ -77,7 +91,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!product) return;
+    if (!product || !business?.id) return;
 
     setLoading(true);
     try {
@@ -85,7 +99,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       const newQuantity = formData.quantity;
       const quantityDiff = newQuantity - oldQuantity;
 
-      // Prepare update data - only use product_category_id
+      // Update product data
       const updateData: any = {
         name: formData.name,
         barcode: formData.barcode || null,
@@ -99,12 +113,26 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         updated_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase
+      const { error: productError } = await supabase
         .from('products')
         .update(updateData)
         .eq('id', product.id);
 
-      if (error) throw error;
+      if (productError) throw productError;
+
+      // Update or insert threshold
+      const { error: thresholdError } = await supabase
+        .from('product_thresholds')
+        .upsert({
+          product_id: product.id,
+          business_id: business.id,
+          low_stock_threshold: formData.low_stock_threshold,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (thresholdError) {
+        console.error('Threshold update error:', thresholdError);
+      }
 
       // Log inventory action if quantity changed
       if (quantityDiff !== 0) {
@@ -146,38 +174,40 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>עריכת מוצר - {product?.name}</DialogTitle>
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-4 sm:p-6" dir="rtl">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-lg sm:text-xl">עריכת מוצר - {product?.name}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="name">שם המוצר *</Label>
+                  <Label htmlFor="name" className="text-sm font-medium">שם המוצר *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
+                    className="mt-1 h-10"
                   />
                 </div>
                 
                 <div>
-                  <Label htmlFor="barcode">ברקוד</Label>
-                  <div className="flex gap-2">
+                  <Label htmlFor="barcode" className="text-sm font-medium">ברקוד</Label>
+                  <div className="flex gap-2 mt-1">
                     <Input
                       id="barcode"
                       value={formData.barcode}
                       onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
                       placeholder="הזן ברקוד או סרוק"
-                      className="flex-1"
+                      className="flex-1 h-10"
                     />
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => setShowBarcodeScanner(true)}
-                      className="px-3"
+                      className="h-10 px-3 min-w-[44px]"
+                      title="סרוק ברקוד"
                     >
                       <Scan className="w-4 h-4" />
                     </Button>
@@ -185,13 +215,13 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="category">קטגוריה</Label>
-                  <div className="flex gap-2">
+                  <Label htmlFor="category" className="text-sm font-medium">קטגוריה</Label>
+                  <div className="flex gap-2 mt-1">
                     <Select
                       value={formData.product_category_id}
                       onValueChange={(value) => setFormData({ ...formData, product_category_id: value })}
                     >
-                      <SelectTrigger className="flex-1">
+                      <SelectTrigger className="flex-1 h-10">
                         <SelectValue placeholder="בחר קטגוריה" />
                       </SelectTrigger>
                       <SelectContent>
@@ -208,7 +238,8 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                         variant="outline"
                         size="sm"
                         onClick={() => setShowAddCategory(true)}
-                        className="px-2"
+                        className="h-10 px-3 min-w-[44px]"
+                        title="הוסף קטגוריה"
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -216,9 +247,9 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="quantity">כמות *</Label>
+                    <Label htmlFor="quantity" className="text-sm font-medium">כמות *</Label>
                     <Input
                       id="quantity"
                       type="number"
@@ -226,21 +257,37 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                       value={formData.quantity}
                       onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
                       required
+                      className="mt-1 h-10"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="location">מיקום</Label>
+                    <Label htmlFor="low_stock_threshold" className="text-sm font-medium">סף מלאי נמוך</Label>
                     <Input
-                      id="location"
-                      value={formData.location}
-                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      id="low_stock_threshold"
+                      type="number"
+                      min="0"
+                      value={formData.low_stock_threshold}
+                      onChange={(e) => setFormData({ ...formData, low_stock_threshold: Number(e.target.value) })}
+                      className="mt-1 h-10"
+                      placeholder="5"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="location" className="text-sm font-medium">מיקום</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    className="mt-1 h-10"
+                    placeholder="מדף, אזור, וכו'"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="cost">עלות</Label>
+                    <Label htmlFor="cost" className="text-sm font-medium">עלות (₪)</Label>
                     <Input
                       id="cost"
                       type="number"
@@ -248,10 +295,11 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                       step="0.01"
                       value={formData.cost}
                       onChange={(e) => setFormData({ ...formData, cost: Number(e.target.value) })}
+                      className="mt-1 h-10"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="price">מחיר מכירה</Label>
+                    <Label htmlFor="price" className="text-sm font-medium">מחיר מכירה (₪)</Label>
                     <Input
                       id="price"
                       type="number"
@@ -259,40 +307,50 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                       step="0.01"
                       value={formData.price}
                       onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                      className="mt-1 h-10"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="expiration_date">תאריך פג תוקף</Label>
+                  <Label htmlFor="expiration_date" className="text-sm font-medium">תאריך פג תוקף</Label>
                   <Input
                     id="expiration_date"
                     type="date"
                     value={formData.expiration_date}
                     onChange={(e) => setFormData({ ...formData, expiration_date: e.target.value })}
+                    className="mt-1 h-10"
                   />
                 </div>
               </div>
 
-              <div>
-                <Label>תמונת מוצר</Label>
-                <ImageUpload
-                  currentImageUrl={formData.image}
-                  onImageUpload={handleImageUpload}
-                  onImageRemove={handleImageRemove}
-                />
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium block mb-2">תמונת מוצר</Label>
+                  <div className="border-2 border-dashed border-gray-200 rounded-lg p-4">
+                    <ImageUpload
+                      currentImageUrl={formData.image}
+                      onImageUpload={handleImageUpload}
+                      onImageRemove={handleImageRemove}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-2 pt-4">
-              <Button type="submit" disabled={loading} className="flex-1">
+            <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
+              <Button 
+                type="submit" 
+                disabled={loading} 
+                className="flex-1 h-12 text-base font-medium"
+              >
                 {loading ? 'שומר...' : 'שמור שינויים'}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="flex-1"
+                className="flex-1 h-12 text-base"
               >
                 ביטול
               </Button>
