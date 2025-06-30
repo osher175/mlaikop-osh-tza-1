@@ -1,18 +1,16 @@
 
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart3, TrendingUp, DollarSign, Package, Download, Loader2, AlertCircle } from 'lucide-react';
+import { BarChart3, TrendingUp, DollarSign, Package, Download, AlertCircle } from 'lucide-react';
 import { ProtectedFeature } from '@/components/ProtectedFeature';
 import { useReports } from '@/hooks/useReports';
 import { useCategories } from '@/hooks/useCategories';
 import { useSuppliers } from '@/hooks/useSuppliers';
-
-// Lazy load chart components to improve initial load time
-const ReportsCharts = lazy(() => import('@/components/reports/ReportsCharts'));
-const TopProductsList = lazy(() => import('@/components/reports/TopProductsList'));
+import ReportsCharts from '@/components/reports/ReportsCharts';
+import TopProductsList from '@/components/reports/TopProductsList';
 
 const LoadingSkeleton = () => (
   <div className="animate-pulse">
@@ -244,22 +242,7 @@ export const Reports: React.FC = () => {
           fallback={<div></div>}
           showUpgradePrompt={false}
         >
-          <Suspense fallback={
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardContent className="p-6 flex items-center justify-center h-64">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6 flex items-center justify-center h-64">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                </CardContent>
-              </Card>
-            </div>
-          }>
-            <ReportsCharts reportsData={reportsData} isLoading={isLoading} />
-          </Suspense>
+          <ReportsCharts reportsData={reportsData} isLoading={isLoading} />
         </ProtectedFeature>
 
         {/* Top Products */}
@@ -268,19 +251,11 @@ export const Reports: React.FC = () => {
           fallback={<div></div>}
           showUpgradePrompt={false}
         >
-          <Suspense fallback={
-            <Card>
-              <CardContent className="p-6 flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </CardContent>
-            </Card>
-          }>
-            <TopProductsList 
-              topProducts={reportsData?.topProducts || []} 
-              isLoading={isLoading}
-              formatCurrency={formatCurrency}
-            />
-          </Suspense>
+          <TopProductsList 
+            topProducts={reportsData?.topProducts || []} 
+            isLoading={isLoading}
+            formatCurrency={formatCurrency}
+          />
         </ProtectedFeature>
 
         {/* AI Insights Placeholder */}
