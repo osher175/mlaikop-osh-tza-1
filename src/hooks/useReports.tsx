@@ -97,8 +97,8 @@ export const useReports = (filters: ReportsFilters) => {
 
         console.log('reports_aggregate response:', aggregateData);
 
-        // Type cast the response to our interface
-        const typedAggregateData = aggregateData as ReportsAggregateData;
+        // Type cast the response to our interface with proper conversion
+        const typedAggregateData = aggregateData as unknown as ReportsAggregateData;
 
         // Get products for additional filtering if needed
         let query = supabase
