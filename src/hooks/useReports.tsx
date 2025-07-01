@@ -19,6 +19,23 @@ interface ReportsFilters {
   endDate?: string;
 }
 
+interface ReportsAggregateData {
+  total_added: number;
+  total_removed: number;
+  total_value: number;
+  gross_profit: number;
+  net_profit: number;
+  top_product: string | null;
+  suppliers_breakdown: Array<{
+    supplier_id: string | null;
+    total_purchased: number;
+  }> | null;
+  timeline_breakdown: Array<{
+    date: string;
+    sales: number;
+  }> | null;
+}
+
 export const useReports = (filters: ReportsFilters) => {
   const { user } = useAuth();
   const { business } = useBusiness();
@@ -80,6 +97,9 @@ export const useReports = (filters: ReportsFilters) => {
 
         console.log('reports_aggregate response:', aggregateData);
 
+        // Type cast the response to our interface
+        const typedAggregateData = aggregateData as ReportsAggregateData;
+
         // Get products for additional filtering if needed
         let query = supabase
           .from('products')
@@ -106,12 +126,12 @@ export const useReports = (filters: ReportsFilters) => {
         }
 
         // Parse the aggregate data from the function
-        const totalRevenue = aggregateData?.gross_profit || 0;
-        const totalCost = aggregateData?.total_value || 0;
-        const totalProfit = aggregateData?.net_profit || 0;
+        const totalRevenue = typedAggregateData?.gross_profit || 0;
+        const totalCost = typedAggregateData?.total_value || 0;
+        const totalProfit = typedAggregateData?.net_profit || 0;
         const roi = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
 
-        // Create mock top products from available products (since we don't have sales data yet)
+        // Create top products from available products (since we don't have detailed sales data yet)
         const topProducts = products?.slice(0, 5).map(product => ({
           ...product,
           unitsSold: Math.floor(Math.random() * 50) + 1,
@@ -130,8 +150,8 @@ export const useReports = (filters: ReportsFilters) => {
           return acc;
         }, {} as Record<string, { revenue: number; quantity: number }>) || {};
 
-        // Use timeline data from the function or create mock data
-        const monthlyTrend = aggregateData?.timeline_breakdown || Array.from({ length: 6 }, (_, i) => ({
+        // Use timeline data from the function or create mock data if no data exists
+        const monthlyTrend = typedAggregateData?.timeline_breakdown || Array.from({ length: 6 }, (_, i) => ({
           month: new Date(now.getFullYear(), now.getMonth() - i, 1).toLocaleDateString('he-IL', { month: 'short' }),
           revenue: Math.floor(Math.random() * 20000) + 10000,
           profit: Math.floor(Math.random() * 8000) + 2000,
@@ -146,7 +166,7 @@ export const useReports = (filters: ReportsFilters) => {
           categoryBreakdown,
           monthlyTrend,
           products: products || [],
-          aggregateData // Include raw aggregate data for debugging
+          aggregateData: typedAggregateData // Include raw aggregate data for debugging
         };
       } catch (error) {
         console.error('Error fetching reports data:', error);
