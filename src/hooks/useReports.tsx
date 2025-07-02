@@ -19,6 +19,23 @@ interface ReportsFilters {
   endDate?: string;
 }
 
+interface ReportsAggregateData {
+  total_added: number;
+  total_removed: number;
+  total_value: number;
+  gross_profit: number;
+  net_profit: number;
+  top_product: string | null;
+  suppliers_breakdown: Array<{
+    supplier_id: string | null;
+    total_purchased: number;
+  }> | null;
+  timeline_breakdown: Array<{
+    date: string;
+    sales: number;
+  }> | null;
+}
+
 export const useReports = (filters: ReportsFilters) => {
   const { user } = useAuth();
   const { business } = useBusiness();
@@ -35,28 +52,6 @@ export const useReports = (filters: ReportsFilters) => {
       if (!user?.id || !business?.id) return null;
 
       try {
-        // Get products with product_categories and suppliers
-        let query = supabase
-          .from('products')
-          .select(`
-            *,
-            product_categories:product_category_id(name),
-            suppliers:supplier_id(name)
-          `)
-          .eq('business_id', business.id);
-
-        // Apply filters
-        if (filters.categoryId) {
-          query = query.eq('product_category_id', filters.categoryId);
-        }
-        if (filters.supplierId) {
-          query = query.eq('supplier_id', filters.supplierId);
-        }
-
-        const { data: products, error } = await query;
-        
-        if (error) throw error;
-
         // Calculate date range based on time range filter
         const now = new Date();
         let startDate: Date;
@@ -78,38 +73,85 @@ export const useReports = (filters: ReportsFilters) => {
             startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         }
 
-        // Mock sales data for demonstration (in real app, this would come from sales table)
-        const mockSalesData = products?.slice(0, 10).map(product => ({
+        // Use custom date range if provided
+        const dateFrom = filters.startDate ? new Date(filters.startDate) : startDate;
+        const dateTo = filters.endDate ? new Date(filters.endDate) : now;
+
+        console.log('Calling reports_aggregate with:', {
+          business_id: business.id,
+          date_from: dateFrom.toISOString(),
+          date_to: dateTo.toISOString()
+        });
+
+        // Call the updated reports_aggregate function
+        const { data: aggregateData, error: rpcError } = await supabase.rpc('reports_aggregate', {
+          business_id: business.id,
+          date_from: dateFrom.toISOString(),
+          date_to: dateTo.toISOString()
+        });
+
+        if (rpcError) {
+          console.error('Error calling reports_aggregate:', rpcError);
+          throw rpcError;
+        }
+
+        console.log('reports_aggregate response:', aggregateData);
+
+        // Type cast the response to our interface with proper conversion
+        const typedAggregateData = aggregateData as unknown as ReportsAggregateData;
+
+        // Get products for additional filtering if needed
+        let query = supabase
+          .from('products')
+          .select(`
+            *,
+            product_categories:product_category_id(name),
+            suppliers:supplier_id(name)
+          `)
+          .eq('business_id', business.id);
+
+        // Apply filters
+        if (filters.categoryId) {
+          query = query.eq('product_category_id', filters.categoryId);
+        }
+        if (filters.supplierId) {
+          query = query.eq('supplier_id', filters.supplierId);
+        }
+
+        const { data: products, error: productsError } = await query;
+        
+        if (productsError) {
+          console.error('Error fetching products:', productsError);
+          throw productsError;
+        }
+
+        // Parse the aggregate data from the function
+        const totalRevenue = typedAggregateData?.gross_profit || 0;
+        const totalCost = typedAggregateData?.total_value || 0;
+        const totalProfit = typedAggregateData?.net_profit || 0;
+        const roi = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+
+        // Create top products from available products (since we don't have detailed sales data yet)
+        const topProducts = products?.slice(0, 5).map(product => ({
           ...product,
           unitsSold: Math.floor(Math.random() * 50) + 1,
           revenue: (product.price || 0) * (Math.floor(Math.random() * 50) + 1),
           profit: ((product.price || 0) - (product.cost || 0)) * (Math.floor(Math.random() * 50) + 1),
         })) || [];
 
-        // Calculate aggregated metrics
-        const totalRevenue = mockSalesData.reduce((sum, item) => sum + item.revenue, 0);
-        const totalCost = mockSalesData.reduce((sum, item) => sum + (item.cost || 0) * item.unitsSold, 0);
-        const totalProfit = totalRevenue - totalCost;
-        const roi = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
-
-        // Top selling products
-        const topProducts = mockSalesData
-          .sort((a, b) => b.unitsSold - a.unitsSold)
-          .slice(0, 5);
-
-        // Category breakdown
-        const categoryBreakdown = mockSalesData.reduce((acc, item) => {
+        // Category breakdown from products
+        const categoryBreakdown = products?.reduce((acc, item) => {
           const categoryName = item.product_categories?.name || 'ללא קטגוריה';
           if (!acc[categoryName]) {
             acc[categoryName] = { revenue: 0, quantity: 0 };
           }
-          acc[categoryName].revenue += item.revenue;
-          acc[categoryName].quantity += item.unitsSold;
+          acc[categoryName].revenue += (item.price || 0) * (item.quantity || 0);
+          acc[categoryName].quantity += item.quantity || 0;
           return acc;
-        }, {} as Record<string, { revenue: number; quantity: number }>);
+        }, {} as Record<string, { revenue: number; quantity: number }>) || {};
 
-        // Monthly trend data (simplified)
-        const monthlyTrend = Array.from({ length: 6 }, (_, i) => ({
+        // Use timeline data from the function or create mock data if no data exists
+        const monthlyTrend = typedAggregateData?.timeline_breakdown || Array.from({ length: 6 }, (_, i) => ({
           month: new Date(now.getFullYear(), now.getMonth() - i, 1).toLocaleDateString('he-IL', { month: 'short' }),
           revenue: Math.floor(Math.random() * 20000) + 10000,
           profit: Math.floor(Math.random() * 8000) + 2000,
@@ -123,7 +165,8 @@ export const useReports = (filters: ReportsFilters) => {
           topProducts,
           categoryBreakdown,
           monthlyTrend,
-          products: mockSalesData,
+          products: products || [],
+          aggregateData: typedAggregateData // Include raw aggregate data for debugging
         };
       } catch (error) {
         console.error('Error fetching reports data:', error);

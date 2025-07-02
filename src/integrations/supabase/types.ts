@@ -1009,6 +1009,10 @@ export type Database = {
         Args: { business_uuid: string }
         Returns: boolean
       }
+      reports_aggregate: {
+        Args: { business_id: string; date_from: string; date_to: string }
+        Returns: Json
+      }
       search_products: {
         Args: {
           search_term?: string
