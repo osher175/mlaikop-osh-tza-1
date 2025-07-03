@@ -56,7 +56,7 @@ export const useReports = (range: ReportsRange) => {
       if (error) throw error;
       
       // Type assertion to properly type the returned data
-      return data as ReportsData;
+      return data as unknown as ReportsData;
     },
     enabled: !!business?.id,
     staleTime: 5 * 60 * 1000,
