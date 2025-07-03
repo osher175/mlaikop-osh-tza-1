@@ -1,12 +1,13 @@
 
-import React, { useState } from 'react';
+import * as React from 'react';
+import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, type ButtonProps } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart3, TrendingUp, DollarSign, Package, Download, AlertCircle } from 'lucide-react';
+import { BarChart3, TrendingUp, DollarSign, Package, Download, AlertCircle, Loader2, Award } from 'lucide-react';
 import { ProtectedFeature } from '@/components/ProtectedFeature';
-import { useReports } from '@/hooks/useReports';
+import { useReports, ReportsRange } from '@/hooks/useReports';
 import { useCategories } from '@/hooks/useCategories';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import ReportsCharts from '@/components/reports/ReportsCharts';
@@ -32,24 +33,27 @@ const ErrorFallback = ({ error, retry }: { error: Error; retry: () => void }) =>
   </Card>
 );
 
+const rangeOptions: { label: string; value: ReportsRange }[] = [
+  { label: 'יומי', value: 'daily' },
+  { label: 'שבועי', value: 'weekly' },
+  { label: 'חודשי', value: 'monthly' },
+  { label: 'שנתי', value: 'yearly' },
+];
+
 export const Reports: React.FC = () => {
-  const [timeRange, setTimeRange] = useState<'weekly' | 'monthly' | 'quarterly' | 'yearly'>('monthly');
+  const [selectedRange, setSelectedRange] = useState<ReportsRange>('monthly');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSupplier, setSelectedSupplier] = useState<string>('');
 
   const { categories } = useCategories();
   const { suppliers } = useSuppliers();
-  const { reportsData, isLoading, error } = useReports({
-    timeRange,
-    categoryId: selectedCategory || undefined,
-    supplierId: selectedSupplier || undefined,
-  });
+  const { reportsData, isLoading, error } = useReports(selectedRange);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('he-IL', {
       style: 'currency',
       currency: 'ILS',
-    }).format(amount);
+    }).format(amount || 0);
   };
 
   const retryFetch = () => {
@@ -68,216 +72,120 @@ export const Reports: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-6" dir="rtl">
+      <div className="space-y-6 p-4 md:p-8" dir="rtl">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">דוחות וגרפים</h1>
-            <p className="text-gray-600">ניתוח נתונים ותובנות עסקיות</p>
+            <h1 className="text-3xl font-bold text-gray-900">דוחות עסקיים</h1>
+            <p className="text-gray-600">סקירה וניתוח נתונים לפי טווח זמן</p>
           </div>
-          
-          <ProtectedFeature 
-            requiredPermission="canViewReports"
-            fallback={<div></div>}
-            showUpgradePrompt={false}
-          >
-            <Button variant="outline">
-              <Download className="w-4 h-4 ml-2" />
-              יצא דוח
-            </Button>
-          </ProtectedFeature>
+          <div className="flex gap-2">
+            {rangeOptions.map((opt) => (
+              <Button
+                key={opt.value}
+                variant={selectedRange === opt.value ? ("default" as ButtonProps['variant']) : ("outline" as ButtonProps['variant'])}
+                onClick={() => setSelectedRange(opt.value)}
+                className="min-w-[70px]"
+                type="button"
+              >
+                {opt.label}
+              </Button>
+            ))}
+          </div>
         </div>
 
-        {/* Filters */}
-        <ProtectedFeature 
-          requiredPermission="canViewReports"
-          fallback={
-            <Card>
-              <CardContent className="p-6 text-center">
-                <p className="text-gray-600">נדרשות הרשאות נוספות לצפייה בדוחות</p>
-              </CardContent>
-            </Card>
-          }
-          showUpgradePrompt={false}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle>מסננים</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">טווח זמן</label>
-                  <Select value={timeRange} onValueChange={(value: any) => setTimeRange(value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="weekly">שבועי</SelectItem>
-                      <SelectItem value="monthly">חודשי</SelectItem>
-                      <SelectItem value="quarterly">רבעוני</SelectItem>
-                      <SelectItem value="yearly">שנתי</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">קטגוריה</label>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="כל הקטגוריות" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">כל הקטגוריות</SelectItem>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">ספק</label>
-                  <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="כל הספקים" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">כל הספקים</SelectItem>
-                      {suppliers.map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.id}>
-                          {supplier.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </ProtectedFeature>
-
-        {/* Key Metrics */}
-        <ProtectedFeature 
-          requiredPermission="canViewReports"
-          fallback={<div></div>}
-          showUpgradePrompt={false}
-        >
-          {isLoading ? (
+        {/* Loader or Error */}
+        {isLoading ? (
+          <div className="flex justify-center items-center min-h-[30vh]">
+            <Loader2 className="animate-spin w-10 h-10 text-gray-400" />
+          </div>
+        ) : error ? (
+          <div className="flex justify-center items-center min-h-[30vh]">
+            <div className="text-red-600">שגיאה בטעינת הדוחות: {error.message}</div>
+          </div>
+        ) : reportsData ? (
+          <>
+            {/* Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              {[...Array(4)].map((_, i) => (
-                <Card key={i}>
-                  <CardContent className="p-6">
-                    <LoadingSkeleton />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <DollarSign className="h-8 w-8 text-green-500" />
-                    <div className="mr-4">
-                      <p className="text-sm font-medium text-gray-600">סה״כ הכנסות</p>
-                      <p className="text-2xl font-bold text-green-600">
-                        {reportsData ? formatCurrency(reportsData.totalRevenue) : '₪0'}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <TrendingUp className="h-8 w-8 text-blue-500" />
-                    <div className="mr-4">
-                      <p className="text-sm font-medium text-gray-600">רווח נקי</p>
-                      <p className="text-2xl font-bold text-blue-600">
-                        {reportsData ? formatCurrency(reportsData.totalProfit) : '₪0'}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center">
                     <Package className="h-8 w-8 text-orange-500" />
                     <div className="mr-4">
-                      <p className="text-sm font-medium text-gray-600">עלות כוללת</p>
-                      <p className="text-2xl font-bold text-orange-600">
-                        {reportsData ? formatCurrency(reportsData.totalCost) : '₪0'}
-                      </p>
+                      <p className="text-sm font-medium text-gray-600">סה"כ נכנסו</p>
+                      <p className="text-2xl font-bold text-orange-600">{reportsData.total_added ?? 0}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center">
                     <BarChart3 className="h-8 w-8 text-purple-500" />
                     <div className="mr-4">
-                      <p className="text-sm font-medium text-gray-600">ROI</p>
-                      <p className="text-2xl font-bold text-purple-600">
-                        {reportsData ? `${reportsData.roi.toFixed(1)}%` : '0%'}
-                      </p>
+                      <p className="text-sm font-medium text-gray-600">סה"כ יצאו</p>
+                      <p className="text-2xl font-bold text-purple-600">{reportsData.total_removed ?? 0}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <DollarSign className="h-8 w-8 text-green-500" />
+                    <div className="mr-4">
+                      <p className="text-sm font-medium text-gray-600">שווי מלאי</p>
+                      <p className="text-2xl font-bold text-green-600">{formatCurrency(reportsData.total_value)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <TrendingUp className="h-8 w-8 text-blue-500" />
+                    <div className="mr-4">
+                      <p className="text-sm font-medium text-gray-600">רווח גולמי</p>
+                      <p className="text-2xl font-bold text-blue-600">{formatCurrency(reportsData.gross_profit)}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
-          )}
-        </ProtectedFeature>
 
-        {/* Charts Section */}
-        <ProtectedFeature 
-          requiredPermission="canViewReports"
-          fallback={<div></div>}
-          showUpgradePrompt={false}
-        >
-          <ReportsCharts reportsData={reportsData} isLoading={isLoading} />
-        </ProtectedFeature>
+            {/* Net Profit & Top Product */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardContent className="p-6 flex items-center gap-4">
+                  <Award className="h-8 w-8 text-yellow-500" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">המוצר הפופולרי ביותר</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {reportsData.top_product?.name || '—'}
+                      {reportsData.top_product?.quantity ? ` (${reportsData.top_product.quantity})` : ''}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6 flex items-center gap-4">
+                  <DollarSign className="h-8 w-8 text-emerald-600" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">רווח נטו (לאחר מע"מ)</p>
+                    <p className="text-lg font-bold text-emerald-700">{formatCurrency(reportsData.net_profit)}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-        {/* Top Products */}
-        <ProtectedFeature 
-          requiredPermission="canViewReports"
-          fallback={<div></div>}
-          showUpgradePrompt={false}
-        >
-          <TopProductsList 
-            topProducts={reportsData?.topProducts || []} 
-            isLoading={isLoading}
-            formatCurrency={formatCurrency}
-          />
-        </ProtectedFeature>
-
-        {/* AI Insights Placeholder */}
-        <ProtectedFeature requiredRole="smart_master_user" showUpgradePrompt={false}>
-          <Card>
-            <CardHeader>
-              <CardTitle>תובנות חכמות (AI)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm font-medium text-yellow-800">המלצה לרכישה</p>
-                  <p className="text-xs text-yellow-700">מומלץ להזמין מוצרים מקטגוריית מחשבים - הביקוש עולה</p>
-                </div>
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm font-medium text-green-800">הזדמנות רווח</p>
-                  <p className="text-xs text-green-700">שקול להעלות מחירים בקטגוריית אביזרים - שוק חם</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </ProtectedFeature>
+            {/* Charts */}
+            <ReportsCharts
+              timeline={reportsData.timeline_breakdown}
+              suppliers={reportsData.suppliers_breakdown}
+              isLoading={isLoading}
+            />
+          </>
+        ) : null}
       </div>
     </MainLayout>
   );
