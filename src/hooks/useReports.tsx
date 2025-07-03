@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBusiness } from './useBusiness';
 import { useMemo } from 'react';
+import { ReportsData } from '@/types/reports';
 
 export type ReportsRange = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -53,7 +54,9 @@ export const useReports = (range: ReportsRange) => {
         date_to,
       });
       if (error) throw error;
-      return data;
+      
+      // Type assertion to properly type the returned data
+      return data as ReportsData;
     },
     enabled: !!business?.id,
     staleTime: 5 * 60 * 1000,
