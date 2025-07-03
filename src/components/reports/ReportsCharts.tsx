@@ -22,12 +22,12 @@ import {
 } from 'recharts';
 
 const chartConfig = {
-  revenue: {
-    label: "הכנסות",
+  sales: {
+    label: "מכירות",
     color: "#00BFBF",
   },
-  profit: {
-    label: "רווח",
+  total_purchased: {
+    label: "קניות",
     color: "#FFA940",
   },
 };
@@ -35,11 +35,12 @@ const chartConfig = {
 const COLORS = ['#00BFBF', '#FFA940', '#27AE60', '#E74C3C', '#9B59B6'];
 
 interface ReportsChartsProps {
-  reportsData: any;
+  timeline: any[];
+  suppliers: any[];
   isLoading: boolean;
 }
 
-const ReportsCharts: React.FC<ReportsChartsProps> = ({ reportsData, isLoading }) => {
+const ReportsCharts: React.FC<ReportsChartsProps> = ({ timeline, suppliers, isLoading }) => {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -57,58 +58,55 @@ const ReportsCharts: React.FC<ReportsChartsProps> = ({ reportsData, isLoading })
     );
   }
 
-  const categoryChartData = reportsData ? Object.entries(reportsData.categoryBreakdown).map(([name, data]: [string, any]) => ({
-    name,
-    value: data.revenue,
-  })) : [];
+  const timelineData = timeline || [];
+  const suppliersData = suppliers || [];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Revenue Trend Chart */}
+      {/* Timeline Chart */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <LineChart className="w-5 h-5" />
-            מגמת הכנסות ורווח
+            מגמת מכירות לפי זמן
           </CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-64">
-            <RechartsLineChart data={reportsData?.monthlyTrend || []}>
+            <RechartsLineChart data={timelineData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
+              <XAxis dataKey="date" />
               <YAxis />
               <ChartTooltip content={<ChartTooltipContent />} />
               <ChartLegend content={<ChartLegendContent />} />
-              <Line type="monotone" dataKey="revenue" stroke="var(--color-revenue)" strokeWidth={2} />
-              <Line type="monotone" dataKey="profit" stroke="var(--color-profit)" strokeWidth={2} />
+              <Line type="monotone" dataKey="sales" stroke="var(--color-sales)" strokeWidth={2} />
             </RechartsLineChart>
           </ChartContainer>
         </CardContent>
       </Card>
 
-      {/* Category Breakdown */}
+      {/* Suppliers Chart */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <PieChart className="w-5 h-5" />
-            פירוט לפי קטגוריות
+            פירוט לפי ספקים
           </CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-64">
             <RechartsPieChart>
               <Pie
-                data={categoryChartData}
+                data={suppliersData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
                 outerRadius={80}
                 fill="#8884d8"
-                dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                dataKey="total_purchased"
+                label={({ total_purchased, percent }) => `${(percent * 100).toFixed(0)}%`}
               >
-                {categoryChartData.map((entry, index) => (
+                {suppliersData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>

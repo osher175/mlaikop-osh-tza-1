@@ -161,8 +161,7 @@ export const Reports: React.FC = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-600">המוצר הפופולרי ביותר</p>
                     <p className="text-lg font-bold text-gray-900">
-                      {reportsData.top_product?.name || '—'}
-                      {reportsData.top_product?.quantity ? ` (${reportsData.top_product.quantity})` : ''}
+                      {reportsData.top_product || '—'}
                     </p>
                   </div>
                 </CardContent>
