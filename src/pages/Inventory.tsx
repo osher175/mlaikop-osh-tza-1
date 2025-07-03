@@ -25,6 +25,7 @@ export const Inventory: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [viewingProductImage, setViewingProductImage] = useState<Product | null>(null);
+  const [activeStockFilter, setActiveStockFilter] = useState<'all' | 'inStock' | 'lowStock' | 'outOfStock'>('all');
   const navigate = useNavigate();
   
   const { businessContext, isLoading: businessLoading } = useBusinessAccess();
@@ -102,6 +103,8 @@ export const Inventory: React.FC = () => {
           inStock={inStock}
           lowStock={lowStock}
           outOfStock={outOfStock}
+          activeStockFilter={activeStockFilter}
+          setActiveStockFilter={setActiveStockFilter}
         />
 
         {/* טבלת המוצרים */}
@@ -111,6 +114,7 @@ export const Inventory: React.FC = () => {
           onEditProduct={setEditingProduct}
           onDeleteProduct={setDeletingProduct}
           onViewProductImage={setViewingProductImage}
+          activeStockFilter={activeStockFilter}
         />
 
         {/* דיאלוגים */}

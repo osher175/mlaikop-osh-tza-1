@@ -34,7 +34,7 @@ function getDateRange(range: ReportsRange): { date_from: string; date_to: string
 
 export const useReports = (range: ReportsRange) => {
   const { business } = useBusiness();
-  const { date_from, date_to } = getDateRange(range);
+  const { date_from, date_to } = useMemo(() => getDateRange(range), [range]);
 
   const queryKey = useMemo(() => [
     'reports_aggregate',
@@ -44,16 +44,23 @@ export const useReports = (range: ReportsRange) => {
     date_to,
   ], [business?.id, range, date_from, date_to]);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey,
     queryFn: async () => {
       if (!business?.id) return null;
+      
+      console.log('Fetching reports for:', { business_id: business.id, date_from, date_to });
+      
       const { data, error } = await supabase.rpc('reports_aggregate', {
         business_id: business.id,
         date_from,
         date_to,
       });
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Error fetching reports:', error);
+        throw error;
+      }
       
       // Runtime validation with type guard
       const result = data as unknown;
@@ -65,13 +72,17 @@ export const useReports = (range: ReportsRange) => {
       return result;
     },
     enabled: !!business?.id,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes (previously cacheTime)
     retry: 2,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   return {
     reportsData: data,
     isLoading,
     error,
+    refetch,
   };
 };

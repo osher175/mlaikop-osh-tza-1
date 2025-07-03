@@ -19,6 +19,7 @@ interface InventoryTableProps {
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (product: Product) => void;
   onViewProductImage: (product: Product) => void;
+  activeStockFilter: 'all' | 'inStock' | 'lowStock' | 'outOfStock';
 }
 
 export const InventoryTable: React.FC<InventoryTableProps> = ({
@@ -27,6 +28,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
   onEditProduct,
   onDeleteProduct,
   onViewProductImage,
+  activeStockFilter,
 }) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -57,27 +59,62 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
     return product.product_categories?.name || '-';
   };
 
-  const filteredProducts = products.filter(product =>
+  // Filter products by search term first
+  const searchFilteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (product.barcode && product.barcode.includes(searchTerm)) ||
     (product.location && product.location.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Then filter by stock status
+  const filteredProducts = searchFilteredProducts.filter(product => {
+    const quantity = product.quantity;
+    const threshold = product.product_thresholds?.low_stock_threshold || 5;
+    
+    switch (activeStockFilter) {
+      case 'inStock':
+        return quantity > threshold;
+      case 'lowStock':
+        return quantity > 0 && quantity <= threshold;
+      case 'outOfStock':
+        return quantity === 0;
+      case 'all':
+      default:
+        return true;
+    }
+  });
+
+  const getFilterTitle = () => {
+    switch (activeStockFilter) {
+      case 'inStock':
+        return 'מוצרים במלאי';
+      case 'lowStock':
+        return 'מוצרים במלאי נמוך';
+      case 'outOfStock':
+        return 'מוצרים שאזלו';
+      case 'all':
+      default:
+        return 'רשימת מוצרים';
+    }
+  };
 
   // Mobile optimized card view
   if (isMobile) {
     return (
       <Card className="w-full">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">רשימת מוצרים ({filteredProducts.length})</CardTitle>
+          <CardTitle className="text-lg">{getFilterTitle()} ({filteredProducts.length})</CardTitle>
         </CardHeader>
         <CardContent className="p-2">
           {filteredProducts.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500 mb-4 text-sm">
-                {searchTerm ? 'לא נמצאו מוצרים מתאימים' : 'עדיין לא נוספו מוצרים'}
+                {searchTerm || activeStockFilter !== 'all' 
+                  ? 'לא נמצאו מוצרים מתאימים' 
+                  : 'עדיין לא נוספו מוצרים'}
               </p>
-              {!searchTerm && (
+              {!searchTerm && activeStockFilter === 'all' && (
                 <Button 
                   className="w-full h-12" 
                   onClick={() => navigate('/add-product')}
@@ -180,16 +217,18 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>רשימת מוצרים ({filteredProducts.length})</CardTitle>
+        <CardTitle>{getFilterTitle()} ({filteredProducts.length})</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         {filteredProducts.length === 0 ? (
           <div className="text-center py-8">
             <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500">
-              {searchTerm ? 'לא נמצאו מוצרים מתאימים' : 'עדיין לא נוספו מוצרים'}
+              {searchTerm || activeStockFilter !== 'all' 
+                ? 'לא נמצאו מוצרים מתאימים' 
+                : 'עדיין לא נוספו מוצרים'}
             </p>
-            {!searchTerm && (
+            {!searchTerm && activeStockFilter === 'all' && (
               <Button 
                 className="mt-4" 
                 onClick={() => navigate('/add-product')}
