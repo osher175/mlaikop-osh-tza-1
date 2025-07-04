@@ -36,20 +36,59 @@ export const useOptimizedProducts = (searchTerm = '', limit = 50) => {
       
       console.log('Fetching optimized products:', { business_id: business.id, searchTerm, limit });
       
-      // Use direct SQL query instead of RPC since the function might not be recognized by TypeScript
-      const { data, error } = await supabase
-        .from('products_with_status')
-        .select('*')
-        .eq('business_id', business.id)
-        .ilike('name', `%${searchTerm}%`)
+      // Build the query dynamically
+      let query = supabase
+        .from('products')
+        .select(`
+          id,
+          name,
+          barcode,
+          quantity,
+          location,
+          expiration_date,
+          price,
+          cost,
+          product_categories!inner(name),
+          suppliers(name)
+        `)
+        .eq('business_id', business.id);
+
+      // Add search filter if provided
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%`);
+      }
+
+      // Add limit and ordering
+      query = query
+        .order('created_at', { ascending: false })
         .limit(limit);
+      
+      const { data, error } = await query;
       
       if (error) {
         console.error('Error fetching optimized products:', error);
         throw error;
       }
       
-      return data as OptimizedProduct[];
+      // Transform the data to match our interface
+      const transformedData: OptimizedProduct[] = (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        barcode: item.barcode,
+        quantity: item.quantity,
+        location: item.location,
+        expiration_date: item.expiration_date,
+        price: item.price,
+        cost: item.cost,
+        category_name: item.product_categories?.name || null,
+        supplier_name: item.suppliers?.name || null,
+        stock_status: item.quantity === 0 ? 'out_of_stock' : 
+                     item.quantity <= 5 ? 'low_stock' : 'in_stock',
+        search_rank: searchTerm ? 
+          (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ? 2 : 1) : 1
+      }));
+      
+      return transformedData;
     },
     enabled: !!business?.id,
     staleTime: 2 * 60 * 1000, // 2 minutes
