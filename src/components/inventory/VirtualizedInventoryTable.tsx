@@ -192,6 +192,7 @@ export const VirtualizedInventoryTable: React.FC<VirtualizedInventoryTableProps>
         <div className="h-[600px]">
           <List
             height={600}
+            width="100%"
             itemCount={filteredProducts.length}
             itemSize={ROW_HEIGHT}
             itemData={filteredProducts}

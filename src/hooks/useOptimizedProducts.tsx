@@ -36,11 +36,13 @@ export const useOptimizedProducts = (searchTerm = '', limit = 50) => {
       
       console.log('Fetching optimized products:', { business_id: business.id, searchTerm, limit });
       
-      const { data, error } = await supabase.rpc('search_products_fast', {
-        search_term: searchTerm,
-        business_uuid: business.id,
-        limit_count: limit,
-      });
+      // Use direct SQL query instead of RPC since the function might not be recognized by TypeScript
+      const { data, error } = await supabase
+        .from('products_with_status')
+        .select('*')
+        .eq('business_id', business.id)
+        .ilike('name', `%${searchTerm}%`)
+        .limit(limit);
       
       if (error) {
         console.error('Error fetching optimized products:', error);

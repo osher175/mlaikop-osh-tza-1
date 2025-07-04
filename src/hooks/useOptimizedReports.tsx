@@ -51,7 +51,8 @@ export const useOptimizedReports = (range: ReportsRange) => {
       
       console.log('Fetching optimized reports for:', { business_id: business.id, date_from, date_to });
       
-      const { data, error } = await supabase.rpc('reports_aggregate_optimized', {
+      // Use the existing reports_aggregate function instead of the new one
+      const { data, error } = await supabase.rpc('reports_aggregate', {
         business_id: business.id,
         date_from,
         date_to,
