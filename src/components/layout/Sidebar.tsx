@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -10,7 +9,8 @@ import {
   Settings,
   Shield,
   Crown,
-  Truck
+  Truck,
+  Receipt
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -70,6 +70,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
       to: '/suppliers',
       icon: <Truck className="w-5 h-5" />,
       label: 'ספקים',
+      show: permissions.canViewProducts && !permissions.isPlatformAdmin
+    },
+    {
+      to: '/supplier-invoices',
+      icon: <Receipt className="w-5 h-5" />,
+      label: 'חשבוניות ספקים',
       show: permissions.canViewProducts && !permissions.isPlatformAdmin
     },
     {

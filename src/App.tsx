@@ -27,6 +27,7 @@ import { JoinBusiness } from "./pages/JoinBusiness";
 import { Subscriptions } from "./pages/Subscriptions";
 import { NotificationSettingsPage } from "./pages/NotificationSettings";
 import { Suppliers } from "./pages/Suppliers";
+import { SupplierInvoices } from "./pages/SupplierInvoices";
 
 // Import components
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -81,6 +82,13 @@ function App() {
               <ProtectedRoute>
                 <OnboardingGuard>
                   <Suppliers />
+                </OnboardingGuard>
+              </ProtectedRoute>
+            } />
+            <Route path="/supplier-invoices" element={
+              <ProtectedRoute>
+                <OnboardingGuard>
+                  <SupplierInvoices />
                 </OnboardingGuard>
               </ProtectedRoute>
             } />
