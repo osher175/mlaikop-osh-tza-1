@@ -1,47 +1,41 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Settings, ArrowLeft } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
-export const AdminNavigationHelper: React.FC = () => {
+interface AdminNavigationHelperProps {
+  children: React.ReactNode;
+}
+
+export const AdminNavigationHelper: React.FC<AdminNavigationHelperProps> = ({ children }) => {
+  const { userRole, isLoading } = useUserRole();
   const navigate = useNavigate();
-  const { userRole, permissions } = useUserRole();
 
-  console.log('AdminNavigationHelper - Current user role:', userRole);
-  console.log('AdminNavigationHelper - Is platform admin:', permissions.isPlatformAdmin);
+  useEffect(() => {
+    if (!isLoading && userRole !== 'admin') {
+      // Redirect non-admin users to dashboard
+      navigate('/dashboard');
+    }
+  }, [userRole, isLoading, navigate]);
 
-  if (!permissions.isPlatformAdmin) {
-    return null;
+  // Show loading while checking permissions
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">בודק הרשאות...</p>
+        </div>
+      </div>
+    );
   }
 
-  const handleNavigateToAdmin = () => {
-    console.log('Navigating to admin settings...');
-    navigate('/admin/settings');
-  };
+  // Only render children for admin users
+  if (userRole === 'admin') {
+    return <>{children}</>;
+  }
 
-  return (
-    <Card className="border-2 border-red-200 bg-red-50" dir="rtl">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold text-red-700 font-rubik flex items-center gap-2">
-          <Settings className="w-5 h-5" />
-          פאנל ניהול מערכת
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-red-600 font-rubik mb-4">
-          אתה מנהל מערכת! ניתן לגשת לפאנל הניהול המתקדם כדי לנהל משתמשים ותוכניות מנוי.
-        </p>
-        <Button 
-          onClick={handleNavigateToAdmin}
-          className="bg-red-600 hover:bg-red-700 text-white font-rubik"
-        >
-          <ArrowLeft className="w-4 h-4 ml-2" />
-          עבור לפאנל ניהול
-        </Button>
-      </CardContent>
-    </Card>
-  );
+  // Return null for non-admin users (they will be redirected)
+  return null;
 };
