@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useSupplierInvoices } from '@/hooks/useSupplierInvoices';
-import { Upload, Camera } from 'lucide-react';
+import { Upload, Camera, X } from 'lucide-react';
 import { ImageUpload } from '@/components/ui/image-upload';
 
 interface AddSupplierInvoiceDialogProps {
@@ -265,8 +264,50 @@ const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
   onCapture,
 }) => {
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
-  const [canvasRef, setCanvasRef] = useState<HTMLCanvasElement | null>(null);
+  const [error, setError] = useState<string>('');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const startCamera = useCallback(async () => {
+    try {
+      setError('');
+      console.log('Starting camera...');
+      
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: 'environment', // Use back camera on mobile
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+      
+      console.log('Camera stream obtained:', mediaStream);
+      setStream(mediaStream);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        videoRef.current.play();
+        console.log('Video element set up successfully');
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      setError('לא ניתן לגשת למצלמה. אנא ודא שנתת הרשאה לשימוש במצלמה.');
+    }
+  }, []);
+
+  const stopCamera = useCallback(() => {
+    if (stream) {
+      console.log('Stopping camera stream');
+      stream.getTracks().forEach(track => {
+        track.stop();
+        console.log('Track stopped:', track.kind);
+      });
+      setStream(null);
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }, [stream]);
 
   React.useEffect(() => {
     if (open) {
@@ -275,48 +316,41 @@ const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
       stopCamera();
     }
 
-    return () => stopCamera();
-  }, [open]);
-
-  const startCamera = async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment', // Use back camera on mobile
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      });
-      setStream(mediaStream);
-      
-      if (videoRef) {
-        videoRef.srcObject = mediaStream;
-      }
-    } catch (error) {
-      console.error('Error accessing camera:', error);
-      alert('לא ניתן לגשת למצלמה. אנא ודא שנתת הרשאה לשימוש במצלמה.');
-    }
-  };
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-  };
+    return () => {
+      stopCamera();
+    };
+  }, [open, startCamera, stopCamera]);
 
   const capturePhoto = () => {
-    if (videoRef && canvasRef) {
-      const context = canvasRef.getContext('2d');
-      if (context) {
-        canvasRef.width = videoRef.videoWidth;
-        canvasRef.height = videoRef.videoHeight;
-        context.drawImage(videoRef, 0, 0);
-        
-        const imageDataUrl = canvasRef.toDataURL('image/jpeg', 0.8);
-        onCapture(imageDataUrl);
-      }
+    if (!videoRef.current || !canvasRef.current) {
+      console.error('Video or canvas ref not available');
+      return;
     }
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+      console.error('Canvas context not available');
+      return;
+    }
+
+    // Set canvas size to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    console.log('Capturing photo with dimensions:', canvas.width, 'x', canvas.height);
+
+    // Draw the current video frame to canvas
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Convert to data URL
+    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    console.log('Photo captured, data URL length:', imageDataUrl.length);
+    
+    onCapture(imageDataUrl);
+    onClose();
   };
 
   return (
@@ -327,38 +361,59 @@ const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
         </DialogHeader>
         
         <div className="space-y-4">
-          <div className="relative bg-black rounded-lg overflow-hidden">
-            <video
-              ref={setVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-64 object-cover"
-            />
-            
-            {/* Overlay guide */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="border-2 border-white border-dashed rounded-lg w-4/5 h-3/4 opacity-50"></div>
+          {error ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+              <p className="text-red-700">{error}</p>
+              <Button 
+                onClick={startCamera} 
+                className="mt-2"
+                variant="outline"
+              >
+                נסה שוב
+              </Button>
             </div>
-          </div>
-          
-          <div className="text-center text-sm text-gray-600">
-            מקם את החשbונית במרכז המסגרת ולחץ על צלם
-          </div>
-          
-          <div className="flex gap-3 justify-center">
-            <Button onClick={capturePhoto} className="flex items-center gap-2">
-              <Camera className="w-4 h-4" />
-              צלם
-            </Button>
-            <Button variant="outline" onClick={onClose}>
-              ביטול
-            </Button>
-          </div>
+          ) : (
+            <>
+              <div className="relative bg-black rounded-lg overflow-hidden">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-64 object-cover"
+                  onLoadedMetadata={() => {
+                    console.log('Video metadata loaded');
+                  }}
+                  onCanPlay={() => {
+                    console.log('Video can play');
+                  }}
+                />
+                
+                {/* Overlay guide */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="border-2 border-white border-dashed rounded-lg w-4/5 h-3/4 opacity-50"></div>
+                </div>
+              </div>
+              
+              <div className="text-center text-sm text-gray-600">
+                מקם את החשבונית במרכז המסגרת ולחץ על צלם
+              </div>
+              
+              <div className="flex gap-3 justify-center">
+                <Button onClick={capturePhoto} className="flex items-center gap-2">
+                  <Camera className="w-4 h-4" />
+                  צלם
+                </Button>
+                <Button variant="outline" onClick={onClose}>
+                  ביטול
+                </Button>
+              </div>
+            </>
+          )}
         </div>
         
         {/* Hidden canvas for image capture */}
-        <canvas ref={setCanvasRef} className="hidden" />
+        <canvas ref={canvasRef} className="hidden" />
       </DialogContent>
     </Dialog>
   );
