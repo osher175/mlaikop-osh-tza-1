@@ -16,6 +16,7 @@ import { useSuppliers } from '@/hooks/useSuppliers';
 import { useCategories } from '@/hooks/useCategories';
 import { useBusiness } from '@/hooks/useBusiness';
 import { AddProductCategoryDialog } from '@/components/inventory/AddProductCategoryDialog';
+import { AddSupplierDialog } from '@/components/inventory/AddSupplierDialog';
 import { Plus, ArrowRight, Package, Scan } from 'lucide-react';
 import { useInventoryLogger } from '@/hooks/useInventoryLogger';
 
@@ -31,6 +32,7 @@ export const AddProduct: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
+  const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     barcode: '',
@@ -237,21 +239,32 @@ export const AddProduct: React.FC = () => {
 
                   <div>
                     <Label htmlFor="supplier">ספק</Label>
-                    <Select
-                      value={formData.supplier_id}
-                      onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="בחר ספק (אופציונלי)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {suppliers.map((supplier) => (
-                          <SelectItem key={supplier.id} value={supplier.id}>
-                            {supplier.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-2">
+                      <Select
+                        value={formData.supplier_id}
+                        onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="בחר ספק (אופציונלי)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {suppliers.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.id}>
+                              {supplier.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddSupplier(true)}
+                        className="px-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -354,6 +367,12 @@ export const AddProduct: React.FC = () => {
           open={showAddCategory}
           onOpenChange={setShowAddCategory}
           businessCategoryId={business?.business_category_id || 'default'}
+        />
+
+        {/* Add Supplier Dialog */}
+        <AddSupplierDialog
+          open={showAddSupplier}
+          onOpenChange={setShowAddSupplier}
         />
       </div>
     </MainLayout>
