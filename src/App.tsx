@@ -7,25 +7,25 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 // Import pages
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Dashboard from "./pages/Dashboard";
-import Inventory from "./pages/Inventory";
+import { Auth } from "./pages/Auth";
+import { ForgotPassword } from "./pages/ForgotPassword";
+import { ResetPassword } from "./pages/ResetPassword";
+import { Dashboard } from "./pages/Dashboard";
+import { Inventory } from "./pages/Inventory";
 import { AddProduct } from "./pages/AddProduct";
 import { Reports } from "./pages/Reports";
-import UserManagement from "./pages/UserManagement";
-import BusinessSettings from "./pages/BusinessSettings";
-import UserProfile from "./pages/UserProfile";
-import AdminPanel from "./pages/AdminPanel";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminSettings from "./pages/AdminSettings";
+import { UserManagement } from "./pages/UserManagement";
+import { BusinessSettings } from "./pages/BusinessSettings";
+import { UserProfile } from "./pages/UserProfile";
+import { AdminPanel } from "./pages/AdminPanel";
+import { AdminDashboard } from "./pages/AdminDashboard";
+import { AdminSettings } from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
-import CreateBusiness from "./pages/CreateBusiness";
-import OnboardingDecision from "./pages/OnboardingDecision";
-import JoinBusiness from "./pages/JoinBusiness";
-import Subscriptions from "./pages/Subscriptions";
-import NotificationSettings from "./pages/NotificationSettings";
+import { CreateBusiness } from "./pages/CreateBusiness";
+import { OnboardingDecision } from "./pages/OnboardingDecision";
+import { JoinBusiness } from "./pages/JoinBusiness";
+import { Subscriptions } from "./pages/Subscriptions";
+import { NotificationSettingsPage } from "./pages/NotificationSettings";
 import { Suppliers } from "./pages/Suppliers";
 
 // Import components
@@ -120,7 +120,7 @@ function App() {
             <Route path="/notifications" element={
               <ProtectedRoute>
                 <OnboardingGuard>
-                  <NotificationSettings />
+                  <NotificationSettingsPage />
                 </OnboardingGuard>
               </ProtectedRoute>
             } />
