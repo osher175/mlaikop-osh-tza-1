@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -68,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
       to: '/reports',
       icon: <BarChart3 className="w-5 h-5" />,
       label: 'דוחות',
-      show: permissions.canViewReports
+      show: !permissions.isPlatformAdmin && permissions.canAccessBusinessData // Show for all business users, but not admin
     },
     {
       to: '/users',

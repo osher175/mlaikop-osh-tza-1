@@ -5,11 +5,13 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart3, TrendingUp, DollarSign, Package, Download, AlertCircle, Loader2, Award } from 'lucide-react';
+import { BarChart3, TrendingUp, DollarSign, Package, Download, AlertCircle, Loader2, Award, Shield } from 'lucide-react';
 import { ProtectedFeature } from '@/components/ProtectedFeature';
 import { useReports, ReportsRange } from '@/hooks/useReports';
 import { useCategories } from '@/hooks/useCategories';
 import { useSuppliers } from '@/hooks/useSuppliers';
+import { useUserRole } from '@/hooks/useUserRole';
+import { useNavigate } from 'react-router-dom';
 import ReportsCharts from '@/components/reports/ReportsCharts';
 import TopProductsList from '@/components/reports/TopProductsList';
 
@@ -44,10 +46,32 @@ export const Reports: React.FC = () => {
   const [selectedRange, setSelectedRange] = useState<ReportsRange>('monthly');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSupplier, setSelectedSupplier] = useState<string>('');
-
+  const navigate = useNavigate();
+  
+  const { permissions } = useUserRole();
   const { categories } = useCategories();
   const { suppliers } = useSuppliers();
   const { reportsData, isLoading, error } = useReports(selectedRange);
+
+  // Block admin users from accessing reports
+  if (permissions.isPlatformAdmin) {
+    return (
+      <MainLayout>
+        <div className="text-center py-12" dir="rtl">
+          <Shield className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            גישה מוגבלת
+          </h2>
+          <p className="text-gray-600 mb-6">
+            דף הדוחות אינו זמין למנהלי מערכת
+          </p>
+          <Button onClick={() => navigate('/admin')}>
+            חזור לפאנל המנהל
+          </Button>
+        </div>
+      </MainLayout>
+    );
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('he-IL', {
