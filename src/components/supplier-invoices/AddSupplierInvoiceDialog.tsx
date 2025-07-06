@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useSupplierInvoices } from '@/hooks/useSupplierInvoices';
-import { Upload } from 'lucide-react';
+import { Upload, Camera } from 'lucide-react';
+import { ImageUpload } from '@/components/ui/image-upload';
 
 interface AddSupplierInvoiceDialogProps {
   open: boolean;
@@ -27,6 +28,7 @@ export const AddSupplierInvoiceDialog: React.FC<AddSupplierInvoiceDialogProps> =
     amount: '',
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState<string>('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +51,27 @@ export const AddSupplierInvoiceDialog: React.FC<AddSupplierInvoiceDialogProps> =
       amount: '',
     });
     setSelectedFile(null);
+    setImageUrl('');
     onOpenChange(false);
+  };
+
+  const handleImageUpload = (uploadedImageUrl: string) => {
+    setImageUrl(uploadedImageUrl);
+    // Convert the uploaded image URL to a file for submission
+    fetch(uploadedImageUrl)
+      .then(res => res.blob())
+      .then(blob => {
+        const file = new File([blob], 'invoice-image.jpg', { type: 'image/jpeg' });
+        setSelectedFile(file);
+      })
+      .catch(error => {
+        console.error('Error converting image URL to file:', error);
+      });
+  };
+
+  const handleImageRemove = () => {
+    setImageUrl('');
+    setSelectedFile(null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,6 +80,7 @@ export const AddSupplierInvoiceDialog: React.FC<AddSupplierInvoiceDialogProps> =
       const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
       if (allowedTypes.includes(file.type)) {
         setSelectedFile(file);
+        setImageUrl(''); // Clear image upload if file is selected
       } else {
         alert('נא לבחור קובץ PDF, JPG או PNG בלבד');
       }
@@ -120,22 +143,39 @@ export const AddSupplierInvoiceDialog: React.FC<AddSupplierInvoiceDialogProps> =
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="file-upload">קובץ מצורף (PDF, JPG, PNG)</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="file-upload"
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <Label
-                htmlFor="file-upload"
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50"
-              >
-                <Upload className="w-4 h-4" />
-                {selectedFile ? selectedFile.name : 'בחר קובץ'}
-              </Label>
+            <Label>קובץ מצורף</Label>
+            <div className="space-y-3">
+              {/* Camera/Image Upload Section */}
+              <div>
+                <Label className="text-sm text-gray-600 mb-2 block">צלם או העלה תמונה</Label>
+                <ImageUpload
+                  currentImageUrl={imageUrl}
+                  onImageUpload={handleImageUpload}
+                  onImageRemove={handleImageRemove}
+                  className="w-full"
+                />
+              </div>
+
+              {/* File Upload Section */}
+              <div>
+                <Label className="text-sm text-gray-600 mb-2 block">או העלה קובץ (PDF, JPG, PNG)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="file-upload"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <Label
+                    htmlFor="file-upload"
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 flex-1 justify-center"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {selectedFile && !imageUrl ? selectedFile.name : 'בחר קובץ'}
+                  </Label>
+                </div>
+              </div>
             </div>
           </div>
 
