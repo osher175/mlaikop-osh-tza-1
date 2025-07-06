@@ -758,6 +758,54 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_invoices: {
+        Row: {
+          amount: number
+          business_id: string
+          created_at: string
+          file_url: string | null
+          id: string
+          invoice_date: string
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          business_id: string
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          invoice_date: string
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          business_id?: string
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          invoice_date?: string
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_invoices_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           agent_name: string | null
