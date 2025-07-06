@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -141,7 +140,7 @@ export const Auth = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center p-4" dir="rtl">
       <div className="w-full max-w-md">
-        {/* Logo */}
+        {/* Logo and Brand */}
         <div className="w-full flex items-center justify-center mb-6">
           <img
             src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png"
@@ -319,7 +318,7 @@ export const Auth = () => {
                         variant="ghost"
                         size="sm"
                         className="absolute left-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       >
                         {showConfirmPassword ? (
                           <EyeOff className="h-4 w-4 text-gray-400" />
@@ -351,7 +350,7 @@ export const Auth = () => {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-500">
-          <p>פלטפורמת Mlaiko – ניהול מלאי מתקדם | כל הזכויות שמורות</p>
+          <p>פלטפורמת Mlaiko - ניהול מלאי מתקדם</p>
         </div>
       </div>
     </div>
