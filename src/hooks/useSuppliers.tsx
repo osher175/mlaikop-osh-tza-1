@@ -11,7 +11,7 @@ export const useSuppliers = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('suppliers')
-        .select('id, name, contact_email, phone, address, created_at')
+        .select('id, name, contact_email, phone, created_at')
         .order('name');
       
       if (error) {

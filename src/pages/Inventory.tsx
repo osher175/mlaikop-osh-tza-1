@@ -16,26 +16,11 @@ import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useNavigate } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
 
-// Define a proper Product type that matches what we get from the database
-interface Product {
-  id: string;
-  name: string;
-  barcode: string | null;
-  quantity: number;
-  location: string | null;
-  expiration_date: string | null;
-  price: number | null;
-  cost: number | null;
-  image: string | null;
-  created_at: string;
-  updated_at: string;
-  business_id: string;
-  created_by: string;
-  alert_dismissed: boolean;
-  product_category_id: string | null;
-  supplier_id: string | null;
+// Use the database type directly - this matches what useProducts returns
+type Product = Database['public']['Tables']['products']['Row'] & {
   product_categories?: { name: string } | null;
-}
+  product_thresholds?: { low_stock_threshold: number } | null;
+};
 
 export const Inventory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,28 +31,7 @@ export const Inventory: React.FC = () => {
   const navigate = useNavigate();
   
   const { businessContext, isLoading: businessLoading } = useBusinessAccess();
-  const { products: rawProducts, isLoading: productsLoading, refetch } = useProducts();
-
-  // Transform the raw products to match our Product interface
-  const products: Product[] = rawProducts.map(product => ({
-    id: product.id,
-    name: product.name,
-    barcode: product.barcode,
-    quantity: product.quantity,
-    location: product.location,
-    expiration_date: product.expiration_date,
-    price: product.price,
-    cost: product.cost,
-    image: product.image,
-    created_at: product.created_at,
-    updated_at: product.updated_at,
-    business_id: product.business_id,
-    created_by: product.created_by,
-    alert_dismissed: product.alert_dismissed,
-    product_category_id: product.product_category_id,
-    supplier_id: product.supplier_id,
-    product_categories: product.product_categories
-  }));
+  const { products, isLoading: productsLoading, refetch } = useProducts();
 
   const getStatusCounts = React.useMemo(() => {
     const inStock = products.filter(p => p.quantity > 5).length;

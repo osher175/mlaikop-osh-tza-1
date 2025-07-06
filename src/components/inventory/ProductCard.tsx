@@ -55,7 +55,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 src={product.image}
                 alt={product.name}
                 className="w-full h-full"
-                thumbnailSrc={`${product.image}?w=150&h=150&q=70`} // Thumbnail version
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gray-50">
