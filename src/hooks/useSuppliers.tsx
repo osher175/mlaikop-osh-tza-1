@@ -16,7 +16,7 @@ export const useSuppliers = () => {
       
       const { data, error } = await supabase
         .from('suppliers')
-        .select('id, name, contact_email, phone, agent_name, created_at')
+        .select('*')
         .eq('business_id', businessContext.business_id)
         .order('name');
       
