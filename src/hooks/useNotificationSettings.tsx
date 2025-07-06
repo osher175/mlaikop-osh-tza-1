@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -26,7 +27,7 @@ export const useNotificationSettings = () => {
       
       const { data, error } = await supabase
         .from('notification_settings')
-        .select('id, business_id, low_stock_threshold, expiration_alerts, email_notifications, created_at, updated_at')
+        .select('id, business_id, low_stock_threshold, low_stock_enabled, expiration_enabled, expiration_days_warning, plan_limit_enabled, created_at, updated_at')
         .eq('business_id', business.id)
         .maybeSingle();
       
@@ -103,8 +104,8 @@ export const useNotificationSettings = () => {
         return data;
       }
     },
-    onSuccess: (data) => {
-      console.log('Successfully saved notification settings:', data);
+    onSuccess: () => {
+      console.log('Successfully saved notification settings');
       queryClient.invalidateQueries({ queryKey: ['notification-settings'] });
       toast({
         title: "הגדרות נשמרו",

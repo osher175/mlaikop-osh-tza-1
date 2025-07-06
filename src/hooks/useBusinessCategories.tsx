@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +15,7 @@ export const useBusinessCategories = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('business_categories')
-        .select('id, name, description, created_at')
+        .select('id, name, created_at, updated_at')
         .order('name');
       
       if (error) {
