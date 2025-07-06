@@ -25,17 +25,7 @@ export const useProducts = () => {
       const { data, error } = await supabase
         .from('products')
         .select(`
-          id,
-          name,
-          barcode,
-          quantity,
-          location,
-          expiration_date,
-          price,
-          cost,
-          image,
-          created_at,
-          updated_at,
+          *,
           product_categories(name),
           product_thresholds(low_stock_threshold)
         `)
