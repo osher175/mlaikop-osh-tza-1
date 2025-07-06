@@ -57,6 +57,23 @@ export const AddProduct: React.FC = () => {
 
     setLoading(true);
     try {
+      // Duplicate check
+      const { data: existing, error: existingError } = await supabase
+        .from("products")
+        .select("id")
+        .or(`name.eq.${formData.name},barcode.eq.${formData.barcode}`)
+        .eq("business_id", businessContext.business_id)
+        .maybeSingle();
+      if (existing) {
+        toast({
+          title: "המוצר כבר קיים במלאי",
+          description: "שם המוצר או הברקוד שהזנת כבר קיימים.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       const productData = {
         name: formData.name,
         barcode: formData.barcode || null,
@@ -206,17 +223,15 @@ export const AddProduct: React.FC = () => {
                           ))}
                         </SelectContent>
                       </Select>
-                      {business?.business_category_id && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowAddCategory(true)}
-                          className="px-2"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddCategory(true)}
+                        className="px-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
 
@@ -334,14 +349,12 @@ export const AddProduct: React.FC = () => {
           onBarcodeScanned={handleBarcodeScanned}
         />
 
-        {/* Add Category Dialog */}
-        {business?.business_category_id && (
-          <AddProductCategoryDialog
-            open={showAddCategory}
-            onOpenChange={setShowAddCategory}
-            businessCategoryId={business.business_category_id}
-          />
-        )}
+        {/* Add Category Dialog - Now available for all businesses */}
+        <AddProductCategoryDialog
+          open={showAddCategory}
+          onOpenChange={setShowAddCategory}
+          businessCategoryId={business?.business_category_id || 'default'}
+        />
       </div>
     </MainLayout>
   );
