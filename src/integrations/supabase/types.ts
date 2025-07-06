@@ -760,6 +760,7 @@ export type Database = {
       }
       suppliers: {
         Row: {
+          agent_name: string | null
           business_id: string | null
           contact_email: string | null
           created_at: string | null
@@ -769,6 +770,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          agent_name?: string | null
           business_id?: string | null
           contact_email?: string | null
           created_at?: string | null
@@ -778,6 +780,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          agent_name?: string | null
           business_id?: string | null
           contact_email?: string | null
           created_at?: string | null

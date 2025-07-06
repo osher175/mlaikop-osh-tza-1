@@ -9,7 +9,8 @@ import {
   Users, 
   Settings,
   Shield,
-  Crown
+  Crown,
+  Truck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -66,10 +67,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
       show: permissions.canEditProducts
     },
     {
+      to: '/suppliers',
+      icon: <Truck className="w-5 h-5" />,
+      label: 'ספקים',
+      show: permissions.canViewProducts && !permissions.isPlatformAdmin
+    },
+    {
       to: '/reports',
       icon: <BarChart3 className="w-5 h-5" />,
       label: 'דוחות',
-      show: !permissions.isPlatformAdmin && permissions.canAccessBusinessData // Show for all business users, but not admin
+      show: !permissions.isPlatformAdmin && permissions.canAccessBusinessData
     },
     {
       to: '/users',

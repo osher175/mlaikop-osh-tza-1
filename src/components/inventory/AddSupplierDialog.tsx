@@ -22,6 +22,7 @@ export const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
+    agent_name: '',
     contact_email: '',
     phone: '',
   });
@@ -49,6 +50,7 @@ export const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({
         .from('suppliers')
         .insert({
           name: formData.name.trim(),
+          agent_name: formData.agent_name.trim() || null,
           contact_email: formData.contact_email.trim() || null,
           phone: formData.phone.trim() || null,
           business_id: business.id,
@@ -64,7 +66,7 @@ export const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({
         description: `הספק "${formData.name.trim()}" נוסף למערכת`,
       });
       
-      setFormData({ name: '', contact_email: '', phone: '' });
+      setFormData({ name: '', agent_name: '', contact_email: '', phone: '' });
       onOpenChange(false);
     } catch (error) {
       console.error('Error creating supplier:', error);
@@ -93,6 +95,16 @@ export const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="הכנס שם ספק..."
               required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="agentName">שם הסוכן</Label>
+            <Input
+              id="agentName"
+              value={formData.agent_name}
+              onChange={(e) => setFormData({ ...formData, agent_name: e.target.value })}
+              placeholder="הכנס שם סוכן..."
             />
           </div>
 
