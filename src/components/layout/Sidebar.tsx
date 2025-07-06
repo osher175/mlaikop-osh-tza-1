@@ -84,12 +84,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
       label: 'דוחות',
       show: !permissions.isPlatformAdmin && permissions.canAccessBusinessData
     },
-    {
-      to: '/users',
-      icon: <Users className="w-5 h-5" />,
-      label: 'ניהול משתמשים',
-      show: permissions.canManageUsers && !permissions.isPlatformAdmin
-    },
+    // Hide User Management for MVP - keep code for future use
+    // {
+    //   to: '/users',
+    //   icon: <Users className="w-5 h-5" />,
+    //   label: 'ניהול משתמשים',
+    //   show: permissions.canManageUsers && !permissions.isPlatformAdmin
+    // },
     {
       to: '/settings',
       icon: <Settings className="w-5 h-5" />,
@@ -168,8 +169,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
             </>
           )}
 
-          {/* Subscription link for non-admin users */}
-          {!permissions.isPlatformAdmin && (
+          {/* Hide Subscription Management for MVP - keep code for future use */}
+          {/* {!permissions.isPlatformAdmin && (
             <>
               <div className="border-t border-gray-200 my-4 mx-4"></div>
               <SidebarItem
@@ -180,7 +181,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
                 onClick={onNavigate}
               />
             </>
-          )}
+          )} */}
         </nav>
       </div>
 

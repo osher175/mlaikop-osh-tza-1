@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -99,13 +98,16 @@ function App() {
                 </OnboardingGuard>
               </ProtectedRoute>
             } />
-            <Route path="/users" element={
+            
+            {/* Hide User Management for MVP - keep code for future use */}
+            {/* <Route path="/users" element={
               <ProtectedRoute>
                 <OnboardingGuard>
                   <UserManagement />
                 </OnboardingGuard>
               </ProtectedRoute>
-            } />
+            } /> */}
+            
             <Route path="/settings" element={
               <ProtectedRoute>
                 <OnboardingGuard>
@@ -118,13 +120,16 @@ function App() {
                 <UserProfile />
               </ProtectedRoute>
             } />
-            <Route path="/subscriptions" element={
+            
+            {/* Hide Subscriptions for MVP - keep code for future use */}
+            {/* <Route path="/subscriptions" element={
               <ProtectedRoute>
                 <OnboardingGuard>
                   <Subscriptions />
                 </OnboardingGuard>
               </ProtectedRoute>
-            } />
+            } /> */}
+            
             <Route path="/notifications" element={
               <ProtectedRoute>
                 <OnboardingGuard>
