@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -140,17 +139,12 @@ export const Auth = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center p-4" dir="rtl">
       <div className="w-full max-w-md">
         {/* Logo and Brand */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-32 h-24 mb-3 shadow-lg">
-            <img 
-              src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png" 
-              alt="Mlaiko Logo" 
-              className="w-full h-full object-contain"
-            />
-          </div>
-          <div className="bg-accent px-4 py-2 rounded-full mb-4">
-            <p className="text-white font-medium text-sm text-center">מערכת ניהול מלאי מתקדמת</p>
-          </div>
+        <div className="w-full flex items-center justify-center mb-6">
+          <img
+            src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png"
+            alt="Mlaiko Logo"
+            className="w-full max-w-xs sm:max-w-sm md:max-w-md h-32 sm:h-40 md:h-48 object-contain"
+          />
         </div>
 
         <Card className="shadow-xl border-0">

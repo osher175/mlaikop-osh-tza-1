@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,7 +33,7 @@ interface VirtualizedInventoryTableProps {
 const ROW_HEIGHT = 80;
 const HEADER_HEIGHT = 60;
 
-export const VirtualizedInventoryTable: React.FC<VirtualizedInventoryTableProps> = ({
+export const VirtualizedInventoryTable: React.FC<VirtualizedInventoryTableProps> = React.memo(({
   products,
   searchTerm,
   onEditProduct,
@@ -204,4 +203,6 @@ export const VirtualizedInventoryTable: React.FC<VirtualizedInventoryTableProps>
       </CardContent>
     </Card>
   );
-};
+});
+
+VirtualizedInventoryTable.displayName = 'VirtualizedInventoryTable';

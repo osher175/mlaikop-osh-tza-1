@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Package, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { LazyImage } from '@/components/inventory/LazyImage';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'] & {
@@ -107,22 +108,13 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                 >
                   <CardContent className="p-3">
                     <div className="flex items-start gap-3 mb-3">
-                      {product.image ? (
-                        <React.Suspense fallback={<div className="w-12 h-12 flex items-center justify-center"><span className="loader"></span></div>}>
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            loading="lazy"
-                            className="w-12 h-12 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity flex-shrink-0"
-                            onClick={() => onViewProductImage(product)}
-                            title="לחץ לצפייה בתמונה מוגדלת"
-                          />
-                        </React.Suspense>
-                      ) : (
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Package className="w-6 h-6 text-gray-400" />
-                        </div>
-                      )}
+                      <LazyImage
+                        src={product.image}
+                        alt={product.name}
+                        className="w-12 h-12 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity flex-shrink-0"
+                        onClick={() => onViewProductImage(product)}
+                        title="לחץ לצפייה בתמונה מוגדלת"
+                      />
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-semibold text-gray-900 truncate">
                           {product.name}
@@ -238,22 +230,13 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                     }`}
                   >
                     <td className="p-3">
-                      {product.image ? (
-                        <React.Suspense fallback={<div className="w-10 h-10 flex items-center justify-center"><span className="loader"></span></div>}>
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            loading="lazy"
-                            className="w-10 h-10 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity"
-                            onClick={() => onViewProductImage(product)}
-                            title="לחץ לצפייה בתמונה מוגדלת"
-                          />
-                        </React.Suspense>
-                      ) : (
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <Package className="w-5 h-5 text-gray-400" />
-                        </div>
-                      )}
+                      <LazyImage
+                        src={product.image}
+                        alt={product.name}
+                        className="w-10 h-10 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity"
+                        onClick={() => onViewProductImage(product)}
+                        title="לחץ לצפייה בתמונה מוגדלת"
+                      />
                     </td>
                     <td className="p-3 font-medium text-sm max-w-[150px] truncate">
                       {isLowStock(product) && <AlertTriangle className="w-4 h-4 text-yellow-600 inline ml-2" />}

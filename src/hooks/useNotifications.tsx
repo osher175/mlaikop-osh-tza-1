@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -24,7 +23,14 @@ export const useNotifications = () => {
       const { data, error } = await supabase
         .from('notifications')
         .select(`
-          *,
+          id,
+          title,
+          message,
+          type,
+          is_read,
+          created_at,
+          updated_at,
+          product_id,
           products:product_id(name)
         `)
         .eq('business_id', businessContext.business_id)
@@ -40,6 +46,9 @@ export const useNotifications = () => {
       return data as Notification[];
     },
     enabled: !!user?.id && !!businessContext?.business_id,
+    staleTime: 30 * 1000,
+    gcTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const markAsRead = useMutation({

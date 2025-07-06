@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -26,7 +25,17 @@ export const useProducts = () => {
       const { data, error } = await supabase
         .from('products')
         .select(`
-          *,
+          id,
+          name,
+          barcode,
+          quantity,
+          location,
+          expiration_date,
+          price,
+          cost,
+          image,
+          created_at,
+          updated_at,
           product_categories(name),
           product_thresholds(low_stock_threshold)
         `)
@@ -41,6 +50,9 @@ export const useProducts = () => {
       return data || [];
     },
     enabled: !!user?.id && !!businessContext?.business_id,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   const createProduct = useMutation({

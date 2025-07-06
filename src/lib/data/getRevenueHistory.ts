@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 
 interface RevenueData {
@@ -8,7 +7,7 @@ interface RevenueData {
 
 export const useRevenueHistory = () => {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['revenue-history'],
+    queryKey: ['revenue-history', 'monthly'],
     queryFn: async (): Promise<RevenueData[]> => {
       // TODO: Replace with actual Supabase query when revenue tracking is implemented
       // For now, return dummy data
@@ -26,6 +25,9 @@ export const useRevenueHistory = () => {
       
       return dummyData;
     },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   return {

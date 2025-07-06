@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBusiness } from '@/hooks/useBusiness';
@@ -17,7 +16,7 @@ export const useCategories = () => {
       
       const { data, error } = await supabase
         .from('product_categories')
-        .select('*')
+        .select('id, name, business_category_id, created_at, updated_at')
         .eq('business_category_id', business.business_category_id)
         .order('name');
       
@@ -29,6 +28,9 @@ export const useCategories = () => {
       return data;
     },
     enabled: !!business?.business_category_id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fallback to old categories table when business_category_id is not set
@@ -39,7 +41,7 @@ export const useCategories = () => {
       
       const { data, error } = await supabase
         .from('categories')
-        .select('*')
+        .select('id, name, business_id, created_at, updated_at')
         .eq('business_id', business.id)
         .order('name');
       
@@ -51,6 +53,9 @@ export const useCategories = () => {
       return data;
     },
     enabled: !!business?.id && !business?.business_category_id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Transform old categories to match product categories interface

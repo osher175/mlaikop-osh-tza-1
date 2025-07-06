@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +17,7 @@ export const useProductCategories = (businessCategoryId?: string) => {
       
       const { data, error } = await supabase
         .from('product_categories')
-        .select('*')
+        .select('id, name, description, business_category_id, created_at')
         .eq('business_category_id', businessCategoryId)
         .order('name');
       
@@ -30,6 +29,9 @@ export const useProductCategories = (businessCategoryId?: string) => {
       return data;
     },
     enabled: !!businessCategoryId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const createProductCategory = useMutation({

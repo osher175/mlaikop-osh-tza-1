@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -11,11 +10,11 @@ export const useBusinessCategories = () => {
   const queryClient = useQueryClient();
 
   const { data: businessCategories = [], isLoading, error } = useQuery({
-    queryKey: ['business-categories'],
+    queryKey: ['business-categories', 'all'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('business_categories')
-        .select('*')
+        .select('id, name, description, created_at')
         .order('name');
       
       if (error) {
@@ -25,6 +24,9 @@ export const useBusinessCategories = () => {
       
       return data;
     },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   return {

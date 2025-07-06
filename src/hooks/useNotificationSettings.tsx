@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -27,7 +26,7 @@ export const useNotificationSettings = () => {
       
       const { data, error } = await supabase
         .from('notification_settings')
-        .select('*')
+        .select('id, business_id, low_stock_threshold, expiration_alerts, email_notifications, created_at, updated_at')
         .eq('business_id', business.id)
         .maybeSingle();
       
@@ -40,6 +39,9 @@ export const useNotificationSettings = () => {
       return data;
     },
     enabled: !!user?.id && !!business?.id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const createOrUpdateSettings = useMutation({

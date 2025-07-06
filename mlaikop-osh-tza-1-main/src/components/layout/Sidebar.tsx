@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -110,11 +109,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
     <div className="h-full flex flex-col bg-white overflow-hidden">
       {/* Header */}
       <div className="p-6 border-b border-gray-100 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-            <Package className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-center w-full h-32">
+          <div className="w-24 h-24 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+            <Package className="w-16 h-16 text-white" />
           </div>
-          <span className="text-xl font-bold text-gray-900 truncate">Mlaiko</span>
+          <span className="text-2xl font-bold text-gray-900 truncate mr-3">Mlaiko</span>
         </div>
       </div>
 

@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -68,6 +67,9 @@ export const useSummaryStats = () => {
       };
     },
     enabled: !!user?.id && !!business?.id,
+    staleTime: 1 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   return {

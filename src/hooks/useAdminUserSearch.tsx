@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,6 +42,9 @@ export const useAdminUserSearch = () => {
       return data as SearchUser[];
     },
     enabled: true,
+    staleTime: 30 * 1000,
+    gcTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Toggle user active status mutation

@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -11,7 +10,7 @@ interface AdminStats {
 
 export const useAdminStats = () => {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['admin-stats'],
+    queryKey: ['admin-stats', 'overview'],
     queryFn: async (): Promise<AdminStats> => {
       try {
         // Get total users from profiles
@@ -53,6 +52,9 @@ export const useAdminStats = () => {
         };
       }
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   return {

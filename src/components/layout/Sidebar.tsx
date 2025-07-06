@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -110,11 +109,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
     <div className="h-full flex flex-col bg-white overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-gray-100 flex-shrink-0">
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center w-full h-32">
           <img 
             src="/lovable-uploads/350d6f82-170a-4eef-816c-1e0d30c9f352.png" 
             alt="Mlaiko Logo" 
-            className="h-12 w-auto object-contain max-w-full sm:h-16 md:h-20"
+            className="w-full h-full object-contain max-w-full"
           />
         </div>
       </div>

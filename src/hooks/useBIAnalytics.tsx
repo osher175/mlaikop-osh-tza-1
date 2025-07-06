@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBusinessAccess } from './useBusinessAccess';
@@ -48,7 +47,11 @@ export const useBIAnalytics = () => {
       const { data: inventoryActions, error: actionsError } = await supabase
         .from('inventory_actions')
         .select(`
-          *,
+          id,
+          action_type,
+          quantity_changed,
+          timestamp,
+          notes,
           products(id, name, price, cost, supplier_id, suppliers(id, name))
         `)
         .eq('business_id', businessContext.business_id)
@@ -209,6 +212,9 @@ export const useBIAnalytics = () => {
       };
     },
     enabled: !!businessContext?.business_id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   return {
