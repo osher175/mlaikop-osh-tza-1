@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -158,6 +157,7 @@ export const CreateBusiness: React.FC = () => {
                     <SelectItem value="electronics">אלקטרוניקה</SelectItem>
                     <SelectItem value="construction">בנייה וקבלנות</SelectItem>
                     <SelectItem value="healthcare">בריאות ורפואה</SelectItem>
+                    <SelectItem value="beauty_aesthetics">אסתטיקה ויופי</SelectItem>
                     <SelectItem value="other">אחר</SelectItem>
                   </SelectContent>
                 </Select>
