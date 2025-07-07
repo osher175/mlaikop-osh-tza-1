@@ -21,18 +21,33 @@ export const useBusinessAccess = () => {
         return true;
       }
       
-      // Check if user has business access via the database function
-      const { data, error } = await supabase.rpc('user_has_business_access', {
-        user_uuid: user.id
-      });
+      // Check if user owns a business
+      const { data: ownedBusiness, error: ownerError } = await supabase
+        .from('businesses')
+        .select('id')
+        .eq('owner_id', user.id)
+        .single();
       
-      if (error) {
-        console.error('Error checking business access:', error);
-        return false;
+      if (!ownerError && ownedBusiness) {
+        console.log('User owns a business:', ownedBusiness.id);
+        return true;
       }
       
-      console.log('Business access result:', data);
-      return data || false;
+      // Check if user is a member of a business
+      const { data: businessMember, error: memberError } = await supabase
+        .from('business_users')
+        .select('business_id')
+        .eq('user_id', user.id)
+        .eq('status', 'approved')
+        .single();
+      
+      if (!memberError && businessMember) {
+        console.log('User is a member of business:', businessMember.business_id);
+        return true;
+      }
+      
+      console.log('User has no business access');
+      return false;
     },
     enabled: !!user?.id && !roleLoading,
   });
@@ -47,16 +62,44 @@ export const useBusinessAccess = () => {
         return null;
       }
       
-      const { data, error } = await supabase.rpc('get_user_business_context', {
-        user_uuid: user.id
-      });
+      // First check if user owns a business
+      const { data: ownedBusiness, error: ownerError } = await supabase
+        .from('businesses')
+        .select('id, name')
+        .eq('owner_id', user.id)
+        .single();
       
-      if (error) {
-        console.error('Error getting business context:', error);
-        return null;
+      if (!ownerError && ownedBusiness) {
+        return {
+          business_id: ownedBusiness.id,
+          business_name: ownedBusiness.name,
+          user_role: 'OWNER',
+          is_owner: true
+        };
       }
       
-      return data?.[0] || null;
+      // Then check if user is a business member
+      const { data: businessMember, error: memberError } = await supabase
+        .from('business_users')
+        .select(`
+          business_id,
+          role,
+          businesses!inner(name)
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'approved')
+        .single();
+      
+      if (!memberError && businessMember) {
+        return {
+          business_id: businessMember.business_id,
+          business_name: businessMember.businesses.name,
+          user_role: businessMember.role,
+          is_owner: false
+        };
+      }
+      
+      return null;
     },
     enabled: !!user?.id && hasAccess && !roleLoading,
   });
