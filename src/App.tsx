@@ -27,6 +27,8 @@ import { Subscriptions } from "./pages/Subscriptions";
 import { NotificationSettingsPage } from "./pages/NotificationSettings";
 import { Suppliers } from "./pages/Suppliers";
 import { SupplierInvoices } from "./pages/SupplierInvoices";
+import { Unauthorized } from "./pages/Unauthorized";
+import { ProtectedRouteWithRole } from "./components/ProtectedRouteWithRole";
 
 // Import components
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -47,6 +49,9 @@ function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            
+            {/* Unauthorized route */}
+            <Route path="/unauthorized" element={<Unauthorized />} />
 
             {/* Protected routes with onboarding guard */}
             <Route path="/" element={
@@ -66,44 +71,56 @@ function App() {
             <Route path="/inventory" element={
               <ProtectedRoute>
                 <OnboardingGuard>
-                  <Inventory />
+                  <ProtectedRouteWithRole requiredPermission="canViewProducts">
+                    <Inventory />
+                  </ProtectedRouteWithRole>
                 </OnboardingGuard>
               </ProtectedRoute>
             } />
             <Route path="/add-product" element={
               <ProtectedRoute>
                 <OnboardingGuard>
-                  <AddProduct />
+                  <ProtectedRouteWithRole requiredPermission="canEditProducts">
+                    <AddProduct />
+                  </ProtectedRouteWithRole>
                 </OnboardingGuard>
               </ProtectedRoute>
             } />
             <Route path="/suppliers" element={
               <ProtectedRoute>
                 <OnboardingGuard>
-                  <Suppliers />
+                  <ProtectedRouteWithRole requiredPermission="canViewProducts">
+                    <Suppliers />
+                  </ProtectedRouteWithRole>
                 </OnboardingGuard>
               </ProtectedRoute>
             } />
             <Route path="/supplier-invoices" element={
               <ProtectedRoute>
                 <OnboardingGuard>
-                  <SupplierInvoices />
+                  <ProtectedRouteWithRole requiredPermission="canViewProducts">
+                    <SupplierInvoices />
+                  </ProtectedRouteWithRole>
                 </OnboardingGuard>
               </ProtectedRoute>
             } />
             <Route path="/reports" element={
               <ProtectedRoute>
                 <OnboardingGuard>
-                  <Reports />
+                  <ProtectedRouteWithRole requiredPermission="canAccessBusinessData">
+                    <Reports />
+                  </ProtectedRouteWithRole>
                 </OnboardingGuard>
               </ProtectedRoute>
             } />
             
-            {/* Hide User Management for MVP - keep code for future use */}
+            {/* Hide User Management for MVP - with extra protection when re-enabled */}
             {/* <Route path="/users" element={
               <ProtectedRoute>
                 <OnboardingGuard>
-                  <UserManagement />
+                  <ProtectedRouteWithRole requiredPermission="canManageUsers">
+                    <UserManagement />
+                  </ProtectedRouteWithRole>
                 </OnboardingGuard>
               </ProtectedRoute>
             } /> */}
@@ -111,7 +128,9 @@ function App() {
             <Route path="/settings" element={
               <ProtectedRoute>
                 <OnboardingGuard>
-                  <BusinessSettings />
+                  <ProtectedRouteWithRole requiredPermission="canManageSettings">
+                    <BusinessSettings />
+                  </ProtectedRouteWithRole>
                 </OnboardingGuard>
               </ProtectedRoute>
             } />
@@ -121,11 +140,13 @@ function App() {
               </ProtectedRoute>
             } />
             
-            {/* Hide Subscriptions for MVP - keep code for future use */}
+            {/* Hide Subscriptions for MVP - with extra protection when re-enabled */}
             {/* <Route path="/subscriptions" element={
               <ProtectedRoute>
                 <OnboardingGuard>
-                  <Subscriptions />
+                  <ProtectedRouteWithRole requiredRole="pro_starter_user">
+                    <Subscriptions />
+                  </ProtectedRouteWithRole>
                 </OnboardingGuard>
               </ProtectedRoute>
             } /> */}
@@ -155,26 +176,32 @@ function App() {
               </ProtectedRoute>
             } />
 
-            {/* Admin routes */}
+            {/* Admin routes with enhanced protection */}
             <Route path="/admin" element={
               <ProtectedRoute>
-                <AdminNavigationHelper>
-                  <AdminPanel />
-                </AdminNavigationHelper>
+                <ProtectedRouteWithRole requiredRole="admin">
+                  <AdminNavigationHelper>
+                    <AdminPanel />
+                  </AdminNavigationHelper>
+                </ProtectedRouteWithRole>
               </ProtectedRoute>
             } />
             <Route path="/admin-dashboard" element={
               <ProtectedRoute>
-                <AdminNavigationHelper>
-                  <AdminDashboard />
-                </AdminNavigationHelper>
+                <ProtectedRouteWithRole requiredRole="admin">
+                  <AdminNavigationHelper>
+                    <AdminDashboard />
+                  </AdminNavigationHelper>
+                </ProtectedRouteWithRole>
               </ProtectedRoute>
             } />
             <Route path="/admin/settings" element={
               <ProtectedRoute>
-                <AdminNavigationHelper>
-                  <AdminSettings />
-                </AdminNavigationHelper>
+                <ProtectedRouteWithRole requiredRole="admin">
+                  <AdminNavigationHelper>
+                    <AdminSettings />
+                  </AdminNavigationHelper>
+                </ProtectedRouteWithRole>
               </ProtectedRoute>
             } />
 
