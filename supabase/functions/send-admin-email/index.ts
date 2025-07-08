@@ -25,9 +25,10 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Verify user is admin
+    // Verify user is authenticated and has admin role
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('No authorization header provided');
       throw new Error('No authorization header');
     }
 
@@ -41,28 +42,50 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
+    // Verify JWT token and get user
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
-      throw new Error('Unauthorized');
+      console.error('Authentication failed:', authError);
+      throw new Error('Unauthorized - Invalid token');
     }
 
-    // Check if user is admin
-    const { data: userRole, error: roleError } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
+    console.log('User authenticated:', user.email);
 
-    if (roleError || userRole?.role !== 'admin') {
+    // Check if user has admin role using the database function
+    const { data: userRole, error: roleError } = await supabaseClient.rpc('get_user_role', {
+      user_uuid: user.id
+    });
+
+    if (roleError) {
+      console.error('Error checking user role:', roleError);
+      throw new Error('Error verifying user permissions');
+    }
+
+    if (userRole !== 'admin') {
+      console.error('Access denied. User role:', userRole, 'Required: admin');
       throw new Error('Access denied. Admin role required.');
     }
 
-    const { to, subject, html, isBulk }: EmailRequest = await req.json();
+    console.log('Admin role verified for user:', user.email);
 
-    console.log('Sending email to:', to);
+    // Validate request body
+    const requestBody = await req.json();
+    const { to, subject, html, isBulk }: EmailRequest = requestBody;
+
+    if (!to || !subject || !html) {
+      throw new Error('Missing required fields: to, subject, or html');
+    }
+
+    // Rate limiting for bulk emails
+    if (isBulk && Array.isArray(to) && to.length > 50) {
+      throw new Error('Bulk email limit exceeded. Maximum 50 recipients per request.');
+    }
+
+    console.log('Sending email to:', Array.isArray(to) ? `${to.length} recipients` : to);
     console.log('Subject:', subject);
     console.log('Is bulk:', isBulk);
 
+    // Send email using Resend
     const emailResponse = await resend.emails.send({
       from: "Mlaiko <noreply@mlaiko.com>",
       to: Array.isArray(to) ? to : [to],
@@ -70,7 +93,23 @@ const handler = async (req: Request): Promise<Response> => {
       html: html,
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    if (emailResponse.error) {
+      console.error("Email sending failed:", emailResponse.error);
+      throw new Error(`Email sending failed: ${emailResponse.error.message}`);
+    }
+
+    console.log("Email sent successfully:", emailResponse.data?.id);
+
+    // Log the email sending action for audit purposes
+    try {
+      await supabaseClient.from('emails').insert({
+        email: Array.isArray(to) ? to.join(', ') : to,
+        user_id: user.id,
+      });
+    } catch (logError) {
+      console.error('Failed to log email action:', logError);
+      // Don't fail the request if logging fails
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 
@@ -85,13 +124,30 @@ const handler = async (req: Request): Promise<Response> => {
     });
   } catch (error: any) {
     console.error("Error in send-admin-email function:", error);
+    
+    // Return appropriate error status based on error type
+    let status = 500;
+    let errorMessage = 'שגיאה בשליחת המייל';
+    
+    if (error.message.includes('Unauthorized') || error.message.includes('Access denied')) {
+      status = 403;
+      errorMessage = 'אין לך הרשאה לבצע פעולה זו';
+    } else if (error.message.includes('Missing required fields')) {
+      status = 400;
+      errorMessage = 'חסרים שדות נדרשים';
+    } else if (error.message.includes('limit exceeded')) {
+      status = 429;
+      errorMessage = 'חרגת ממגבלת השליחה';
+    }
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'שגיאה בשליחת המייל'
+        error: errorMessage,
+        details: error.message
       }),
       {
-        status: 500,
+        status: status,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );

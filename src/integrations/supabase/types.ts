@@ -240,6 +240,33 @@ export type Database = {
           },
         ]
       }
+      login_attempts: {
+        Row: {
+          attempted_at: string
+          email: string
+          id: string
+          ip_address: unknown | null
+          success: boolean
+          user_agent: string | null
+        }
+        Insert: {
+          attempted_at?: string
+          email: string
+          id?: string
+          ip_address?: unknown | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Update: {
+          attempted_at?: string
+          email?: string
+          id?: string
+          ip_address?: unknown | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       notification_settings: {
         Row: {
           business_id: string
@@ -1011,6 +1038,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      check_rate_limit: {
+        Args: {
+          user_email: string
+          user_ip?: unknown
+          max_attempts?: number
+          time_window_minutes?: number
+        }
+        Returns: boolean
+      }
       delete_user_by_admin: {
         Args: { target_user_id: string }
         Returns: boolean
@@ -1064,6 +1100,15 @@ export type Database = {
       is_first_user_in_business: {
         Args: { business_uuid: string }
         Returns: boolean
+      }
+      log_login_attempt: {
+        Args: {
+          user_email: string
+          user_ip?: unknown
+          is_success?: boolean
+          user_agent_string?: string
+        }
+        Returns: undefined
       }
       reports_aggregate: {
         Args: { business_id: string; date_from: string; date_to: string }

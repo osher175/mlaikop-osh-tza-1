@@ -26,11 +26,73 @@ const cleanupAuthState = () => {
   });
 };
 
+// Session timeout management
+const SESSION_TIMEOUT_MINUTES = 30; // 30 minutes of inactivity
+const SESSION_WARNING_MINUTES = 5; // Show warning 5 minutes before timeout
+
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionWarning, setSessionWarning] = useState(false);
   const { toast } = useToast();
+
+  // Session timeout tracking
+  useEffect(() => {
+    let sessionTimer: NodeJS.Timeout;
+    let warningTimer: NodeJS.Timeout;
+
+    const resetTimers = () => {
+      if (sessionTimer) clearTimeout(sessionTimer);
+      if (warningTimer) clearTimeout(warningTimer);
+      setSessionWarning(false);
+
+      if (session) {
+        // Set warning timer (25 minutes)
+        warningTimer = setTimeout(() => {
+          setSessionWarning(true);
+          toast({
+            title: 'התחברות תפוג בקרוב',
+            description: 'ההתחברות שלך תפוג בעוד 5 דקות. המשך לגלוש כדי להישאר מחובר.',
+            variant: 'destructive',
+          });
+        }, (SESSION_TIMEOUT_MINUTES - SESSION_WARNING_MINUTES) * 60 * 1000);
+
+        // Set logout timer (30 minutes)
+        sessionTimer = setTimeout(async () => {
+          console.log('Session timeout - signing out user');
+          await signOut();
+          toast({
+            title: 'התחברות פגה',
+            description: 'נותקת מהמערכת עקב חוסר פעילות.',
+            variant: 'destructive',
+          });
+        }, SESSION_TIMEOUT_MINUTES * 60 * 1000);
+      }
+    };
+
+    const handleUserActivity = () => {
+      if (session) {
+        resetTimers();
+      }
+    };
+
+    // Listen for user activity
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(event => {
+      document.addEventListener(event, handleUserActivity, true);
+    });
+
+    resetTimers();
+
+    return () => {
+      if (sessionTimer) clearTimeout(sessionTimer);
+      if (warningTimer) clearTimeout(warningTimer);
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserActivity, true);
+      });
+    };
+  }, [session, toast]);
 
   useEffect(() => {
     // Set up auth state listener
@@ -74,6 +136,43 @@ export const useAuth = () => {
     }
   };
 
+  // Check rate limit before attempting login
+  const checkRateLimit = async (email: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.rpc('check_rate_limit', {
+        user_email: email,
+        user_ip: null, // We'll handle IP on the server side if needed
+        max_attempts: 5,
+        time_window_minutes: 15
+      });
+
+      if (error) {
+        console.error('Error checking rate limit:', error);
+        return true; // Allow attempt if we can't check
+      }
+
+      return data || false;
+    } catch (error) {
+      console.error('Error in checkRateLimit:', error);
+      return true; // Allow attempt if we can't check
+    }
+  };
+
+  // Log login attempt
+  const logLoginAttempt = async (email: string, success: boolean) => {
+    try {
+      await supabase.rpc('log_login_attempt', {
+        user_email: email,
+        user_ip: null, // Client-side IP detection is limited
+        is_success: success,
+        user_agent_string: navigator.userAgent
+      });
+    } catch (error) {
+      console.error('Error logging login attempt:', error);
+      // Don't throw error as this is just logging
+    }
+  };
+
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
@@ -93,6 +192,19 @@ export const useAuth = () => {
   };
 
   const signIn = async (email: string, password: string) => {
+    // Check rate limit first
+    const isAllowed = await checkRateLimit(email);
+    if (!isAllowed) {
+      const error = { message: 'יותר מדי ניסיונות התחברות. נסה שוב בעוד 15 דקות.' };
+      await logLoginAttempt(email, false);
+      toast({
+        title: 'חסימת התחברות',
+        description: 'יותר מדי ניסיונות התחברות נכשלו. נסה שוב בעוד 15 דקות.',
+        variant: 'destructive',
+      });
+      return { data: null, error };
+    }
+
     // Clean up existing state before signing in
     cleanupAuthState();
     
@@ -108,6 +220,9 @@ export const useAuth = () => {
       email,
       password,
     });
+    
+    // Log the attempt
+    await logLoginAttempt(email, !error && !!data.user);
     
     if (data.user && !error) {
       console.log('User signed in, checking active status:', data.user.email);
@@ -167,12 +282,20 @@ export const useAuth = () => {
     }
   };
 
+  const extendSession = () => {
+    // Called when user acknowledges session warning
+    setSessionWarning(false);
+    // Activity will be detected and timers will reset automatically
+  };
+
   return {
     user,
     session,
     loading,
+    sessionWarning,
     signUp,
     signIn,
     signOut,
+    extendSession,
   };
 };

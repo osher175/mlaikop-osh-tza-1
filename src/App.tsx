@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -34,6 +35,7 @@ import { ProtectedRouteWithRole } from "./components/ProtectedRouteWithRole";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { OnboardingGuard } from "./components/OnboardingGuard";
 import { AdminNavigationHelper } from "./components/AdminNavigationHelper";
+import { SessionWarningDialog } from "./components/SessionWarningDialog";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +45,7 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <SessionWarningDialog />
         <BrowserRouter>
           <Routes>
             {/* Public routes */}
