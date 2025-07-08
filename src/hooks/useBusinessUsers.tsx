@@ -11,17 +11,10 @@ export const useBusinessUsers = () => {
     queryFn: async () => {
       if (!businessContext?.business_id) return [];
 
-      // Get business owner
+      // Get business owner from businesses table
       const { data: ownerData, error: ownerError } = await supabase
         .from('businesses')
-        .select(`
-          owner_id,
-          profiles!businesses_owner_id_fkey (
-            id,
-            first_name,
-            last_name
-          )
-        `)
+        .select('owner_id')
         .eq('id', businessContext.business_id)
         .single();
 
@@ -30,18 +23,22 @@ export const useBusinessUsers = () => {
         throw ownerError;
       }
 
+      // Get owner profile
+      const { data: ownerProfile, error: ownerProfileError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .eq('id', ownerData.owner_id)
+        .single();
+
+      if (ownerProfileError) {
+        console.error('Error fetching owner profile:', ownerProfileError);
+        throw ownerProfileError;
+      }
+
       // Get business members
       const { data: membersData, error: membersError } = await supabase
         .from('business_users')
-        .select(`
-          user_id,
-          role,
-          profiles!business_users_user_id_fkey (
-            id,
-            first_name,
-            last_name
-          )
-        `)
+        .select('user_id, role')
         .eq('business_id', businessContext.business_id)
         .eq('status', 'approved');
 
@@ -53,26 +50,38 @@ export const useBusinessUsers = () => {
       const users = [];
 
       // Add owner
-      if (ownerData?.profiles) {
+      if (ownerProfile) {
         users.push({
-          id: ownerData.profiles.id,
-          first_name: ownerData.profiles.first_name,
-          last_name: ownerData.profiles.last_name,
+          id: ownerProfile.id,
+          first_name: ownerProfile.first_name,
+          last_name: ownerProfile.last_name,
           role: 'בעלים'
         });
       }
 
-      // Add members
-      if (membersData) {
-        membersData.forEach(member => {
-          if (member.profiles) {
-            users.push({
-              id: member.profiles.id,
-              first_name: member.profiles.first_name,
-              last_name: member.profiles.last_name,
-              role: member.role
-            });
-          }
+      // Get profiles for all members
+      if (membersData && membersData.length > 0) {
+        const memberIds = membersData.map(member => member.user_id);
+        
+        const { data: memberProfiles, error: memberProfilesError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', memberIds);
+
+        if (memberProfilesError) {
+          console.error('Error fetching member profiles:', memberProfilesError);
+          throw memberProfilesError;
+        }
+
+        // Combine member profiles with their roles
+        memberProfiles?.forEach(profile => {
+          const memberRole = membersData.find(member => member.user_id === profile.id)?.role;
+          users.push({
+            id: profile.id,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            role: memberRole || 'משתמש'
+          });
         });
       }
 
