@@ -9,11 +9,11 @@ import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { Bell, AlertTriangle, Calendar } from 'lucide-react';
 
 export const NotificationManagement: React.FC = () => {
-  const { settings, isLoading, updateSettings } = useNotificationSettings();
+  const { settings, isLoading, createOrUpdateSettings } = useNotificationSettings();
 
   const handleSettingChange = async (key: string, value: any) => {
     try {
-      await updateSettings.mutateAsync({ [key]: value });
+      await createOrUpdateSettings.mutateAsync({ [key]: value });
     } catch (error) {
       console.error('Error updating notification settings:', error);
     }
