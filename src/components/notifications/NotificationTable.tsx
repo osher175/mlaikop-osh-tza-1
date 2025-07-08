@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Edit2, Trash2, Users, Save, X } from 'lucide-react';
 import { useNotificationManagement } from '@/hooks/useNotificationManagement';
-import { EditNotificationDialog } from './EditNotificationDialog';
 import { NotificationTargetsDialog } from './NotificationTargetsDialog';
 
 interface NotificationTableProps {
@@ -24,7 +23,6 @@ export const NotificationTable: React.FC<NotificationTableProps> = ({
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingData, setEditingData] = useState<any>({});
-  const [editDialogId, setEditDialogId] = useState<string | null>(null);
   const [targetsDialogId, setTargetsDialogId] = useState<string | null>(null);
   
   const { updateNotification, deleteNotification } = useNotificationManagement();
@@ -186,7 +184,7 @@ export const NotificationTable: React.FC<NotificationTableProps> = ({
                       })}
                     />
                   ) : (
-                    <Badge variant={notification.is_active ? "success" : "secondary"}>
+                    <Badge variant={notification.is_active ? "default" : "secondary"}>
                       {notification.is_active ? 'פעיל' : 'מושבת'}
                     </Badge>
                   )}
