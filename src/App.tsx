@@ -35,6 +35,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { OnboardingGuard } from "./components/OnboardingGuard";
 import { AdminNavigationHelper } from "./components/AdminNavigationHelper";
 import { SessionWarningDialog } from "./components/SessionWarningDialog";
+import { NotificationManagementPage } from "./pages/NotificationManagementPage";
 
 const queryClient = new QueryClient();
 
@@ -103,6 +104,17 @@ function App() {
                 <OnboardingGuard>
                   <ProtectedRouteWithRole requireBusinessAccess={true}>
                     <Reports />
+                  </ProtectedRouteWithRole>
+                </OnboardingGuard>
+              </ProtectedRoute>
+            } />
+            
+            {/* Notification Management - requires OWNER role */}
+            <Route path="/notification-management" element={
+              <ProtectedRoute>
+                <OnboardingGuard>
+                  <ProtectedRouteWithRole requiredRole="OWNER">
+                    <NotificationManagementPage />
                   </ProtectedRouteWithRole>
                 </OnboardingGuard>
               </ProtectedRoute>

@@ -331,10 +331,13 @@ export type Database = {
           expiration_days_warning: number
           expiration_enabled: boolean
           id: string
+          is_active: boolean
           low_stock_enabled: boolean
           low_stock_threshold: number
+          notification_type: string
           plan_limit_enabled: boolean
           updated_at: string
+          whatsapp_to_supplier: boolean
         }
         Insert: {
           business_id: string
@@ -342,10 +345,13 @@ export type Database = {
           expiration_days_warning?: number
           expiration_enabled?: boolean
           id?: string
+          is_active?: boolean
           low_stock_enabled?: boolean
           low_stock_threshold?: number
+          notification_type?: string
           plan_limit_enabled?: boolean
           updated_at?: string
+          whatsapp_to_supplier?: boolean
         }
         Update: {
           business_id?: string
@@ -353,10 +359,13 @@ export type Database = {
           expiration_days_warning?: number
           expiration_enabled?: boolean
           id?: string
+          is_active?: boolean
           low_stock_enabled?: boolean
           low_stock_threshold?: number
+          notification_type?: string
           plan_limit_enabled?: boolean
           updated_at?: string
+          whatsapp_to_supplier?: boolean
         }
         Relationships: [
           {
@@ -364,6 +373,38 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: true
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_targets: {
+        Row: {
+          created_at: string
+          id: string
+          notification_setting_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notification_setting_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notification_setting_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_targets_notification_setting_id_fkey"
+            columns: ["notification_setting_id"]
+            isOneToOne: false
+            referencedRelation: "notification_settings"
             referencedColumns: ["id"]
           },
         ]

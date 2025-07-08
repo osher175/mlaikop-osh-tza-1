@@ -10,7 +10,10 @@ import {
   Shield,
   Crown,
   Truck,
-  Receipt
+  Receipt,
+  Bell,
+  Settings2,
+  FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -46,6 +49,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
   const location = useLocation();
   const { userRole, permissions } = useUserRole();
+  const { pathname } = location;
 
   const menuItems = [
     {
@@ -118,6 +122,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
       label: 'הגדרות מערכת',
       show: permissions.isPlatformAdmin
     }
+  ];
+
+  const navigationItems = [
+    { name: 'דשבורד', href: '/dashboard', icon: Home, current: pathname === '/dashboard' },
+    { name: 'מלאי', href: '/inventory', icon: Package, current: pathname === '/inventory' },
+    { name: 'הוסף מוצר', href: '/add-product', icon: Plus, current: pathname === '/add-product' },
+    { name: 'ספקים', href: '/suppliers', icon: Truck, current: pathname === '/suppliers' },
+    { name: 'חשבוניות ספקים', href: '/supplier-invoices', icon: Receipt, current: pathname === '/supplier-invoices' },
+    { name: 'דוחות', href: '/reports', icon: BarChart3, current: pathname === '/reports' },
+    { name: 'ניהול התראות', href: '/notification-management', icon: Bell, current: pathname === '/notification-management' },
+    { name: 'הגדרות התראות', href: '/notifications', icon: Settings2, current: pathname === '/notifications' },
+    { name: 'הגדרות עסק', href: '/settings', icon: Settings, current: pathname === '/settings' },
   ];
 
   return (
