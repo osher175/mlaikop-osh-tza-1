@@ -11,6 +11,16 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Security Headers - הגנת דפדפן
+const securityHeaders = {
+  "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:",
+  "X-Frame-Options": "DENY",
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "no-referrer",
+  "X-XSS-Protection": "1; mode=block",
+  ...corsHeaders,
+};
+
 interface EmailRequest {
   to: string | string[];
   subject: string;
@@ -21,7 +31,7 @@ interface EmailRequest {
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: securityHeaders });
   }
 
   try {
@@ -106,6 +116,20 @@ const handler = async (req: Request): Promise<Response> => {
         email: Array.isArray(to) ? to.join(', ') : to,
         user_id: user.id,
       });
+
+      // Log audit event for email sending
+      await supabaseClient.rpc('log_audit_event', {
+        p_action_type: 'admin_email_sent',
+        p_target_type: 'email',
+        p_target_id: null,
+        p_business_id: null,
+        p_details: {
+          recipients: Array.isArray(to) ? to.length : 1,
+          subject: subject,
+          is_bulk: isBulk || false,
+          email_id: emailResponse.data?.id
+        }
+      });
     } catch (logError) {
       console.error('Failed to log email action:', logError);
       // Don't fail the request if logging fails
@@ -119,7 +143,7 @@ const handler = async (req: Request): Promise<Response> => {
       status: 200,
       headers: {
         "Content-Type": "application/json",
-        ...corsHeaders,
+        ...securityHeaders,
       },
     });
   } catch (error: any) {
@@ -148,7 +172,7 @@ const handler = async (req: Request): Promise<Response> => {
       }),
       {
         status: status,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...securityHeaders },
       }
     );
   }
