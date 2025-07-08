@@ -288,6 +288,13 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "inventory_actions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "stale_products"
+            referencedColumns: ["id"]
+          },
         ]
       }
       login_attempts: {
@@ -416,6 +423,13 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "notifications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "stale_products"
+            referencedColumns: ["id"]
+          },
         ]
       }
       permissions: {
@@ -512,6 +526,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: true
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_thresholds_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "stale_products"
             referencedColumns: ["id"]
           },
         ]
@@ -713,6 +734,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "recent_activity_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "stale_products"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "recent_activity_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
@@ -761,6 +789,70 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_alerts: {
+        Row: {
+          alert_type: string
+          business_id: string | null
+          created_at: string
+          id: string
+          product_id: string | null
+          product_name: string
+          quantity_at_trigger: number
+          resolved: boolean | null
+          resolved_at: string | null
+          supplier_name: string | null
+          supplier_phone: string | null
+        }
+        Insert: {
+          alert_type: string
+          business_id?: string | null
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          product_name: string
+          quantity_at_trigger: number
+          resolved?: boolean | null
+          resolved_at?: string | null
+          supplier_name?: string | null
+          supplier_phone?: string | null
+        }
+        Update: {
+          alert_type?: string
+          business_id?: string | null
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          product_name?: string
+          quantity_at_trigger?: number
+          resolved?: boolean | null
+          resolved_at?: string | null
+          supplier_name?: string | null
+          supplier_phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_alerts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "stale_products"
             referencedColumns: ["id"]
           },
         ]
@@ -929,6 +1021,62 @@ export type Database = {
           },
         ]
       }
+      user_activity_log: {
+        Row: {
+          action_type: string
+          business_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: string
+          id: string
+          ip_address: unknown | null
+          new_values: Json | null
+          old_values: Json | null
+          timestamp: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          business_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          business_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_activity_log_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_businesses: {
         Row: {
           business_id: string
@@ -1077,7 +1225,29 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      stale_products: {
+        Row: {
+          business_id: string | null
+          cost: number | null
+          days_since_activity: number | null
+          id: string | null
+          last_activity: string | null
+          location: string | null
+          name: string | null
+          price: number | null
+          product_created_at: string | null
+          quantity: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       check_expiration_notifications: {
@@ -1104,6 +1274,22 @@ export type Database = {
       delete_user_by_admin: {
         Args: { target_user_id: string }
         Returns: boolean
+      }
+      generate_weekly_stock_summary: {
+        Args: { target_business_id: string }
+        Returns: Json
+      }
+      get_expiring_products: {
+        Args: { days_ahead?: number; target_business_id?: string }
+        Returns: {
+          product_id: string
+          product_name: string
+          expiration_date: string
+          days_until_expiry: number
+          business_id: string
+          supplier_name: string
+          quantity: number
+        }[]
       }
       get_product_autocomplete: {
         Args: {
@@ -1175,6 +1361,20 @@ export type Database = {
           user_agent_string?: string
         }
         Returns: undefined
+      }
+      log_user_activity: {
+        Args: {
+          p_action_type: string
+          p_entity_type: string
+          p_entity_id: string
+          p_entity_name: string
+          p_business_id: string
+          p_old_values?: Json
+          p_new_values?: Json
+          p_ip_address?: unknown
+          p_user_agent?: string
+        }
+        Returns: string
       }
       reports_aggregate: {
         Args: { business_id: string; date_from: string; date_to: string }
