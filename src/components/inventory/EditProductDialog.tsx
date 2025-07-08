@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { BarcodeScanner } from '@/components/ui/barcode-scanner';
@@ -49,7 +50,8 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     expiration_date: product?.expiration_date || '',
     image: product?.image || '',
     product_category_id: product?.product_category_id || '',
-    low_stock_threshold: 5, // Default threshold
+    low_stock_threshold: 5,
+    enable_whatsapp_supplier_notification: product?.enable_whatsapp_supplier_notification || false,
   });
 
   React.useEffect(() => {
@@ -73,6 +75,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
           image: product.image || '',
           product_category_id: product.product_category_id || '',
           low_stock_threshold: thresholdData?.low_stock_threshold || 5,
+          enable_whatsapp_supplier_notification: product.enable_whatsapp_supplier_notification || false,
         });
       };
 
@@ -112,6 +115,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         expiration_date: formData.expiration_date || null,
         image: formData.image || null,
         product_category_id: formData.product_category_id || null,
+        enable_whatsapp_supplier_notification: formData.enable_whatsapp_supplier_notification,
         updated_at: new Date().toISOString(),
       };
 
@@ -343,6 +347,26 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                     value={formData.expiration_date}
                     onChange={(e) => setFormData({ ...formData, expiration_date: e.target.value })}
                     className="mt-1 h-10"
+                  />
+                </div>
+
+                {/* WhatsApp Supplier Notification Toggle */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <Label htmlFor="whatsapp_notification" className="text-sm font-medium">
+                      בקש הצעת מחיר אוטומטית מהספק
+                    </Label>
+                    <p className="text-xs text-gray-600 mt-1">
+                      כאשר המוצר אוזל מהמלאי, תישלח הודעת WhatsApp לספק באופן אוטומטי
+                    </p>
+                  </div>
+                  <Switch
+                    id="whatsapp_notification"
+                    checked={formData.enable_whatsapp_supplier_notification}
+                    onCheckedChange={(checked) => setFormData({
+                      ...formData,
+                      enable_whatsapp_supplier_notification: checked
+                    })}
                   />
                 </div>
               </div>

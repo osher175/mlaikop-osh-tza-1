@@ -586,6 +586,7 @@ export type Database = {
           cost: number | null
           created_at: string | null
           created_by: string
+          enable_whatsapp_supplier_notification: boolean
           expiration_date: string | null
           id: string
           image: string | null
@@ -604,6 +605,7 @@ export type Database = {
           cost?: number | null
           created_at?: string | null
           created_by: string
+          enable_whatsapp_supplier_notification?: boolean
           expiration_date?: string | null
           id?: string
           image?: string | null
@@ -622,6 +624,7 @@ export type Database = {
           cost?: number | null
           created_at?: string | null
           created_by?: string
+          enable_whatsapp_supplier_notification?: boolean
           expiration_date?: string | null
           id?: string
           image?: string | null
@@ -1030,6 +1033,8 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          sales_agent_name: string | null
+          sales_agent_phone: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1040,6 +1045,8 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          sales_agent_name?: string | null
+          sales_agent_phone?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1050,6 +1057,8 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          sales_agent_name?: string | null
+          sales_agent_phone?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1261,6 +1270,80 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "subscription_plans_new"
             referencedColumns: ["plan"]
+          },
+        ]
+      }
+      whatsapp_notifications_log: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          message_text: string
+          product_id: string
+          recipient_phone: string
+          sales_agent_phone: string
+          sent_at: string | null
+          supplier_id: string
+          trigger_type: string | null
+          updated_at: string
+          was_sent: boolean
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          message_text: string
+          product_id: string
+          recipient_phone: string
+          sales_agent_phone: string
+          sent_at?: string | null
+          supplier_id: string
+          trigger_type?: string | null
+          updated_at?: string
+          was_sent?: boolean
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          message_text?: string
+          product_id?: string
+          recipient_phone?: string
+          sales_agent_phone?: string
+          sent_at?: string | null
+          supplier_id?: string
+          trigger_type?: string | null
+          updated_at?: string
+          was_sent?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_notifications_log_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notifications_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notifications_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "stale_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notifications_log_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
           },
         ]
       }
