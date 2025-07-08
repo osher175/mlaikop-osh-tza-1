@@ -34,6 +34,7 @@ export const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) =>
 
   // Non-admin users need business access
   if (!hasAccess) {
+    console.log('User does not have business access, redirecting to onboarding');
     return <OnboardingDecision />;
   }
 

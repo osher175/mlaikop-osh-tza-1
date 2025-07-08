@@ -27,6 +27,8 @@ import { Subscriptions } from "./pages/Subscriptions";
 import { NotificationSettingsPage } from "./pages/NotificationSettings";
 import { Suppliers } from "./pages/Suppliers";
 import { SupplierInvoices } from "./pages/SupplierInvoices";
+import { Unauthorized } from "./pages/Unauthorized";
+import { ProtectedRouteWithRole } from "./components/ProtectedRouteWithRole";
 
 // Import components
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -47,6 +49,7 @@ function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
 
             {/* Protected routes with onboarding guard */}
             <Route path="/" element={
@@ -91,10 +94,14 @@ function App() {
                 </OnboardingGuard>
               </ProtectedRoute>
             } />
+            
+            {/* Reports - requires business access */}
             <Route path="/reports" element={
               <ProtectedRoute>
                 <OnboardingGuard>
-                  <Reports />
+                  <ProtectedRouteWithRole requireBusinessAccess={true}>
+                    <Reports />
+                  </ProtectedRouteWithRole>
                 </OnboardingGuard>
               </ProtectedRoute>
             } />
@@ -103,7 +110,9 @@ function App() {
             {/* <Route path="/users" element={
               <ProtectedRoute>
                 <OnboardingGuard>
-                  <UserManagement />
+                  <ProtectedRouteWithRole requiredRole="OWNER">
+                    <UserManagement />
+                  </ProtectedRouteWithRole>
                 </OnboardingGuard>
               </ProtectedRoute>
             } /> */}
@@ -111,7 +120,9 @@ function App() {
             <Route path="/settings" element={
               <ProtectedRoute>
                 <OnboardingGuard>
-                  <BusinessSettings />
+                  <ProtectedRouteWithRole requiredRole="OWNER">
+                    <BusinessSettings />
+                  </ProtectedRouteWithRole>
                 </OnboardingGuard>
               </ProtectedRoute>
             } />
@@ -125,7 +136,9 @@ function App() {
             {/* <Route path="/subscriptions" element={
               <ProtectedRoute>
                 <OnboardingGuard>
-                  <Subscriptions />
+                  <ProtectedRouteWithRole requiredRole="OWNER">
+                    <Subscriptions />
+                  </ProtectedRouteWithRole>
                 </OnboardingGuard>
               </ProtectedRoute>
             } /> */}
@@ -155,26 +168,32 @@ function App() {
               </ProtectedRoute>
             } />
 
-            {/* Admin routes */}
+            {/* Admin routes - require admin role */}
             <Route path="/admin" element={
               <ProtectedRoute>
-                <AdminNavigationHelper>
-                  <AdminPanel />
-                </AdminNavigationHelper>
+                <ProtectedRouteWithRole requiredRole="admin">
+                  <AdminNavigationHelper>
+                    <AdminPanel />
+                  </AdminNavigationHelper>
+                </ProtectedRouteWithRole>
               </ProtectedRoute>
             } />
             <Route path="/admin-dashboard" element={
               <ProtectedRoute>
-                <AdminNavigationHelper>
-                  <AdminDashboard />
-                </AdminNavigationHelper>
+                <ProtectedRouteWithRole requiredRole="admin">
+                  <AdminNavigationHelper>
+                    <AdminDashboard />
+                  </AdminNavigationHelper>
+                </ProtectedRouteWithRole>
               </ProtectedRoute>
             } />
             <Route path="/admin/settings" element={
               <ProtectedRoute>
-                <AdminNavigationHelper>
-                  <AdminSettings />
-                </AdminNavigationHelper>
+                <ProtectedRouteWithRole requiredRole="admin">
+                  <AdminNavigationHelper>
+                    <AdminSettings />
+                  </AdminNavigationHelper>
+                </ProtectedRouteWithRole>
               </ProtectedRoute>
             } />
 
