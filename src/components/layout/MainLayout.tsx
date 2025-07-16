@@ -6,18 +6,35 @@ import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+// Custom hook to detect if sidebar should be a drawer (screen < 1024px)
+function useIsSidebarDrawer() {
+  const [isDrawer, setIsDrawer] = React.useState(false);
+  React.useEffect(() => {
+    const check = () => setIsDrawer(window.innerWidth < 1024);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return isDrawer;
+}
+
 interface MainLayoutProps {
   children: React.ReactNode;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
+  const isSidebarDrawer = useIsSidebarDrawer();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // for manual toggle on tablet
+
+  // If sidebar is a drawer, open/close with drawer state
+  // If sidebar is fixed, allow manual collapse/expand
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile Header with Hamburger Menu */}
-      {isMobile && (
+      {/* Header with Hamburger Menu for <1024px */}
+      {isSidebarDrawer && (
         <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
           <div className="flex items-center gap-2">
             <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
@@ -47,25 +64,41 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
       {/* Main Layout Container */}
       <div className="flex min-h-screen">
-        {/* Desktop Sidebar - Fixed */}
-        {!isMobile && (
-          <div className="w-64 fixed right-0 top-0 h-screen z-30 border-l border-gray-200 bg-white">
+        {/* Fixed Sidebar for >=1024px (lg) */}
+        {!isSidebarDrawer && sidebarOpen && (
+          <div className="w-64 fixed right-0 top-0 h-screen z-30 border-l border-gray-200 bg-white transition-all duration-300">
             <Sidebar />
           </div>
         )}
 
+        {/* Sidebar toggle button for tablets (>=640px and <1024px) */}
+        {!isSidebarDrawer && (
+          <button
+            className="fixed right-4 top-4 z-40 bg-white border border-gray-200 rounded-full shadow p-2 lg:hidden"
+            style={{ display: 'block' }}
+            onClick={() => setSidebarOpen((open) => !open)}
+            aria-label={sidebarOpen ? 'סגור תפריט' : 'פתח תפריט'}
+          >
+            <Menu className="h-5 w-5 text-gray-700" />
+          </button>
+        )}
+
         {/* Main Content Area */}
-        <div className={`flex-1 flex flex-col ${!isMobile ? 'mr-64' : ''} min-h-screen`}>
+        <div
+          className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${
+            !isSidebarDrawer && sidebarOpen ? 'mr-64' : ''
+          }`}
+        >
           {/* Desktop Header */}
-          {!isMobile && (
+          {!isSidebarDrawer && (
             <div className="sticky top-0 z-20 bg-white border-b border-gray-200">
               <Header />
             </div>
           )}
-          
+
           {/* Main Content - Scrollable */}
           <main className="flex-1 overflow-y-auto">
-            <div className={`${isMobile ? 'p-3' : 'p-4 md:p-6 lg:p-8'} min-h-full`}>
+            <div className={`${isSidebarDrawer ? 'p-3' : 'p-4 md:p-6 lg:p-8'} min-h-full`}>
               {children}
             </div>
           </main>
