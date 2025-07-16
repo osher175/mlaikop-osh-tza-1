@@ -1,7 +1,9 @@
 
 import React from 'react';
 
-// MVP: Admin features are frozen/hidden
-export const AdminNavigationHelper: React.FC = () => {
+interface AdminNavigationHelperProps {}
+
+export const AdminNavigationHelper: React.FC<AdminNavigationHelperProps> = () => {
+  // For MVP - this component is disabled since we froze the role system
   return null;
 };

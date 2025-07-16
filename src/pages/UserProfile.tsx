@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,18 +39,9 @@ export const UserProfile: React.FC = () => {
   };
 
   const getRoleBadgeColor = () => {
-    switch (userRole) {
-      case 'admin':
-        return 'bg-red-500';
-      case 'elite_pilot_user':
-        return 'bg-purple-500';
-      case 'smart_master_user':
-        return 'bg-blue-500';
-      case 'pro_starter_user':
-        return 'bg-amber-500';
-      default:
-        return 'bg-gray-500';
-    }
+    // Since we froze the role system to always return 'OWNER',
+    // we'll use the OWNER color for everyone
+    return 'bg-blue-500';
   };
 
   const handleChangePasswordClick = () => {

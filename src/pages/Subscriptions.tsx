@@ -11,16 +11,9 @@ export const Subscriptions: React.FC = () => {
   const { userRole, getRoleDisplayName } = useUserRole();
 
   const getRoleIcon = () => {
-    switch (userRole) {
-      case 'elite_pilot_user':
-        return <Star className="w-6 h-6 text-purple-500" />;
-      case 'smart_master_user':
-        return <Crown className="w-6 h-6 text-blue-500" />;
-      case 'pro_starter_user':
-        return <Crown className="w-6 h-6 text-amber-500" />;
-      default:
-        return <Crown className="w-6 h-6 text-gray-500" />;
-    }
+    // Since we froze the role system to always return 'OWNER', 
+    // we'll show the crown icon for everyone
+    return <Crown className="w-6 h-6 text-blue-500" />;
   };
 
   return (

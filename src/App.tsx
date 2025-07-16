@@ -9,7 +9,7 @@ import Index from "./pages/Index";
 import { Auth } from "./pages/Auth";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
-import Dashboard from "./pages/Dashboard";
+import { Dashboard } from "./pages/Dashboard";
 import { Inventory } from "./pages/Inventory";
 import { AddProduct } from "./pages/AddProduct";
 import { Reports } from "./pages/Reports";
@@ -186,27 +186,21 @@ function App() {
             <Route path="/admin" element={
               <ProtectedRoute>
                 <ProtectedRouteWithRole requiredRole="admin">
-                  <AdminNavigationHelper>
-                    <AdminPanel />
-                  </AdminNavigationHelper>
+                  <AdminPanel />
                 </ProtectedRouteWithRole>
               </ProtectedRoute>
             } />
             <Route path="/admin-dashboard" element={
               <ProtectedRoute>
                 <ProtectedRouteWithRole requiredRole="admin">
-                  <AdminNavigationHelper>
-                    <AdminDashboard />
-                  </AdminNavigationHelper>
+                  <AdminDashboard />
                 </ProtectedRouteWithRole>
               </ProtectedRoute>
             } />
             <Route path="/admin/settings" element={
               <ProtectedRoute>
                 <ProtectedRouteWithRole requiredRole="admin">
-                  <AdminNavigationHelper>
-                    <AdminSettings />
-                  </AdminNavigationHelper>
+                  <AdminSettings />
                 </ProtectedRouteWithRole>
               </ProtectedRoute>
             } />
