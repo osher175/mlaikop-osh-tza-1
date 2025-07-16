@@ -177,13 +177,6 @@ export type Database = {
             referencedRelation: "business_categories"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "businesses_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_plans_new"
-            referencedColumns: ["plan"]
-          },
         ]
       }
       categories: {
@@ -946,36 +939,6 @@ export type Database = {
         }
         Relationships: []
       }
-      subscription_plans_new: {
-        Row: {
-          ai_credit: number
-          created_at: string | null
-          plan: string
-          storage_limit: number
-          support_level: Database["public"]["Enums"]["support_level"]
-          updated_at: string | null
-          user_limit: number
-        }
-        Insert: {
-          ai_credit: number
-          created_at?: string | null
-          plan: string
-          storage_limit: number
-          support_level: Database["public"]["Enums"]["support_level"]
-          updated_at?: string | null
-          user_limit: number
-        }
-        Update: {
-          ai_credit?: number
-          created_at?: string | null
-          plan?: string
-          storage_limit?: number
-          support_level?: Database["public"]["Enums"]["support_level"]
-          updated_at?: string | null
-          user_limit?: number
-        }
-        Relationships: []
-      }
       supplier_invoices: {
         Row: {
           amount: number
@@ -1190,32 +1153,53 @@ export type Database = {
       }
       user_subscriptions: {
         Row: {
+          canceled_at: string | null
           created_at: string | null
           expires_at: string | null
           id: string
+          next_billing_date: string | null
+          payment_link_id: string | null
           plan_id: string
+          receipt_url: string | null
           started_at: string | null
           status: string | null
+          subscription_started_at: string | null
+          trial_ends_at: string | null
+          trial_started_at: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          canceled_at?: string | null
           created_at?: string | null
           expires_at?: string | null
           id?: string
+          next_billing_date?: string | null
+          payment_link_id?: string | null
           plan_id: string
+          receipt_url?: string | null
           started_at?: string | null
           status?: string | null
+          subscription_started_at?: string | null
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          canceled_at?: string | null
           created_at?: string | null
           expires_at?: string | null
           id?: string
+          next_billing_date?: string | null
+          payment_link_id?: string | null
           plan_id?: string
+          receipt_url?: string | null
           started_at?: string | null
           status?: string | null
+          subscription_started_at?: string | null
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -1226,50 +1210,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "subscription_plans"
             referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_subscriptions_new: {
-        Row: {
-          auto_renew: boolean | null
-          created_at: string | null
-          expires_at: string | null
-          id: string
-          plan: string
-          started_at: string | null
-          status: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          auto_renew?: boolean | null
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          plan: string
-          started_at?: string | null
-          status?: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          auto_renew?: boolean | null
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          plan?: string
-          started_at?: string | null
-          status?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_subscriptions_new_plan_fkey"
-            columns: ["plan"]
-            isOneToOne: false
-            referencedRelation: "subscription_plans_new"
-            referencedColumns: ["plan"]
           },
         ]
       }

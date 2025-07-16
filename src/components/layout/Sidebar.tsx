@@ -1,135 +1,175 @@
-
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
+import { useSubscription } from '@/hooks/useSubscription';
 import { 
   Home, 
   Package, 
-  PlusCircle, 
   BarChart3, 
-  Settings,
-  Truck,
-  Receipt,
-  Bell
+  Settings, 
+  Bell, 
+  Users, 
+  Building2,
+  Crown,
+  AlertTriangle
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useUserRole } from '@/hooks/useUserRole';
-
-interface SidebarItemProps {
-  to: string;
-  icon: React.ReactNode;
-  label: string;
-  isActive?: boolean;
-  onClick?: () => void;
-}
-
-const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, label, isActive, onClick }) => (
-  <Link
-    to={to}
-    onClick={onClick}
-    className={cn(
-      "flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors rounded-lg mx-2",
-      isActive && "bg-primary/10 text-primary border-l-4 border-primary"
-    )}
-  >
-    {icon}
-    <span className="font-medium truncate">{label}</span>
-  </Link>
-);
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface SidebarProps {
-  onNavigate?: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
-  const location = useLocation();
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+  const { subscription, isTrialValid, daysLeftInTrial, isSubscriptionActive } = useSubscription();
 
-  // MVP menu items - simplified without admin/user management
-  const menuItems = [
+  const navigationItems = [
     {
       to: '/',
-      icon: <Home className="w-5 h-5" />,
-      label: 'לוח הבקרה',
-      show: true
+      icon: Home,
+      label: 'דף הבית',
+      requiresSubscription: true
     },
     {
       to: '/inventory',
-      icon: <Package className="w-5 h-5" />,
+      icon: Package,
       label: 'מלאי',
-      show: true
-    },
-    {
-      to: '/add-product',
-      icon: <PlusCircle className="w-5 h-5" />,
-      label: 'הוספת מוצר',
-      show: true
-    },
-    {
-      to: '/suppliers',
-      icon: <Truck className="w-5 h-5" />,
-      label: 'ספקים',
-      show: true
-    },
-    {
-      to: '/supplier-invoices',
-      icon: <Receipt className="w-5 h-5" />,
-      label: 'חשבוניות ספקים',
-      show: true
+      requiresSubscription: true
     },
     {
       to: '/reports',
-      icon: <BarChart3 className="w-5 h-5" />,
+      icon: BarChart3,
       label: 'דוחות',
-      show: true
+      requiresSubscription: true
+    },
+    {
+      to: '/suppliers',
+      icon: Building2,
+      label: 'ספקים',
+      requiresSubscription: true
     },
     {
       to: '/notification-management',
-      icon: <Bell className="w-5 h-5" />,
+      icon: Bell,
       label: 'ניהול התראות',
-      show: true
+      requiresSubscription: true
     },
     {
       to: '/settings',
-      icon: <Settings className="w-5 h-5" />,
+      icon: Settings,
       label: 'הגדרות',
-      show: true
+      requiresSubscription: false
+    },
+    {
+      to: '/subscriptions',
+      icon: Crown,
+      label: 'מנויים',
+      requiresSubscription: false
+    },
+    {
+      to: '/user-management',
+      icon: Users,
+      label: 'ניהול משתמשים',
+      requiresSubscription: false
     }
   ];
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100 flex-shrink-0">
-        <div className="flex items-center justify-center w-full h-32">
-          <img 
-            src="/lovable-uploads/350d6f82-170a-4eef-816c-1e0d30c9f352.png" 
-            alt="Mlaiko Logo" 
-            className="w-full h-full object-contain max-w-full"
-          />
-        </div>
-      </div>
+    <>
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+      
+      <aside className={`
+        fixed top-0 right-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50
+        ${isOpen ? 'translate-x-0' : 'translate-x-full'}
+        lg:relative lg:translate-x-0
+      `}>
+        <div className="flex flex-col h-full">
+          <div className="p-6 border-b">
+            <h2 className="text-xl font-bold text-gray-800" dir="rtl">מלאיקו</h2>
+          </div>
 
-      {/* Navigation Menu - Scrollable */}
-      <div className="flex-1 overflow-y-auto">
-        <nav className="space-y-1 py-4">
-          {menuItems.filter(item => item.show).map((item) => (
-            <SidebarItem
-              key={item.to}
-              to={item.to}
-              icon={item.icon}
-              label={item.label}
-              isActive={location.pathname === item.to}
-              onClick={onNavigate}
-            />
-          ))}
-        </nav>
-      </div>
+          {subscription && (
+            <div className="p-4 border-b bg-gray-50">
+              {subscription.status === 'trial' && isTrialValid && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-orange-600">
+                    <Crown className="h-4 w-4" />
+                    <span className="text-sm font-medium">ניסיון חינם</span>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    נותרו {daysLeftInTrial} ימים
+                  </div>
+                  <Button 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => window.location.href = '/subscribe'}
+                  >
+                    שדרג עכשיו
+                  </Button>
+                </div>
+              )}
+              {subscription.status === 'active' && (
+                <div className="flex items-center gap-2 text-green-600">
+                  <Crown className="h-4 w-4" />
+                  <span className="text-sm font-medium">מנוי פעיל</span>
+                </div>
+              )}
+              {!isSubscriptionActive && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-red-600">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm font-medium">מנוי לא פעיל</span>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => window.location.href = '/subscribe'}
+                  >
+                    חדש מנוי
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
-      {/* Footer - Always at bottom */}
-      <div className="p-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
-        <div className="text-xs text-gray-500 text-center">
-          © 2024 Mlaiko
+          <nav className="flex-1 p-4 space-y-2" dir="rtl">
+            {navigationItems.map((item) => {
+              const Icon = item.icon;
+              const isRestricted = item.requiresSubscription && !isSubscriptionActive;
+              
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={onClose}
+                  className={({ isActive }) => `
+                    flex items-center gap-3 px-3 py-2 rounded-lg transition-colors
+                    ${isActive ? 'bg-primary text-primary-foreground' : 'text-gray-700 hover:bg-gray-100'}
+                    ${isRestricted ? 'opacity-50 cursor-not-allowed' : ''}
+                  `}
+                  {...(isRestricted && { 
+                    onClick: (e) => {
+                      e.preventDefault();
+                      window.location.href = '/subscribe?expired=true';
+                    }
+                  })}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                  {isRestricted && (
+                    <Badge variant="secondary" className="text-xs">נדרש מנוי</Badge>
+                  )}
+                </NavLink>
+              );
+            })}
+          </nav>
         </div>
-      </div>
-    </div>
+      </aside>
+    </>
   );
 };
