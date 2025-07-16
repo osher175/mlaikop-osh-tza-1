@@ -1351,23 +1351,32 @@ export type Database = {
     Views: {
       stale_products: {
         Row: {
-          business_id: string | null
-          cost: number | null
-          days_since_activity: number | null
+          expiration_date: string | null
           id: string | null
-          last_activity: string | null
-          location: string | null
           name: string | null
-          price: number | null
-          product_created_at: string | null
           quantity: number | null
+          supplier_id: string | null
+        }
+        Insert: {
+          expiration_date?: string | null
+          id?: string | null
+          name?: string | null
+          quantity?: number | null
+          supplier_id?: string | null
+        }
+        Update: {
+          expiration_date?: string | null
+          id?: string | null
+          name?: string | null
+          quantity?: number | null
+          supplier_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "products_business_id_fkey"
-            columns: ["business_id"]
+            foreignKeyName: "products_supplier_id_fkey"
+            columns: ["supplier_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]

@@ -37,25 +37,25 @@ const actions = [
 
 export const QuickActions: React.FC = () => {
   return (
-    <Card className="card-shadow">
+    <Card className="card-shadow w-full min-w-0">
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-gray-900">
           פעולות מהירות
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <CardContent className="overflow-x-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
           {actions.map((action) => (
             <Button
               key={action.title}
               variant="outline"
-              className={`h-auto p-4 flex flex-col items-center gap-2 ${action.color} text-white border-0`}
+              className={`h-auto p-4 flex flex-col items-center gap-2 ${action.color} text-white border-0 w-full min-w-0`}
               onClick={() => window.location.href = action.href}
             >
-              <action.icon className="w-6 h-6" />
-              <div className="text-center">
-                <div className="font-medium text-sm">{action.title}</div>
-                <div className="text-xs opacity-90">{action.description}</div>
+              <action.icon className="w-6 h-6 flex-shrink-0" />
+              <div className="text-center min-w-0 w-full">
+                <div className="font-medium text-sm truncate">{action.title}</div>
+                <div className="text-xs opacity-90 truncate">{action.description}</div>
               </div>
             </Button>
           ))}

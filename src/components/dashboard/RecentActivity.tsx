@@ -47,7 +47,7 @@ export const RecentActivity: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Card className="card-shadow">
+      <Card className="card-shadow w-full min-w-0">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-gray-900">
             פעילות אחרונה
@@ -57,7 +57,7 @@ export const RecentActivity: React.FC = () => {
           <div className="space-y-4">
             {[...Array(5)].map((_, index) => (
               <div key={index} className="flex items-center justify-between">
-                <div className="flex-1 space-y-2">
+                <div className="flex-1 space-y-2 min-w-0">
                   <Skeleton className="h-4 w-24" />
                   <Skeleton className="h-4 w-48" />
                   <Skeleton className="h-3 w-32" />
@@ -72,7 +72,7 @@ export const RecentActivity: React.FC = () => {
 
   if (error) {
     return (
-      <Card className="card-shadow">
+      <Card className="card-shadow w-full min-w-0">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-gray-900">
             פעילות אחרונה
@@ -89,7 +89,7 @@ export const RecentActivity: React.FC = () => {
 
   if (!activities.length) {
     return (
-      <Card className="card-shadow">
+      <Card className="card-shadow w-full min-w-0">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-gray-900">
             פעילות אחרונה
@@ -105,13 +105,13 @@ export const RecentActivity: React.FC = () => {
   }
 
   return (
-    <Card className="card-shadow">
+    <Card className="card-shadow w-full min-w-0">
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-gray-900">
           פעילות אחרונה
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="overflow-x-hidden">
         <div className="space-y-4">
           {activities.map((activity) => {
             const statusColorClass = getStatusColorClass(activity.status_color);
@@ -127,31 +127,31 @@ export const RecentActivity: React.FC = () => {
             return (
               <div 
                 key={activity.id} 
-                className={`flex items-start justify-between border-b border-gray-100 pb-3 last:border-b-0 ${
+                className={`flex items-start justify-between border-b border-gray-100 pb-3 last:border-b-0 min-w-0 ${
                   activity.is_critical ? 'bg-red-50 rounded-lg p-3' : ''
                 }`}
               >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm">{priorityIcon}</span>
-                    <Badge variant="secondary" className={statusColorClass}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="text-sm flex-shrink-0">{priorityIcon}</span>
+                    <Badge variant="secondary" className={`${statusColorClass} flex-shrink-0`}>
                       {activity.priority_level === 'high' ? 'חשוב' : 
                        activity.priority_level === 'medium' ? 'בינוני' : 'רגיל'}
                     </Badge>
                     {activity.is_system_generated && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs flex-shrink-0">
                         מערכת
                       </Badge>
                     )}
                   </div>
-                  <p className="text-sm font-medium text-gray-900 mb-1">
+                  <p className="text-sm font-medium text-gray-900 mb-1 break-words">
                     {activity.title}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 break-words">
                     {formattedDate}
                   </p>
                   {activity.quantity_changed && (
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-gray-600 mt-1 break-words">
                       שינוי כמות: {activity.quantity_changed > 0 ? '+' : ''}{activity.quantity_changed}
                     </p>
                   )}

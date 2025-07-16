@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
@@ -32,14 +33,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // If sidebar is fixed, allow manual collapse/expand
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
       {/* Header with Hamburger Menu for <1024px */}
       {isSidebarDrawer && (
-        <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
-          <div className="flex items-center gap-2">
+        <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-40 w-full">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
               <DrawerTrigger asChild>
-                <Button variant="ghost" size="sm" className="p-2 hover:bg-gray-100">
+                <Button variant="ghost" size="sm" className="p-2 hover:bg-gray-100 flex-shrink-0">
                   <Menu className="h-5 w-5" />
                 </Button>
               </DrawerTrigger>
@@ -49,21 +50,23 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 </div>
               </DrawerContent>
             </Drawer>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
                 <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
                 </svg>
               </div>
-              <span className="text-xl font-bold text-gray-900">Mlaiko</span>
+              <span className="text-xl font-bold text-gray-900 truncate">Mlaiko</span>
             </div>
           </div>
-          <Header />
+          <div className="flex-shrink-0">
+            <Header />
+          </div>
         </div>
       )}
 
       {/* Main Layout Container */}
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen w-full">
         {/* Fixed Sidebar for >=1024px (lg) */}
         {!isSidebarDrawer && sidebarOpen && (
           <div className="w-64 fixed right-0 top-0 h-screen z-30 border-l border-gray-200 bg-white transition-all duration-300">
@@ -85,20 +88,20 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
         {/* Main Content Area */}
         <div
-          className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${
+          className={`flex-1 flex flex-col min-h-screen transition-all duration-300 w-full min-w-0 ${
             !isSidebarDrawer && sidebarOpen ? 'mr-64' : ''
           }`}
         >
           {/* Desktop Header */}
           {!isSidebarDrawer && (
-            <div className="sticky top-0 z-20 bg-white border-b border-gray-200">
+            <div className="sticky top-0 z-20 bg-white border-b border-gray-200 w-full">
               <Header />
             </div>
           )}
 
           {/* Main Content - Scrollable */}
-          <main className="flex-1 overflow-y-auto">
-            <div className={`${isSidebarDrawer ? 'p-3' : 'p-4 md:p-6 lg:p-8'} min-h-full`}>
+          <main className="flex-1 overflow-y-auto w-full">
+            <div className={`${isSidebarDrawer ? 'p-3' : 'p-4 md:p-6 lg:p-8'} min-h-full w-full max-w-full overflow-x-hidden`}>
               {children}
             </div>
           </main>
