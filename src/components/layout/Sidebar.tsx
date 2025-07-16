@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -5,15 +6,10 @@ import {
   Package, 
   PlusCircle, 
   BarChart3, 
-  Users, 
   Settings,
-  Shield,
-  Crown,
   Truck,
   Receipt,
-  Bell,
-  Settings2,
-  FileText
+  Bell
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -23,11 +19,10 @@ interface SidebarItemProps {
   icon: React.ReactNode;
   label: string;
   isActive?: boolean;
-  badge?: React.ReactNode;
   onClick?: () => void;
 }
 
-const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, label, isActive, badge, onClick }) => (
+const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, label, isActive, onClick }) => (
   <Link
     to={to}
     onClick={onClick}
@@ -38,7 +33,6 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, label, isActive, ba
   >
     {icon}
     <span className="font-medium truncate">{label}</span>
-    {badge && <span className="mr-auto">{badge}</span>}
   </Link>
 );
 
@@ -48,9 +42,8 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
   const location = useLocation();
-  const { userRole, permissions } = useUserRole();
-  const { pathname } = location;
 
+  // MVP menu items - simplified without admin/user management
   const menuItems = [
     {
       to: '/',
@@ -62,71 +55,43 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
       to: '/inventory',
       icon: <Package className="w-5 h-5" />,
       label: 'מלאי',
-      show: permissions.canViewProducts
+      show: true
     },
     {
       to: '/add-product',
       icon: <PlusCircle className="w-5 h-5" />,
       label: 'הוספת מוצר',
-      show: permissions.canEditProducts
+      show: true
     },
     {
       to: '/suppliers',
       icon: <Truck className="w-5 h-5" />,
       label: 'ספקים',
-      show: permissions.canViewProducts && !permissions.isPlatformAdmin
+      show: true
     },
     {
       to: '/supplier-invoices',
       icon: <Receipt className="w-5 h-5" />,
       label: 'חשבוניות ספקים',
-      show: permissions.canViewProducts && !permissions.isPlatformAdmin
+      show: true
     },
     {
       to: '/reports',
       icon: <BarChart3 className="w-5 h-5" />,
       label: 'דוחות',
-      show: !permissions.isPlatformAdmin && permissions.canAccessBusinessData
+      show: true
     },
     {
       to: '/notification-management',
       icon: <Bell className="w-5 h-5" />,
       label: 'ניהול התראות',
-      show: permissions.canManageSettings && !permissions.isPlatformAdmin
+      show: true
     },
-    // Hide User Management for MVP - keep code for future use
-    // {
-    //   to: '/users',
-    //   icon: <Users className="w-5 h-5" />,
-    //   label: 'ניהול משתמשים',
-    //   show: permissions.canManageUsers && !permissions.isPlatformAdmin
-    // },
     {
       to: '/settings',
       icon: <Settings className="w-5 h-5" />,
       label: 'הגדרות',
-      show: permissions.canManageSettings && !permissions.isPlatformAdmin
-    }
-  ];
-
-  const adminMenuItems = [
-    {
-      to: '/admin',
-      icon: <Shield className="w-5 h-5" />,
-      label: 'פאנל מנהל',
-      show: permissions.isPlatformAdmin
-    },
-    {
-      to: '/admin-dashboard',
-      icon: <BarChart3 className="w-5 h-5" />,
-      label: 'דשבורד מנהל',
-      show: permissions.isPlatformAdmin
-    },
-    {
-      to: '/admin/settings',
-      icon: <Settings className="w-5 h-5" />,
-      label: 'הגדרות מערכת',
-      show: permissions.isPlatformAdmin
+      show: true
     }
   ];
 
@@ -146,7 +111,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
       {/* Navigation Menu - Scrollable */}
       <div className="flex-1 overflow-y-auto">
         <nav className="space-y-1 py-4">
-          {/* Regular menu items */}
           {menuItems.filter(item => item.show).map((item) => (
             <SidebarItem
               key={item.to}
@@ -157,41 +121,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
               onClick={onNavigate}
             />
           ))}
-
-          {/* Admin section */}
-          {permissions.isPlatformAdmin && (
-            <>
-              <div className="border-t border-gray-200 my-4 mx-4"></div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-2">
-                ניהול מערכת
-              </div>
-              {adminMenuItems.filter(item => item.show).map((item) => (
-                <SidebarItem
-                  key={item.to}
-                  to={item.to}
-                  icon={item.icon}
-                  label={item.label}
-                  isActive={location.pathname === item.to}
-                  badge={<Crown className="w-4 h-4 text-red-500 flex-shrink-0" />}
-                  onClick={onNavigate}
-                />
-              ))}
-            </>
-          )}
-
-          {/* Hide Subscription Management for MVP - keep code for future use */}
-          {/* {!permissions.isPlatformAdmin && (
-            <>
-              <div className="border-t border-gray-200 my-4 mx-4"></div>
-              <SidebarItem
-                to="/subscriptions"
-                icon={<Crown className="w-5 h-5" />}
-                label="ניהול מנוי"
-                isActive={location.pathname === '/subscriptions'}
-                onClick={onNavigate}
-              />
-            </>
-          )} */}
         </nav>
       </div>
 

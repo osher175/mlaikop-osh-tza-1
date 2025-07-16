@@ -1,86 +1,244 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building2, Users, Package } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { Building2, Loader2 } from 'lucide-react';
 
 export const OnboardingDecision: React.FC = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const [isCreating, setIsCreating] = useState(false);
+  
+  // Business creation form state
+  const [businessName, setBusinessName] = useState('');
+  const [businessCategory, setBusinessCategory] = useState('');
+  const [industry, setIndustry] = useState('');
+  const [businessType, setBusinessType] = useState('');
+
+  // Fetch business categories
+  const { data: businessCategories, isLoading: categoriesLoading } = useQuery({
+    queryKey: ['business-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('business_categories')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const handleCreateBusiness = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user) {
+      toast({
+        title: 'שגיאה',
+        description: 'יש להתחבר קודם',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!businessName.trim()) {
+      toast({
+        title: 'שגיאה',
+        description: 'יש להזין שם עסק',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsCreating(true);
+
+    try {
+      // Check if business name is available
+      const { data: isAvailable } = await supabase.rpc('is_business_name_available', {
+        business_name: businessName.trim()
+      });
+
+      if (!isAvailable) {
+        toast({
+          title: 'שגיאה',
+          description: 'שם העסק כבר קיים במערכת',
+          variant: 'destructive',
+        });
+        setIsCreating(false);
+        return;
+      }
+
+      // Create the business
+      const { data: newBusiness, error: businessError } = await supabase
+        .from('businesses')
+        .insert({
+          name: businessName.trim(),
+          owner_id: user.id,
+          business_category_id: businessCategory || null,
+          industry: industry || null,
+          business_type: businessType || null,
+        })
+        .select()
+        .single();
+
+      if (businessError) throw businessError;
+
+      // Set user role to OWNER for the new business
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .upsert({
+          user_id: user.id,
+          role: 'OWNER',
+          business_id: newBusiness.id,
+        });
+
+      if (roleError) {
+        console.error('Error setting user role:', roleError);
+        // Don't throw here as business was created successfully
+      }
+
+      // Create default notification settings
+      const { error: notificationError } = await supabase
+        .from('notification_settings')
+        .insert({
+          business_id: newBusiness.id,
+          low_stock_enabled: true,
+          low_stock_threshold: 5,
+          expiration_enabled: true,
+          expiration_days_warning: 7,
+          plan_limit_enabled: true,
+        });
+
+      if (notificationError) {
+        console.error('Error creating notification settings:', notificationError);
+        // Don't throw here as business was created successfully
+      }
+
+      toast({
+        title: 'הצלחה!',
+        description: 'העסק נוצר בהצלחה',
+      });
+
+      // Redirect to dashboard
+      navigate('/');
+    } catch (error) {
+      console.error('Error creating business:', error);
+      toast({
+        title: 'שגיאה',
+        description: 'אירעה שגיאה ביצירת העסק',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  if (categoriesLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-gray-600">טוען...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-4xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 mlaiko-gradient rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <Package className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">ברוכים הבאים ל-Mlaiko</h1>
-          <p className="text-gray-600 text-lg">בחר כיצד תרצה להתחיל</p>
-        </div>
-
-        {/* Decision Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Create New Business */}
-          <Card className="shadow-xl border-0 hover:shadow-2xl transition-shadow cursor-pointer group">
-            <CardHeader className="text-center pb-4">
-              <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-primary-200 transition-colors">
-                <Building2 className="w-10 h-10 text-primary" />
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4" dir="rtl">
+      <div className="w-full max-w-md">
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-primary flex items-center justify-center">
+              <Building2 className="w-6 h-6 text-white" />
+            </div>
+            <CardTitle className="text-xl font-bold">יצירת עסק חדש</CardTitle>
+            <CardDescription>
+              בואו ניצור עסק חדש עבורך במערכת
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleCreateBusiness} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="businessName">שם העסק *</Label>
+                <Input
+                  id="businessName"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder="הזן שם עסק"
+                  required
+                />
               </div>
-              <CardTitle className="text-xl text-gray-900">יצירת עסק חדש</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center">
-              <p className="text-gray-600 mb-6">
-                התחל מהתחלה ויצור עסק חדש במערכת. תהיה בעל העסק ותוכל לנהל את כל המערכת.
-              </p>
-              <ul className="text-sm text-gray-500 mb-6 text-right space-y-2">
-                <li>• ניהול מלא של המערכת</li>
-                <li>• הוספת עובדים ומשתמשים</li>
-                <li>• גישה לכל הדוחות והנתונים</li>
-                <li>• התאמה אישית של המערכת</li>
-              </ul>
-              <Button 
-                onClick={() => navigate('/create-business')}
-                className="w-full bg-primary hover:bg-primary-600 text-white font-medium py-3"
-              >
-                יצירת עסק חדש
-              </Button>
-            </CardContent>
-          </Card>
 
-          {/* Join Existing Business */}
-          <Card className="shadow-xl border-0 hover:shadow-2xl transition-shadow cursor-pointer group">
-            <CardHeader className="text-center pb-4">
-              <div className="w-20 h-20 bg-accent-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-accent-200 transition-colors">
-                <Users className="w-10 h-10 text-accent" />
+              <div className="space-y-2">
+                <Label htmlFor="businessCategory">קטגוריית עסק</Label>
+                <Select value={businessCategory} onValueChange={setBusinessCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="בחר קטגורית עסק" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {businessCategories?.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <CardTitle className="text-xl text-gray-900">הצטרפות לעסק קיים</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center">
-              <p className="text-gray-600 mb-6">
-                הצטרף לעסק קיים במערכת. תקבל הרשאות בהתאם לתפקיד שלך בארגון.
-              </p>
-              <ul className="text-sm text-gray-500 mb-6 text-right space-y-2">
-                <li>• גישה למלאי ולמוצרים</li>
-                <li>• עבודה בצוות</li>
-                <li>• הרשאות מותאמות לתפקיד</li>
-                <li>• התחברות מהירה למערכת</li>
-              </ul>
-              <Button 
-                onClick={() => navigate('/join-business')}
-                className="w-full bg-accent hover:bg-accent-600 text-white font-medium py-3"
-              >
-                הצטרפות לעסק קיים
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Footer */}
-        <div className="text-center mt-8 text-sm text-gray-500">
-          <p>לאחר בחירה תוכל להתחיל לעבוד עם המערכת מיד</p>
-        </div>
+              <div className="space-y-2">
+                <Label htmlFor="industry">תחום</Label>
+                <Input
+                  id="industry"
+                  value={industry}
+                  onChange={(e) => setIndustry(e.target.value)}
+                  placeholder="למשל: מזון, אופנה, טכנולוgiה"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="businessType">סוג עסק</Label>
+                <Select value={businessType} onValueChange={setBusinessType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="בחר סוג עסק" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="retail">קמעונאות</SelectItem>
+                    <SelectItem value="wholesale">סיטונאות</SelectItem>
+                    <SelectItem value="service">שירותים</SelectItem>
+                    <SelectItem value="manufacturing">ייצור</SelectItem>
+                    <SelectItem value="restaurant">מסעדנות</SelectItem>
+                    <SelectItem value="other">אחר</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isCreating}
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin ml-2" />
+                    יוצר עסק...
+                  </>
+                ) : (
+                  'צור עסק חדש'
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

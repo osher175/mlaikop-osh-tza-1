@@ -1,45 +1,40 @@
 
 import React from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { SummaryGrid } from '@/components/dashboard/SummaryGrid';
+import { StatsGrid } from '@/components/dashboard/StatsGrid';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
-import { QuickActions } from '@/components/dashboard/QuickActions';
-import { NotificationPanel } from '@/components/dashboard/NotificationPanel';
-import { StockAlertsPanel } from '@/components/dashboard/StockAlertsPanel';
-import { StaleProductsPanel } from '@/components/inventory/StaleProductsPanel';
-import { ExpirationAlertsPanel } from '@/components/inventory/ExpirationAlertsPanel';
-import { SessionWarningDialog } from '@/components/SessionWarningDialog';
+import { LowStockAlerts } from '@/components/dashboard/LowStockAlerts';
+import { ExpiringProducts } from '@/components/dashboard/ExpiringProducts';
 
-export default function Dashboard() {
+export const Dashboard: React.FC = () => {
   return (
     <MainLayout>
       <div className="space-y-6" dir="rtl">
-        <h1 className="text-3xl font-bold text-gray-900">דשבורד ראשי</h1>
-        
-        {/* Session Warning Dialog */}
-        <SessionWarningDialog />
-        
-        {/* Stock Alerts Panel */}
-        <StockAlertsPanel />
-        
-        {/* Expiration Alerts Panel */}
-        <ExpirationAlertsPanel />
-        
-        {/* Stale Products Panel */}
-        <StaleProductsPanel />
-        
-        {/* Notification Panel */}
-        <NotificationPanel />
-        
-        {/* Summary Grid */}
-        <SummaryGrid />
-        
-        {/* Quick Actions */}
-        <QuickActions />
-        
-        {/* Recent Activity */}
-        <RecentActivity />
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+            לוח הבקרה
+          </h1>
+          <p className="text-gray-600">
+            ברוכים הבאים למערכת ניהול המלאי שלכם
+          </p>
+        </div>
+
+        {/* Main Dashboard Content */}
+        <div className="space-y-6">
+          {/* Stats Grid */}
+          <StatsGrid />
+
+          {/* Alerts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <LowStockAlerts />
+            <ExpiringProducts />
+          </div>
+
+          {/* Recent Activity */}
+          <RecentActivity />
+        </div>
       </div>
     </MainLayout>
   );
-}
+};
