@@ -103,20 +103,20 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
     return (
       <Card className="w-full">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">{getFilterTitle()} ({filteredProducts.length})</CardTitle>
+          <CardTitle className="text-base md:text-lg">{getFilterTitle()} ({filteredProducts.length})</CardTitle>
         </CardHeader>
-        <CardContent className="p-2">
+        <CardContent className="p-2 md:p-4">
           {filteredProducts.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 mb-4 text-sm">
+              <p className="text-gray-500 mb-4 text-sm md:text-base">
                 {searchTerm || activeStockFilter !== 'all' 
                   ? 'לא נמצאו מוצרים מתאימים' 
                   : 'עדיין לא נוספו מוצרים'}
               </p>
               {!searchTerm && activeStockFilter === 'all' && (
                 <Button 
-                  className="w-full h-12" 
+                  className="w-full h-12 min-h-[44px] text-base md:text-lg" 
                   onClick={() => navigate('/add-product')}
                 >
                   הוסף מוצר ראשון
@@ -124,30 +124,30 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
               )}
             </div>
           ) : (
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            <div className="space-y-2 md:space-y-3 max-h-[60vh] overflow-y-auto">
               {filteredProducts.map((product) => (
                 <Card 
                   key={product.id} 
                   className={`${isLowStock(product) ? 'border-l-4 border-l-yellow-500 shadow-sm' : 'shadow-sm'}`}
                 >
-                  <CardContent className="p-3">
-                    <div className="flex items-start gap-3 mb-3">
+                  <CardContent className="p-2 md:p-3">
+                    <div className="flex items-start gap-2 md:gap-3 mb-2 md:mb-3">
                       <LazyImage
                         src={product.image}
                         alt={product.name}
-                        className="w-12 h-12 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity flex-shrink-0"
+                        className="w-10 h-10 md:w-12 md:h-12 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity flex-shrink-0"
                         onClick={() => onViewProductImage(product)}
                         title="לחץ לצפייה בתמונה מוגדלת"
                       />
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-semibold text-gray-900 truncate">
+                        <h3 className="text-base md:text-lg font-semibold text-gray-900 truncate">
                           {product.name}
                         </h3>
-                        <p className="text-xs text-gray-600 truncate">
+                        <p className="text-xs md:text-sm text-gray-600 truncate">
                           {getCategoryName(product)}
                         </p>
                         {product.barcode && (
-                          <p className="text-xs text-gray-500 truncate">
+                          <p className="text-xs md:text-sm text-gray-500 truncate">
                             {product.barcode}
                           </p>
                         )}
@@ -157,7 +157,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                    <div className="grid grid-cols-2 gap-1 md:gap-2 text-xs md:text-sm mb-2 md:mb-3">
                       <div className="truncate">
                         <span className="text-gray-600">כמות: </span>
                         <span className="font-medium">{product.quantity}</span>
@@ -176,25 +176,25 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                       </div>
                     </div>
                     
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 md:gap-4">
                       <Button 
                         size="sm" 
                         variant="outline"
                         onClick={() => onEditProduct(product)}
-                        className="flex-1 h-8 text-xs"
+                        className="flex-1 h-10 min-h-[44px] text-base md:text-lg"
                         title="ערוך מוצר"
                       >
-                        <Edit className="w-3 h-3 ml-1" />
+                        <Edit className="w-4 h-4 ml-1" />
                         ערוך
                       </Button>
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        className="text-red-600 hover:text-red-700 h-8 px-2"
+                        className="text-red-600 hover:text-red-700 h-10 min-h-[44px] px-2 text-base md:text-lg"
                         onClick={() => onDeleteProduct(product)}
                         title="מחק מוצר"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </CardContent>
@@ -232,19 +232,19 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
             )}
           </div>
         ) : (
-          <div className="max-h-[70vh] overflow-auto">
-            <table className="w-full">
+          <div className="max-h-[70vh] overflow-x-auto overflow-y-auto">
+            <table className="w-full min-w-[900px]">
               <thead className="sticky top-0 bg-gray-50 z-10">
                 <tr className="border-b">
-                  <th className="text-right p-3 font-medium text-sm">תמונה</th>
-                  <th className="text-right p-3 font-medium text-sm">שם המוצר</th>
-                  <th className="text-right p-3 font-medium text-sm">ברקוד</th>
-                  <th className="text-right p-3 font-medium text-sm">קטגוריה</th>
-                  <th className="text-right p-3 font-medium text-sm">כמות</th>
-                  <th className="text-right p-3 font-medium text-sm">מחיר</th>
-                  <th className="text-right p-3 font-medium text-sm">מיקום</th>
-                  <th className="text-right p-3 font-medium text-sm">סטטוס</th>
-                  <th className="text-right p-3 font-medium text-sm">פעולות</th>
+                  <th className="text-right p-3 font-medium text-sm min-w-[60px]">תמונה</th>
+                  <th className="text-right p-3 font-medium text-sm min-w-[150px]">שם המוצר</th>
+                  <th className="text-right p-3 font-medium text-sm min-w-[120px] hidden md:table-cell">ברקוד</th>
+                  <th className="text-right p-3 font-medium text-sm min-w-[120px]">קטגוריה</th>
+                  <th className="text-right p-3 font-medium text-sm min-w-[80px]">כמות</th>
+                  <th className="text-right p-3 font-medium text-sm min-w-[100px]">מחיר</th>
+                  <th className="text-right p-3 font-medium text-sm min-w-[120px] hidden md:table-cell">מיקום</th>
+                  <th className="text-right p-3 font-medium text-sm min-w-[100px]">סטטוס</th>
+                  <th className="text-right p-3 font-medium text-sm min-w-[120px]">פעולות</th>
                 </tr>
               </thead>
               <tbody>
@@ -255,7 +255,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                       isLowStock(product) ? 'bg-yellow-50 border-l-4 border-l-yellow-400' : ''
                     }`}
                   >
-                    <td className="p-3">
+                    <td className="p-3 min-w-[60px]">
                       <LazyImage
                         src={product.image}
                         alt={product.name}
@@ -264,17 +264,17 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                         title="לחץ לצפייה בתמונה מוגדלת"
                       />
                     </td>
-                    <td className="p-3 font-medium text-sm max-w-[150px] truncate">
+                    <td className="p-3 font-medium text-sm max-w-[150px] min-w-[150px] truncate">
                       {isLowStock(product) && <AlertTriangle className="w-4 h-4 text-yellow-600 inline ml-2" />}
                       {product.name}
                     </td>
-                    <td className="p-3 text-gray-600 text-sm max-w-[100px] truncate">{product.barcode || '-'}</td>
-                    <td className="p-3 text-gray-600 text-sm max-w-[100px] truncate">{getCategoryName(product)}</td>
-                    <td className="p-3 font-medium text-sm">{product.quantity}</td>
-                    <td className="p-3 text-sm">₪{product.price || '-'}</td>
-                    <td className="p-3 text-sm max-w-[100px] truncate">{product.location || '-'}</td>
-                    <td className="p-3">{getStatusBadge(product)}</td>
-                    <td className="p-3">
+                    <td className="p-3 text-gray-600 text-sm max-w-[100px] min-w-[120px] truncate hidden md:table-cell">{product.barcode || '-'}</td>
+                    <td className="p-3 text-gray-600 text-sm max-w-[100px] min-w-[120px] truncate">{getCategoryName(product)}</td>
+                    <td className="p-3 font-medium text-sm min-w-[80px]">{product.quantity}</td>
+                    <td className="p-3 text-sm min-w-[100px]">₪{product.price || '-'}</td>
+                    <td className="p-3 text-sm max-w-[100px] min-w-[120px] truncate hidden md:table-cell">{product.location || '-'}</td>
+                    <td className="p-3 min-w-[100px]">{getStatusBadge(product)}</td>
+                    <td className="p-3 min-w-[120px]">
                       <div className="flex gap-1">
                         <Button 
                           size="sm" 
