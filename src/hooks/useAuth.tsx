@@ -1,10 +1,9 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/types/supabase";
-type SubscriptionRow = Database["public"]["Tables"]["user_subscriptions_new"]["Row"];
 
 interface AuthContextType {
   user: User | null;
@@ -14,13 +13,6 @@ interface AuthContextType {
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
-}
-
-interface Profile {
-  id: string;
-  first_name: string;
-  last_name: string;
-  // Add other profile fields here
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,10 +38,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         setLoading(false);
 
-        // Create trial subscription for new users when they sign in (after signup they're automatically signed in)
+        // Create trial subscription for new users when they sign in
         if (event === 'SIGNED_IN' && session?.user) {
           console.log('User signed in, checking if trial subscription needed');
-          // Use setTimeout to avoid blocking the auth flow
           setTimeout(() => {
             createTrialSubscription(session.user.id);
           }, 1000);
@@ -64,27 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Creating trial subscription for user:', userId);
       
-      // First, get the first available plan
-      const { data: plans, error: planError } = await supabase
-        .from('subscription_plans')
-        .select('id')
-        .limit(1);
-
-      if (planError) {
-        console.error('Error fetching plans:', planError);
-        return;
-      }
-
-      if (!plans || plans.length === 0) {
-        console.error('No subscription plans available');
-        return;
-      }
-
-      const defaultPlanId = plans[0].id;
-      const now = new Date();
-      const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
-
-      // Check if user already has a subscription
+      // Check if user already has a subscription in user_subscriptions table
       const { data: existingSubscription } = await supabase
         .from('user_subscriptions')
         .select('id')
@@ -96,12 +67,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
+      // Get the first available plan from subscription_plans
+      const { data: plans, error: planError } = await supabase
+        .from('subscription_plans')
+        .select('id')
+        .limit(1)
+        .single();
+
+      if (planError || !plans) {
+        console.error('Error fetching plans:', planError);
+        return;
+      }
+
+      const now = new Date();
+      const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
       const { error: subscriptionError } = await supabase
         .from('user_subscriptions')
         .insert({
           user_id: userId,
-          plan_id: defaultPlanId,
-          status: 'active', // Use 'active' instead of 'trial' to avoid constraint issues
+          plan_id: plans.id,
+          status: 'trial',
           started_at: now.toISOString(),
           expires_at: trialEnd.toISOString(),
           trial_started_at: now.toISOString(),
@@ -215,43 +201,6 @@ export const useAuth = () => {
     }
   };
 
-  // Fallback: Create trial subscription if missing
-  const createTrialIfMissing = async (userId: string) => {
-    try {
-      const { data: existing, error: checkError } = await supabase
-        .from<SubscriptionRow>("user_subscriptions_new")
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (checkError) {
-        console.error('Error checking for existing subscription:', checkError);
-        return;
-      }
-      if (existing) {
-        return;
-      }
-      const now = new Date();
-      const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-      const { error: insertError } = await supabase
-        .from<SubscriptionRow>("user_subscriptions_new")
-        .insert({
-          user_id: userId,
-          plan: 'free_trial',
-          status: 'active',
-          type: 'trial',
-          started_at: now.toISOString(),
-          trial_ends_at: trialEnd.toISOString(),
-        });
-      if (insertError) {
-        console.error('Error creating trial subscription:', insertError);
-      } else {
-        console.log('Trial subscription created for user', userId);
-      }
-    } catch (err) {
-      console.error('Error in createTrialIfMissing:', err);
-    }
-  };
-
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
@@ -275,26 +224,31 @@ export const useAuth = () => {
       email,
       password,
     });
+    
     if (data.user && !error) {
       console.log('User signed in, checking active status:', data.user.email);
+      
       // Check if user is active
       const isActive = await checkUserActiveStatus(data.user.id);
+      
       if (!isActive) {
         // User is disabled, sign them out immediately
         console.log('User account is disabled, signing out:', data.user.email);
         await supabase.auth.signOut();
+        
         toast({
           title: 'החשבון מושבת',
           description: 'החשבון שלך הושבת. פנה למנהל המערכת.',
           variant: 'destructive',
         });
+        
         return { data: null, error: { message: 'החשבון שלך הושבת. פנה למנהל המערכת.' } };
       }
-      // Fallback: Create trial if missing
-      await createTrialIfMissing(data.user.id);
+      
       console.log('User signed in successfully:', data.user.email);
       window.location.href = '/';
     }
+    
     return { data, error };
   };
 
