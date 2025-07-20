@@ -26,12 +26,14 @@ export interface EditProductDialogProps {
   product: Product;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onProductUpdated: () => void;
 }
 
 export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   product,
   open,
   onOpenChange,
+  onProductUpdated,
 }) => {
   const { business } = useBusiness();
   const { updateProduct } = useProducts();
@@ -80,6 +82,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         ...formData,
         expiration_date: expirationDate ? format(expirationDate, 'yyyy-MM-dd') : null,
       });
+      onProductUpdated();
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating product:', error);
