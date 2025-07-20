@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
 
         // Create trial subscription for new users
-        if (event === 'SIGNED_UP' && session?.user) {
+        if (event === 'SIGNED_IN' && session?.user) {
           try {
             const now = new Date();
             const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
