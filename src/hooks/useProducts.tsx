@@ -5,13 +5,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 // Define local types
-interface Product {
+export interface Product {
   id: string;
   name: string;
+  barcode?: string;
   quantity: number;
   price?: number;
   cost?: number;
-  barcode?: string;
   location?: string;
   expiration_date?: string;
   business_id: string;
@@ -20,18 +20,19 @@ interface Product {
   product_category_id?: string;
   image?: string;
   alert_dismissed?: boolean;
+  enable_whatsapp_supplier_notification?: boolean;
   created_at?: string;
   updated_at?: string;
 }
 
 interface CreateProductData {
   name: string;
-  quantity: number;
   business_id: string;
   created_by: string;
+  barcode?: string;
+  quantity?: number;
   price?: number;
   cost?: number;
-  barcode?: string;
   location?: string;
   expiration_date?: string;
   supplier_id?: string;
@@ -44,18 +45,14 @@ export const useProducts = (businessId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: products = [], isLoading, error } = useQuery({
+  const { data: products = [], isLoading, error, refetch } = useQuery({
     queryKey: ['products', businessId],
     queryFn: async () => {
       if (!businessId) return [];
       
       const { data, error } = await supabase
         .from('products')
-        .select(`
-          *,
-          suppliers(name),
-          product_categories(name)
-        `)
+        .select('*')
         .eq('business_id', businessId)
         .order('created_at', { ascending: false });
       
@@ -84,7 +81,7 @@ export const useProducts = (businessId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
         title: 'מוצר נוצר בהצלחה',
-        description: 'המוצר נוסף למערכת',
+        description: 'המוצר נוסף למלאי',
       });
     },
     onError: (error) => {
@@ -113,7 +110,7 @@ export const useProducts = (businessId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
         title: 'מוצר עודכן בהצלחה',
-        description: 'המוצר עודכן במערכת',
+        description: 'פרטי המוצר עודכנו במערכת',
       });
     },
     onError: (error) => {
@@ -139,7 +136,7 @@ export const useProducts = (businessId?: string) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
         title: 'מוצר נמחק בהצלחה',
-        description: 'המוצר הוסר מהמערכת',
+        description: 'המוצר הוסר מהמלאי',
       });
     },
     onError: (error) => {
@@ -156,9 +153,10 @@ export const useProducts = (businessId?: string) => {
     products,
     isLoading,
     error,
-    createProduct: createProductMutation.mutate,
-    updateProduct: updateProductMutation.mutate,
-    deleteProduct: deleteProductMutation.mutate,
+    refetch,
+    createProduct: createProductMutation,
+    updateProduct: updateProductMutation,
+    deleteProduct: deleteProductMutation,
     isCreating: createProductMutation.isPending,
     isUpdating: updateProductMutation.isPending,
     isDeleting: deleteProductMutation.isPending,

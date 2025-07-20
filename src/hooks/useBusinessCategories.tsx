@@ -1,21 +1,22 @@
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import type { Database } from '@/integrations/supabase/types';
 
-type BusinessCategory = Database['public']['Tables']['business_categories']['Row'];
+// Define local types
+export interface BusinessCategory {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export const useBusinessCategories = () => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
   const { data: businessCategories = [], isLoading, error } = useQuery({
-    queryKey: ['business-categories', 'all'],
+    queryKey: ['business-categories'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('business_categories')
-        .select('id, name, created_at, updated_at')
+        .select('*')
         .order('name');
       
       if (error) {
@@ -23,11 +24,8 @@ export const useBusinessCategories = () => {
         throw error;
       }
       
-      return data;
+      return data as BusinessCategory[];
     },
-    staleTime: 10 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false,
   });
 
   return {

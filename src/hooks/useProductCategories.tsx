@@ -3,13 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-// Data local types
-interface ProductCategory {
+// Define local types
+export interface ProductCategory {
   id: string;
   name: string;
   business_category_id: string;
-  created_at?: string;
-  updated_at?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface CreateProductCategoryData {
@@ -17,19 +17,16 @@ interface CreateProductCategoryData {
   business_category_id: string;
 }
 
-export const useProductCategories = (businessCategoryId?: string) => {
+export const useProductCategories = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: productCategories = [], isLoading, error } = useQuery({
-    queryKey: ['product-categories', businessCategoryId],
+    queryKey: ['product-categories'],
     queryFn: async () => {
-      if (!businessCategoryId) return [];
-      
       const { data, error } = await supabase
         .from('product_categories')
         .select('*')
-        .eq('business_category_id', businessCategoryId)
         .order('name');
       
       if (error) {
@@ -39,7 +36,6 @@ export const useProductCategories = (businessCategoryId?: string) => {
       
       return data as ProductCategory[];
     },
-    enabled: !!businessCategoryId,
   });
 
   const createProductCategoryMutation = useMutation({
@@ -74,7 +70,7 @@ export const useProductCategories = (businessCategoryId?: string) => {
     productCategories,
     isLoading,
     error,
-    createProductCategory: createProductCategoryMutation.mutate,
+    createProductCategory: createProductCategoryMutation,
     isCreating: createProductCategoryMutation.isPending,
   };
 };

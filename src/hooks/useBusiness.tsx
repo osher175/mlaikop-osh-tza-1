@@ -124,8 +124,8 @@ export const useBusiness = () => {
     business,
     isLoading,
     error,
-    createBusiness: createBusinessMutation.mutate,
-    updateBusiness: updateBusinessMutation.mutate,
+    createBusiness: createBusinessMutation,
+    updateBusiness: updateBusinessMutation,
     isCreating: createBusinessMutation.isPending,
     isUpdating: updateBusinessMutation.isPending,
   };

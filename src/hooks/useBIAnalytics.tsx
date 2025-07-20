@@ -8,15 +8,34 @@ interface AnalyticsData {
   totalValue: number;
   lowStockItems: number;
   expiringItems: number;
+  hasData: boolean;
   topProducts: Array<{
+    productId: string;
+    productName: string;
     name: string;
     quantity: number;
     value: number;
+    revenue: number;
   }>;
   monthlyTrends: Array<{
     month: string;
     revenue: number;
     costs: number;
+  }>;
+  monthlyPurchases: Array<{
+    month: string;
+    quantity: number;
+    productName: string;
+  }>;
+  salesData: Array<{
+    month: string;
+    grossRevenue: number;
+    netRevenue: number;
+  }>;
+  supplierData: Array<{
+    supplierName: string;
+    purchaseVolume: number;
+    percentage: number;
   }>;
 }
 
@@ -30,8 +49,12 @@ export const useBIAnalytics = (businessId?: string) => {
           totalValue: 0,
           lowStockItems: 0,
           expiringItems: 0,
+          hasData: false,
           topProducts: [],
           monthlyTrends: [],
+          monthlyPurchases: [],
+          salesData: [],
+          supplierData: [],
         };
       }
 
@@ -65,9 +88,12 @@ export const useBIAnalytics = (businessId?: string) => {
         ?.sort((a, b) => (b.quantity * (b.price || 0)) - (a.quantity * (a.price || 0)))
         .slice(0, 5)
         .map(product => ({
+          productId: product.id,
+          productName: product.name,
           name: product.name,
           quantity: product.quantity,
           value: product.quantity * (product.price || 0),
+          revenue: product.quantity * (product.price || 0),
         })) || [];
 
       return {
@@ -75,8 +101,12 @@ export const useBIAnalytics = (businessId?: string) => {
         totalValue,
         lowStockItems,
         expiringItems,
+        hasData: totalProducts > 0,
         topProducts,
         monthlyTrends: [], // Would need sales data to calculate this
+        monthlyPurchases: [],
+        salesData: [],
+        supplierData: [],
       };
     },
     enabled: !!businessId,
