@@ -1,35 +1,62 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
-import { useBusinessAccess } from './useBusinessAccess';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { useInventoryLogger } from './useInventoryLogger';
-import type { Database } from '@/integrations/supabase/types';
 
-type Product = Database['public']['Tables']['products']['Row'];
-type ProductInsert = Database['public']['Tables']['products']['Insert'];
-type ProductUpdate = Database['public']['Tables']['products']['Update'];
+// Define local types
+interface Product {
+  id: string;
+  name: string;
+  quantity: number;
+  price?: number;
+  cost?: number;
+  barcode?: string;
+  location?: string;
+  expiration_date?: string;
+  business_id: string;
+  created_by: string;
+  supplier_id?: string;
+  product_category_id?: string;
+  image?: string;
+  alert_dismissed?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
 
-export const useProducts = () => {
+interface CreateProductData {
+  name: string;
+  quantity: number;
+  business_id: string;
+  created_by: string;
+  price?: number;
+  cost?: number;
+  barcode?: string;
+  location?: string;
+  expiration_date?: string;
+  supplier_id?: string;
+  product_category_id?: string;
+  image?: string;
+}
+
+export const useProducts = (businessId?: string) => {
   const { user } = useAuth();
-  const { businessContext } = useBusinessAccess();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { logInventoryAction } = useInventoryLogger();
 
-  const { data: products = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['products', businessContext?.business_id],
+  const { data: products = [], isLoading, error } = useQuery({
+    queryKey: ['products', businessId],
     queryFn: async () => {
-      if (!user?.id || !businessContext?.business_id) return [];
+      if (!businessId) return [];
       
       const { data, error } = await supabase
         .from('products')
         .select(`
           *,
-          product_categories(name),
-          product_thresholds(low_stock_threshold)
+          suppliers(name),
+          product_categories(name)
         `)
-        .eq('business_id', businessContext.business_id)
+        .eq('business_id', businessId)
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -37,175 +64,91 @@ export const useProducts = () => {
         throw error;
       }
       
-      return data || [];
+      return data as Product[];
     },
-    enabled: !!user?.id && !!businessContext?.business_id,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
+    enabled: !!businessId,
   });
 
-  const createProduct = useMutation({
-    mutationFn: async (productData: Omit<ProductInsert, 'business_id' | 'created_by'> & { low_stock_threshold?: number }) => {
-      if (!user?.id || !businessContext?.business_id) {
-        throw new Error('User or business not found');
-      }
-      
-      const { low_stock_threshold, ...productFields } = productData;
-      
-      console.log('Creating product with threshold:', low_stock_threshold);
-      
+  const createProductMutation = useMutation({
+    mutationFn: async (productData: CreateProductData) => {
       const { data, error } = await supabase
         .from('products')
-        .insert({
-          ...productFields,
-          business_id: businessContext.business_id,
-          created_by: user.id,
-        })
+        .insert([productData])
         .select()
         .single();
-      
-      if (error) {
-        console.error('Error creating product:', error);
-        throw error;
-      }
 
-      // Insert threshold if provided
-      if (low_stock_threshold !== undefined) {
-        console.log('Inserting threshold for product:', data.id, 'with threshold:', low_stock_threshold);
-        
-        const { error: thresholdError } = await supabase
-          .from('product_thresholds')
-          .insert({
-            product_id: data.id,
-            business_id: businessContext.business_id,
-            low_stock_threshold,
-          });
-          
-        if (thresholdError) {
-          console.error('Error inserting threshold:', thresholdError);
-          // Don't fail the entire operation for threshold error
-        }
-      }
-
-      // Log inventory action for initial stock
-      if (productData.quantity && productData.quantity > 0) {
-        await logInventoryAction(
-          data.id, 
-          'add', 
-          productData.quantity,
-          `הוספת מוצר חדש עם ${productData.quantity} יחידות ראשוניות`
-        );
-      }
-      
+      if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['recent-activity'] });
-      queryClient.invalidateQueries({ queryKey: ['bi-analytics'] });
       toast({
-        title: "מוצר נוצר בהצלחה",
-        description: "המוצר נוסף למערכת",
+        title: 'מוצר נוצר בהצלחה',
+        description: 'המוצר נוסף למערכת',
       });
     },
-    onError: (error: any) => {
-      toast({
-        title: "שגיאה",
-        description: error.message || "שגיאה ביצירת המוצר",
-        variant: "destructive",
-      });
+    onError: (error) => {
       console.error('Error creating product:', error);
+      toast({
+        title: 'שגיאה ביצירת המוצר',
+        description: 'אירעה שגיאה ביצירת המוצר. נסה שוב.',
+        variant: 'destructive',
+      });
     },
   });
 
-  const updateProduct = useMutation({
-    mutationFn: async ({ id, ...productData }: ProductUpdate & { id: string }) => {
-      if (!user?.id) throw new Error('User not authenticated');
-      
-      console.log('Updating product:', id, 'with data:', productData);
-      
-      // Get current product data to compare quantities
-      const { data: currentProduct } = await supabase
-        .from('products')
-        .select('quantity')
-        .eq('id', id)
-        .single();
-      
+  const updateProductMutation = useMutation({
+    mutationFn: async ({ id, ...productData }: Partial<Product> & { id: string }) => {
       const { data, error } = await supabase
         .from('products')
         .update(productData)
         .eq('id', id)
         .select()
         .single();
-      
-      if (error) {
-        console.error('Error updating product:', error);
-        throw error;
-      }
 
-      // Log inventory action if quantity changed
-      if (currentProduct && productData.quantity !== undefined && productData.quantity !== currentProduct.quantity) {
-        const quantityDiff = productData.quantity - currentProduct.quantity;
-        const actionType = quantityDiff > 0 ? 'add' : 'remove';
-        const notes = quantityDiff > 0 
-          ? `הוספת ${Math.abs(quantityDiff)} יחידות למלאי`
-          : `הפחתת ${Math.abs(quantityDiff)} יחידות מהמלאי`;
-        
-        await logInventoryAction(id, actionType, Math.abs(quantityDiff), notes);
-      }
-      
+      if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['recent-activity'] });
-      queryClient.invalidateQueries({ queryKey: ['bi-analytics'] });
       toast({
-        title: "מוצר עודכן בהצלחה",
-        description: "השינויים נשמרו במערכת",
+        title: 'מוצר עודכן בהצלחה',
+        description: 'המוצר עודכן במערכת',
       });
     },
-    onError: (error: any) => {
-      toast({
-        title: "שגיאה",
-        description: error.message || "שגיאה בעדכון המוצר",
-        variant: "destructive",
-      });
+    onError: (error) => {
       console.error('Error updating product:', error);
+      toast({
+        title: 'שגיאה בעדכון המוצר',
+        description: 'אירעה שגיאה בעדכון המוצר. נסה שוב.',
+        variant: 'destructive',
+      });
     },
   });
 
-  const deleteProduct = useMutation({
+  const deleteProductMutation = useMutation({
     mutationFn: async (productId: string) => {
-      if (!user?.id) throw new Error('User not authenticated');
-      
       const { error } = await supabase
         .from('products')
         .delete()
         .eq('id', productId);
-      
-      if (error) {
-        console.error('Error deleting product:', error);
-        throw error;
-      }
+
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['recent-activity'] });
-      queryClient.invalidateQueries({ queryKey: ['bi-analytics'] });
       toast({
-        title: "מוצר נמחק בהצלחה",
-        description: "המוצר הוסר מהמערכת",
+        title: 'מוצר נמחק בהצלחה',
+        description: 'המוצר הוסר מהמערכת',
       });
     },
-    onError: (error: any) => {
-      toast({
-        title: "שגיאה",
-        description: error.message || "שגיאה במחיקת המוצר",
-        variant: "destructive",
-      });
+    onError: (error) => {
       console.error('Error deleting product:', error);
+      toast({
+        title: 'שגיאה במחיקת המוצר',
+        description: 'אירעה שגיאה במחיקת המוצר. נסה שוב.',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -213,9 +156,11 @@ export const useProducts = () => {
     products,
     isLoading,
     error,
-    refetch,
-    createProduct,
-    updateProduct,
-    deleteProduct,
+    createProduct: createProductMutation.mutate,
+    updateProduct: updateProductMutation.mutate,
+    deleteProduct: deleteProductMutation.mutate,
+    isCreating: createProductMutation.isPending,
+    isUpdating: updateProductMutation.isPending,
+    isDeleting: deleteProductMutation.isPending,
   };
 };

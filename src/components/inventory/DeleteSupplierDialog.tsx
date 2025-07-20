@@ -1,5 +1,8 @@
 
-import React, { useState } from 'react';
+import React from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,126 +13,74 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
-import { useBusinessAccess } from '@/hooks/useBusinessAccess';
-import type { Database } from '@/integrations/supabase/types';
 
-type Supplier = Database['public']['Tables']['suppliers']['Row'];
+// Define local types instead of importing from non-existent file
+interface Supplier {
+  id: string;
+  name: string;
+  contact_email?: string;
+  phone?: string;
+  business_id?: string;
+}
 
 interface DeleteSupplierDialogProps {
+  supplier: Supplier;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  supplier: Supplier | null;
 }
 
 export const DeleteSupplierDialog: React.FC<DeleteSupplierDialogProps> = ({
+  supplier,
   open,
   onOpenChange,
-  supplier
 }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { businessContext } = useBusinessAccess();
-  const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleDelete = async () => {
-    if (!supplier || !businessContext?.business_id) {
-      toast({
-        title: 'שגיאה',
-        description: 'לא ניתן למחוק את הספק',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsDeleting(true);
-
-    try {
-      // First check if supplier is being used by any products
-      const { data: products, error: productsError } = await supabase
-        .from('products')
-        .select('id, name')
-        .eq('supplier_id', supplier.id)
-        .eq('business_id', businessContext.business_id)
-        .limit(1);
-
-      if (productsError) {
-        console.error('Error checking products:', productsError);
-        throw productsError;
-      }
-
-      if (products && products.length > 0) {
-        toast({
-          title: 'לא ניתן למחוק',
-          description: 'לא ניתן למחוק ספק שמשויך למוצרים. הסר תחילה את השיוך למוצרים.',
-          variant: 'destructive',
-        });
-        setIsDeleting(false);
-        return;
-      }
-
-      // Delete the supplier
+  const deleteSupplierMutation = useMutation({
+    mutationFn: async () => {
       const { error } = await supabase
         .from('suppliers')
         .delete()
-        .eq('id', supplier.id)
-        .eq('business_id', businessContext.business_id);
+        .eq('id', supplier.id);
 
-      if (error) {
-        console.error('Error deleting supplier:', error);
-        toast({
-          title: 'שגיאה',
-          description: 'אירעה שגיאה במחיקת הספק',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      toast({
-        title: 'הצלחה!',
-        description: `הספק "${supplier.name}" נמחק בהצלחה`,
-      });
-
+      if (error) throw error;
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      toast({
+        title: 'ספק נמחק בהצלחה',
+        description: `הספק ${supplier.name} נמחק מהמערכת`,
+      });
       onOpenChange(false);
-
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error('Error deleting supplier:', error);
       toast({
-        title: 'שגיאה',
-        description: 'אירעה שגיאה בלתי צפויה',
+        title: 'שגיאה במחיקת הספק',
+        description: 'אירעה שגיאה במחיקת הספק. נסה שוב.',
         variant: 'destructive',
       });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
+    },
+  });
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent dir="rtl">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-right">
-            מחיקת ספק
-          </AlertDialogTitle>
-          <AlertDialogDescription className="text-right">
-            האם אתה בטוח שברצונך למחוק את הספק "{supplier?.name}"?
-            <br />
-            פעולה זו אינה הפיכה.
+          <AlertDialogTitle>מחיקת ספק</AlertDialogTitle>
+          <AlertDialogDescription>
+            האם אתה בטוח שברצונך למחוק את הספק "{supplier.name}"?
+            פעולה זו לא ניתנת לביטול.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter className="flex-row-reverse gap-2">
-          <AlertDialogCancel disabled={isDeleting}>
-            ביטול
-          </AlertDialogCancel>
+        <AlertDialogFooter>
+          <AlertDialogCancel>ביטול</AlertDialogCancel>
           <AlertDialogAction
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="bg-red-600 hover:bg-red-700"
+            onClick={() => deleteSupplierMutation.mutate()}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isDeleting ? 'מוחק...' : 'מחק'}
+            מחק
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

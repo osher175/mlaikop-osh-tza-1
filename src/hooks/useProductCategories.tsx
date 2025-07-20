@@ -1,10 +1,21 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import type { Database } from '@/integrations/supabase/types';
 
-type ProductCategory = Database['public']['Tables']['product_categories']['Row'];
-type ProductCategoryInsert = Database['public']['Tables']['product_categories']['Insert'];
+// Data local types
+interface ProductCategory {
+  id: string;
+  name: string;
+  business_category_id: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface CreateProductCategoryData {
+  name: string;
+  business_category_id: string;
+}
 
 export const useProductCategories = (businessCategoryId?: string) => {
   const { toast } = useToast();
@@ -17,7 +28,7 @@ export const useProductCategories = (businessCategoryId?: string) => {
       
       const { data, error } = await supabase
         .from('product_categories')
-        .select('id, name, description, business_category_id, created_at')
+        .select('*')
         .eq('business_category_id', businessCategoryId)
         .order('name');
       
@@ -26,42 +37,36 @@ export const useProductCategories = (businessCategoryId?: string) => {
         throw error;
       }
       
-      return data;
+      return data as ProductCategory[];
     },
     enabled: !!businessCategoryId,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
   });
 
-  const createProductCategory = useMutation({
-    mutationFn: async (categoryData: Omit<ProductCategoryInsert, 'created_at' | 'updated_at'>) => {
+  const createProductCategoryMutation = useMutation({
+    mutationFn: async (categoryData: CreateProductCategoryData) => {
       const { data, error } = await supabase
         .from('product_categories')
-        .insert(categoryData)
+        .insert([categoryData])
         .select()
         .single();
-      
-      if (error) {
-        console.error('Error creating product category:', error);
-        throw error;
-      }
+
+      if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product-categories'] });
       toast({
-        title: "קטגוריה נוצרה בהצלחה",
-        description: "הקטגוריה החדשה נוספה למערכת",
+        title: 'קטגוריה נוצרה בהצלחה',
+        description: 'הקטגוריה נוספה למערכת',
       });
     },
-    onError: (error: any) => {
-      toast({
-        title: "שגיאה",
-        description: error.message || "שגיאה ביצירת הקטגוריה",
-        variant: "destructive",
-      });
+    onError: (error) => {
       console.error('Error creating product category:', error);
+      toast({
+        title: 'שגיאה ביצירת הקטגוריה',
+        description: 'אירעה שגיאה ביצירת הקטגוריה. נסה שוב.',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -69,6 +74,7 @@ export const useProductCategories = (businessCategoryId?: string) => {
     productCategories,
     isLoading,
     error,
-    createProductCategory,
+    createProductCategory: createProductCategoryMutation.mutate,
+    isCreating: createProductCategoryMutation.isPending,
   };
 };

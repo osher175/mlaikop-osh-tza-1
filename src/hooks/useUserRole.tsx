@@ -8,18 +8,24 @@ type UserRole = 'admin' | 'free_user' | 'pro_starter_user' | 'smart_master_user'
 export const useUserRole = () => {
   const { user } = useAuth();
   const [userRole, setUserRole] = useState<UserRole>('free_user');
-  const [permissions, setPermissions] = useState<Record<string, boolean>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
       fetchUserRole();
+    } else {
+      setIsLoading(false);
     }
   }, [user]);
 
   const fetchUserRole = async () => {
-    if (!user) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
+      setIsLoading(true);
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
@@ -31,6 +37,8 @@ export const useUserRole = () => {
       }
     } catch (error) {
       console.error('Error fetching user role:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -60,10 +68,18 @@ export const useUserRole = () => {
     return roleNames[role] || role;
   };
 
+  const permissions: Record<string, boolean> = {
+    canManageProducts: hasRole('OWNER') || hasRole('smart_master_user'),
+    canViewReports: hasRole('OWNER') || hasRole('smart_master_user'),
+    canManageUsers: hasRole('admin') || hasRole('OWNER'),
+    canAccessAdmin: hasRole('admin'),
+  };
+
   return {
     userRole,
     hasRole,
     getRoleDisplayName,
     permissions,
+    isLoading,
   };
 };
