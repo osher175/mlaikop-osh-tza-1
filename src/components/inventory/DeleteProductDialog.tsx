@@ -12,26 +12,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
-// Define Product type inline to avoid import issues
-type Product = {
-  id: string;
-  name: string;
-  barcode?: string;
-  quantity: number;
-  price?: number;
-  cost?: number;
-  location?: string;
-  expiration_date?: string;
-  image?: string;
-  product_category_id?: string;
-  supplier_id?: string;
-  business_id: string;
-  created_by: string;
-  created_at?: string;
-  updated_at?: string;
-  alert_dismissed: boolean;
-};
+type Product = Database['public']['Tables']['products']['Row'];
 
 interface DeleteProductDialogProps {
   product: Product | null;

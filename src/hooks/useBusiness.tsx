@@ -1,39 +1,13 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
+import type { Database } from '@/integrations/supabase/types';
 
-// Define local types
-interface Business {
-  id: string;
-  name: string;
-  owner_id: string;
-  business_category_id?: string;
-  industry?: string;
-  business_type?: string;
-  employee_count?: number;
-  avg_monthly_revenue?: number;
-  address?: string;
-  phone?: string;
-  official_email?: string;
-  plan_id?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-interface CreateBusinessData {
-  name: string;
-  owner_id: string;
-  business_category_id?: string;
-  industry?: string;
-  business_type?: string;
-  employee_count?: number;
-  avg_monthly_revenue?: number;
-  address?: string;
-  phone?: string;
-  official_email?: string;
-}
+type Business = Database['public']['Tables']['businesses']['Row'];
+type BusinessInsert = Database['public']['Tables']['businesses']['Insert'];
+type BusinessUpdate = Database['public']['Tables']['businesses']['Update'];
 
 export const useBusiness = () => {
   const { user } = useAuth();
@@ -51,72 +25,93 @@ export const useBusiness = () => {
         .eq('owner_id', user.id)
         .single();
       
-      if (error) {
+      if (error && error.code !== 'PGRST116') {
         console.error('Error fetching business:', error);
-        return null;
+        throw error;
       }
       
-      return data as Business;
+      return data;
     },
     enabled: !!user?.id,
   });
 
-  const createBusinessMutation = useMutation({
-    mutationFn: async (businessData: CreateBusinessData) => {
+  const createBusiness = useMutation({
+    mutationFn: async (businessData: Omit<BusinessInsert, 'owner_id'>) => {
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+      
       const { data, error } = await supabase
         .from('businesses')
-        .insert([businessData])
+        .insert({
+          ...businessData,
+          owner_id: user.id,
+        })
         .select()
         .single();
-
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Error creating business:', error);
+        
+        if (error.message.includes('unique') || error.message.includes('duplicate')) {
+          throw new Error('שם העסק תפוס. בחר שם אחר.');
+        }
+        throw error;
+      }
+      
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['business'] });
+      queryClient.invalidateQueries({ queryKey: ['business-access'] });
       toast({
-        title: 'עסק נוצר בהצלחה',
-        description: 'העסק שלך נוצר במערכת',
+        title: "עסק נוצר בהצלחה",
+        description: "העסק שלך נוצר במערכת",
       });
     },
-    onError: (error) => {
-      console.error('Error creating business:', error);
+    onError: (error: any) => {
+      console.error('Business creation mutation error:', error);
       toast({
-        title: 'שגיאה ביצירת העסק',
-        description: 'אירעה שגיאה ביצירת העסק. נסה שוב.',
-        variant: 'destructive',
+        title: "שגיאה",
+        description: error.message || "שגיאה ביצירת העסק",
+        variant: "destructive",
       });
     },
   });
 
-  const updateBusinessMutation = useMutation({
-    mutationFn: async (businessData: Partial<Business>) => {
-      if (!business?.id) throw new Error('No business to update');
+  const updateBusiness = useMutation({
+    mutationFn: async (businessData: BusinessUpdate) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      if (!business?.id) throw new Error('No business found');
       
       const { data, error } = await supabase
         .from('businesses')
         .update(businessData)
         .eq('id', business.id)
+        .eq('owner_id', user.id)
         .select()
         .single();
-
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Error updating business:', error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['business'] });
       toast({
-        title: 'עסק עודכן בהצלחה',
-        description: 'פרטי העסק עודכנו במערכת',
+        title: "הפרטים עודכנו בהצלחה",
+        description: "פרטי העסק שלך עודכנו במערכת",
       });
     },
-    onError: (error) => {
-      console.error('Error updating business:', error);
+    onError: (error: any) => {
       toast({
-        title: 'שגיאה בעדכון העסק',
-        description: 'אירעה שגיאה בעדכון העסק. נסה שוב.',
-        variant: 'destructive',
+        title: "שגיאה",
+        description: error.message || "שגיאה בעדכון פרטי העסק",
+        variant: "destructive",
       });
+      console.error('Error updating business:', error);
     },
   });
 
@@ -124,9 +119,7 @@ export const useBusiness = () => {
     business,
     isLoading,
     error,
-    createBusiness: createBusinessMutation,
-    updateBusiness: updateBusinessMutation,
-    isCreating: createBusinessMutation.isPending,
-    isUpdating: updateBusinessMutation.isPending,
+    createBusiness,
+    updateBusiness,
   };
 };

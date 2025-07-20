@@ -16,18 +16,14 @@ import { useSupplierInvoices } from '@/hooks/useSupplierInvoices';
 import { AddSupplierInvoiceDialog } from '@/components/supplier-invoices/AddSupplierInvoiceDialog';
 import { DeleteSupplierInvoiceDialog } from '@/components/supplier-invoices/DeleteSupplierInvoiceDialog';
 import { Plus, Receipt, Eye, Trash, FileText, Download } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
 
-// Define local types
-interface SupplierInvoice {
-  id: string;
-  business_id: string;
-  supplier_id: string;
-  invoice_date: string;
-  amount: number;
-  file_url?: string;
-  created_at: string;
-  updated_at: string;
-  suppliers?: { name: string } | null;
+type SupplierInvoice = Database['public']['Tables']['supplier_invoices']['Row'];
+
+interface SupplierInvoiceWithSupplier extends SupplierInvoice {
+  supplier: {
+    name: string;
+  } | null;
 }
 
 export const SupplierInvoices: React.FC = () => {
@@ -55,8 +51,6 @@ export const SupplierInvoices: React.FC = () => {
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('he-IL');
   };
-
-  const typedInvoices = invoices as SupplierInvoice[];
 
   return (
     <MainLayout>
@@ -93,7 +87,7 @@ export const SupplierInvoices: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Receipt className="w-5 h-5" />
-              חשבוניות ({typedInvoices.length})
+              חשבוניות ({invoices.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -102,7 +96,7 @@ export const SupplierInvoices: React.FC = () => {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-turquoise mx-auto"></div>
                 <p className="mt-2 text-gray-600">טוען חשבוניות...</p>
               </div>
-            ) : typedInvoices.length === 0 ? (
+            ) : invoices.length === 0 ? (
               <div className="text-center py-8">
                 <Receipt className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -131,7 +125,7 @@ export const SupplierInvoices: React.FC = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {typedInvoices.map((invoice) => (
+                      {(invoices as SupplierInvoiceWithSupplier[]).map((invoice) => (
                         <TableRow key={invoice.id}>
                           <TableCell className="font-medium">
                             {formatDate(invoice.invoice_date)}
@@ -139,13 +133,13 @@ export const SupplierInvoices: React.FC = () => {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Badge variant="outline">
-                                {invoice.suppliers?.name || 'לא ידוע'}
+                                {invoice.supplier?.name || 'לא ידוע'}
                               </Badge>
                             </div>
                           </TableCell>
                           <TableCell>
                             <span className="font-semibold text-green-600">
-                              {formatCurrency(invoice.amount)}
+                              {formatCurrency(Number(invoice.amount))}
                             </span>
                           </TableCell>
                           <TableCell>
@@ -192,7 +186,7 @@ export const SupplierInvoices: React.FC = () => {
 
                 {/* Mobile Card View */}
                 <div className="md:hidden space-y-4">
-                  {typedInvoices.map((invoice) => (
+                  {(invoices as SupplierInvoiceWithSupplier[]).map((invoice) => (
                     <Card key={invoice.id} className="border-l-4 border-l-turquoise">
                       <CardContent className="p-4">
                         <div className="space-y-3">
@@ -225,14 +219,14 @@ export const SupplierInvoices: React.FC = () => {
                             <div className="flex items-center justify-between">
                               <span className="text-sm text-gray-600">ספק:</span>
                               <Badge variant="outline">
-                                {invoice.suppliers?.name || 'לא ידוע'}
+                                {invoice.supplier?.name || 'לא ידוע'}
                               </Badge>
                             </div>
                             
                             <div className="flex items-center justify-between">
                               <span className="text-sm text-gray-600">סכום:</span>
                               <span className="text-lg font-semibold text-green-600">
-                                {formatCurrency(invoice.amount)}
+                                {formatCurrency(Number(invoice.amount))}
                               </span>
                             </div>
                             

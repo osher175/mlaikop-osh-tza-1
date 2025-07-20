@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useBusiness } from '@/hooks/useBusiness';
-import { useAuth } from '@/hooks/useAuth';
 
 interface CreateBusinessDialogProps {
   open: boolean;
@@ -15,17 +14,13 @@ interface CreateBusinessDialogProps {
 export const CreateBusinessDialog: React.FC<CreateBusinessDialogProps> = ({ open, onClose }) => {
   const [businessName, setBusinessName] = useState('');
   const { createBusiness } = useBusiness();
-  const { user } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!businessName.trim() || !user?.id) return;
+    if (!businessName.trim()) return;
 
     try {
-      await createBusiness.mutateAsync({ 
-        name: businessName,
-        owner_id: user.id 
-      });
+      await createBusiness.mutateAsync({ name: businessName });
       setBusinessName('');
       onClose();
     } catch (error) {

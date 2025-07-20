@@ -1,48 +1,14 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from './useAuth';
+import { useBusinessAccess } from './useBusinessAccess';
 import { useToast } from '@/hooks/use-toast';
-import { useBusinessAccess } from '@/hooks/useBusinessAccess';
-import { useInventoryLogger } from '@/hooks/useInventoryLogger';
+import { useInventoryLogger } from './useInventoryLogger';
+import type { Database } from '@/integrations/supabase/types';
 
-// Define consistent Product type
-export interface Product {
-  id: string;
-  name: string;
-  barcode?: string | null;
-  quantity: number;
-  price?: number | null;
-  cost?: number | null;
-  location?: string | null;
-  expiration_date?: string | null;
-  business_id: string;
-  created_by: string;
-  supplier_id?: string | null;
-  product_category_id?: string | null;
-  image?: string | null;
-  alert_dismissed: boolean;
-  enable_whatsapp_supplier_notification: boolean;
-  created_at?: string;
-  updated_at?: string;
-  product_categories?: { name: string } | null;
-  product_thresholds?: { low_stock_threshold: number } | null;
-}
-
-export interface CreateProductData {
-  name: string;
-  barcode?: string;
-  quantity?: number;
-  price?: number;
-  cost?: number;
-  location?: string;
-  expiration_date?: string;
-  supplier_id?: string;
-  product_category_id?: string;
-  image?: string;
-  enable_whatsapp_supplier_notification?: boolean;
-  low_stock_threshold?: number;
-}
+type Product = Database['public']['Tables']['products']['Row'];
+type ProductInsert = Database['public']['Tables']['products']['Insert'];
+type ProductUpdate = Database['public']['Tables']['products']['Update'];
 
 export const useProducts = () => {
   const { user } = useAuth();
@@ -71,22 +37,23 @@ export const useProducts = () => {
         throw error;
       }
       
-      return (data || []).map(item => ({
-        ...item,
-        alert_dismissed: item.alert_dismissed || false,
-        enable_whatsapp_supplier_notification: item.enable_whatsapp_supplier_notification || false
-      })) as Product[];
+      return data || [];
     },
     enabled: !!user?.id && !!businessContext?.business_id,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   const createProduct = useMutation({
-    mutationFn: async (productData: CreateProductData) => {
+    mutationFn: async (productData: Omit<ProductInsert, 'business_id' | 'created_by'> & { low_stock_threshold?: number }) => {
       if (!user?.id || !businessContext?.business_id) {
         throw new Error('User or business not found');
       }
       
       const { low_stock_threshold, ...productFields } = productData;
+      
+      console.log('Creating product with threshold:', low_stock_threshold);
       
       const { data, error } = await supabase
         .from('products')
@@ -94,8 +61,6 @@ export const useProducts = () => {
           ...productFields,
           business_id: businessContext.business_id,
           created_by: user.id,
-          alert_dismissed: false,
-          enable_whatsapp_supplier_notification: productData.enable_whatsapp_supplier_notification || false
         })
         .select()
         .single();
@@ -107,13 +72,20 @@ export const useProducts = () => {
 
       // Insert threshold if provided
       if (low_stock_threshold !== undefined) {
-        await supabase
+        console.log('Inserting threshold for product:', data.id, 'with threshold:', low_stock_threshold);
+        
+        const { error: thresholdError } = await supabase
           .from('product_thresholds')
           .insert({
             product_id: data.id,
             business_id: businessContext.business_id,
             low_stock_threshold,
           });
+          
+        if (thresholdError) {
+          console.error('Error inserting threshold:', thresholdError);
+          // Don't fail the entire operation for threshold error
+        }
       }
 
       // Log inventory action for initial stock
@@ -148,8 +120,10 @@ export const useProducts = () => {
   });
 
   const updateProduct = useMutation({
-    mutationFn: async ({ id, ...productData }: Partial<Product> & { id: string }) => {
+    mutationFn: async ({ id, ...productData }: ProductUpdate & { id: string }) => {
       if (!user?.id) throw new Error('User not authenticated');
+      
+      console.log('Updating product:', id, 'with data:', productData);
       
       // Get current product data to compare quantities
       const { data: currentProduct } = await supabase

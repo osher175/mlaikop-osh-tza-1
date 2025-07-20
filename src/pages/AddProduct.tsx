@@ -1,35 +1,34 @@
-import React, { useState, useRef } from 'react';
+
+import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ImageUpload } from '@/components/ui/image-upload';
+import { BarcodeScanner } from '@/components/ui/barcode-scanner';
 import { useToast } from '@/hooks/use-toast';
 import { useProducts } from '@/hooks/useProducts';
-import { useSuppliers } from '@/hooks/useSuppliers';
 import { useCategories } from '@/hooks/useCategories';
+import { useSuppliers } from '@/hooks/useSuppliers';
 import { useBusiness } from '@/hooks/useBusiness';
-import { useAuth } from '@/hooks/useAuth';
-import { Package, Calendar as CalendarIcon, Camera, Upload, X, Plus } from 'lucide-react';
-import { format } from 'date-fns';
-import { he } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 import { AddProductCategoryDialog } from '@/components/inventory/AddProductCategoryDialog';
-import { AddSupplierDialog } from '@/components/inventory/AddSupplierDialog';
+import { AddSupplierDialog } from '@/components/suppliers/AddSupplierDialog';
+import { Plus, Scan, Package } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export const AddProduct: React.FC = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
-  const { business } = useBusiness();
+  const navigate = useNavigate();
   const { createProduct } = useProducts();
-  const { suppliers } = useSuppliers();
   const { categories } = useCategories();
-
+  const { suppliers } = useSuppliers();
+  const { business } = useBusiness();
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [showAddSupplier, setShowAddSupplier] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     barcode: '',
@@ -37,50 +36,40 @@ export const AddProduct: React.FC = () => {
     price: 0,
     cost: 0,
     location: '',
-    supplier_id: '',
-    category_id: '',
-    enable_whatsapp_supplier_notification: false,
+    expiration_date: '',
     image: '',
+    product_category_id: '',
+    supplier_id: '',
+    low_stock_threshold: 5,
+    enable_whatsapp_supplier_notification: false,
   });
 
-  const [expirationDate, setExpirationDate] = useState<Date | undefined>(undefined);
-  const [showAddCategory, setShowAddCategory] = useState(false);
-  const [showAddSupplier, setShowAddSupplier] = useState(false);
+  const handleBarcodeScanned = (barcode: string) => {
+    setFormData(prev => ({ ...prev, barcode }));
+    setShowBarcodeScanner(false);
+    toast({
+      title: "ברקוד נסרק בהצלחה",
+      description: `ברקוד: ${barcode}`,
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name.trim()) {
-      toast({
-        title: "שגיאה",
-        description: "יש להזין שם מוצר",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!user?.id || !business?.id) {
-      toast({
-        title: "שגיאה",
-        description: "לא ניתן להוסיף מוצר ללא זיהוי משתמש או עסק",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       await createProduct.mutateAsync({
-        name: formData.name.trim(),
-        barcode: formData.barcode || undefined,
+        name: formData.name,
+        barcode: formData.barcode || null,
         quantity: formData.quantity,
-        price: formData.price || undefined,
-        cost: formData.cost || undefined,
-        location: formData.location || undefined,
-        expiration_date: expirationDate ? format(expirationDate, 'yyyy-MM-dd') : undefined,
-        supplier_id: formData.supplier_id || undefined,
-        product_category_id: formData.category_id || undefined,
+        price: formData.price || null,
+        cost: formData.cost || null,
+        location: formData.location || null,
+        expiration_date: formData.expiration_date || null,
+        image: formData.image || null,
+        product_category_id: formData.product_category_id || null,
+        supplier_id: formData.supplier_id || null,
+        low_stock_threshold: formData.low_stock_threshold,
         enable_whatsapp_supplier_notification: formData.enable_whatsapp_supplier_notification,
-        image: formData.image || undefined,
       });
 
       // Reset form
@@ -91,114 +80,45 @@ export const AddProduct: React.FC = () => {
         price: 0,
         cost: 0,
         location: '',
-        supplier_id: '',
-        category_id: '',
-        enable_whatsapp_supplier_notification: false,
+        expiration_date: '',
         image: '',
+        product_category_id: '',
+        supplier_id: '',
+        low_stock_threshold: 5,
+        enable_whatsapp_supplier_notification: false,
       });
-      setExpirationDate(undefined);
 
       toast({
         title: "מוצר נוסף בהצלחה",
-        description: `המוצר "${formData.name}" נוסף למלאי`,
+        description: "המוצר נוסף למערכת",
       });
+
+      // Navigate to inventory after successful creation
+      navigate('/inventory');
     } catch (error) {
       console.error('Error creating product:', error);
     }
   };
 
-  // Camera capture logic (useState, useRef, functions)
-  const [showCamera, setShowCamera] = useState(false);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const cameraRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  const handleOpenCamera = () => {
-    setShowCamera(true);
-    startCamera();
+  const handleImageUpload = (imageUrl: string) => {
+    setFormData(prev => ({ ...prev, image: imageUrl }));
   };
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      if (cameraRef.current) {
-        cameraRef.current.srcObject = stream;
-      }
-    } catch (error) {
-      console.error("Error accessing camera:", error);
-      toast({
-        title: "שגיאה",
-        description: "לא ניתן לגשת למצלמה. אנא ודא שנתת הרשאה לשימוש במצלמה.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCapture = () => {
-    if (cameraRef.current && canvasRef.current) {
-      const video = cameraRef.current;
-      const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg');
-        setCapturedImage(dataUrl);
-        setFormData({ ...formData, image: dataUrl });
-        stopCamera();
-        setShowCamera(false);
-      }
-    }
-  };
-
-  const stopCamera = () => {
-    if (cameraRef.current && cameraRef.current.srcObject) {
-      const stream = cameraRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      cameraRef.current.srcObject = null;
-    }
-  };
-
-  const handleCloseCamera = () => {
-    stopCamera();
-    setShowCamera(false);
-  };
-
-  const handleRemoveImage = () => {
-    setCapturedImage(null);
-    setFormData({ ...formData, image: '' });
-  };
-
-  // Image upload logic
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const imageUrl = reader.result as string;
-        setCapturedImage(imageUrl);
-        setFormData({ ...formData, image: imageUrl });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleUploadButtonClick = () => {
-    fileInputRef.current?.click();
+  const handleImageRemove = () => {
+    setFormData(prev => ({ ...prev, image: '' }));
   };
 
   return (
     <MainLayout>
       <div className="space-y-6" dir="rtl">
-        <div className="flex items-center gap-3">
-          <Package className="w-8 h-8 text-turquoise" />
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">הוספת מוצר חדש</h1>
-            <p className="text-gray-600">הוסף מוצר חדש למלאי העסק</p>
-          </div>
+        <div className="text-hebrew">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+            <Package className="h-8 w-8" />
+            הוספת מוצר חדש
+          </h1>
+          <p className="text-gray-600">
+            הוסף מוצר חדש למלאי שלך
+          </p>
         </div>
 
         <Card>
@@ -207,213 +127,231 @@ export const AddProduct: React.FC = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name">שם המוצר *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="הזן שם המוצר"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="barcode">ברקוד</Label>
-                  <Input
-                    id="barcode"
-                    value={formData.barcode}
-                    onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                    placeholder="סרוק או הזן ברקוד"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="quantity">כמות במלאי</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    min="0"
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="price">מחיר מכירה (₪)</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cost">מחיר עלות (₪)</Label>
-                  <Input
-                    id="cost"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.cost}
-                    onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="location">מיקום במחסן</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="למשל: מדף A, קומה 2"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>תאריך תפוגה</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-right font-normal",
-                        !expirationDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="ml-2 h-4 w-4" />
-                      {expirationDate ? format(expirationDate, "dd/MM/yyyy", { locale: he }) : "בחר תאריך תפוגה"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={expirationDate}
-                      onSelect={setExpirationDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="supplier">ספק</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowAddSupplier(true)}
-                    >
-                      <Plus className="w-4 h-4 ml-1" />
-                      הוסף ספק
-                    </Button>
-                  </div>
-                  <Select value={formData.supplier_id} onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="בחר ספק" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.id}>
-                          {supplier.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="category">קטגוריה</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowAddCategory(true)}
-                    >
-                      <Plus className="w-4 h-4 ml-1" />
-                      הוסף קטגוריה
-                    </Button>
-                  </div>
-                  <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="בחר קטגוריה" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Image Upload Section */}
-              <div className="space-y-2">
-                <Label>תמונה</Label>
-                {capturedImage ? (
-                  <div className="relative">
-                    <img src={capturedImage} alt="Captured" className="w-32 h-32 object-cover rounded-md" />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-0 left-0"
-                      onClick={handleRemoveImage}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={handleOpenCamera}>
-                      <Camera className="w-4 h-4 ml-2" />
-                      צלם תמונה
-                    </Button>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="name" className="text-sm font-medium">שם המוצר *</Label>
                     <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                      ref={fileInputRef}
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                      className="mt-1"
+                      placeholder="הזן שם המוצר"
                     />
-                    <Button type="button" variant="outline" onClick={handleUploadButtonClick}>
-                      <Upload className="w-4 h-4 ml-2" />
-                      העלה תמונה
-                    </Button>
                   </div>
-                )}
+                  
+                  <div>
+                    <Label htmlFor="barcode" className="text-sm font-medium">ברקוד</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="barcode"
+                        value={formData.barcode}
+                        onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                        placeholder="הזן ברקוד או סרוק"
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowBarcodeScanner(true)}
+                        className="px-3"
+                      >
+                        <Scan className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="category" className="text-sm font-medium">קטגוריה</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Select
+                        value={formData.product_category_id}
+                        onValueChange={(value) => setFormData({ ...formData, product_category_id: value })}
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="בחר קטגוריה" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {business?.business_category_id && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowAddCategory(true)}
+                          className="px-3"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="supplier" className="text-sm font-medium">ספק</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Select
+                        value={formData.supplier_id}
+                        onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="בחר ספק" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {suppliers.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.id}>
+                              {supplier.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddSupplier(true)}
+                        className="px-3"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="quantity" className="text-sm font-medium">כמות *</Label>
+                      <Input
+                        id="quantity"
+                        type="number"
+                        min="0"
+                        value={formData.quantity}
+                        onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                        required
+                        className="mt-1"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="low_stock_threshold" className="text-sm font-medium">סף מלאי נמוך</Label>
+                      <Input
+                        id="low_stock_threshold"
+                        type="number"
+                        min="0"
+                        value={formData.low_stock_threshold}
+                        onChange={(e) => setFormData({ ...formData, low_stock_threshold: Number(e.target.value) })}
+                        className="mt-1"
+                        placeholder="5"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="location" className="text-sm font-medium">מיקום</Label>
+                    <Input
+                      id="location"
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      className="mt-1"
+                      placeholder="מדף, אזור, וכו'"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="cost" className="text-sm font-medium">עלות (₪)</Label>
+                      <Input
+                        id="cost"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.cost}
+                        onChange={(e) => setFormData({ ...formData, cost: Number(e.target.value) })}
+                        className="mt-1"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="price" className="text-sm font-medium">מחיר מכירה (₪)</Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                        className="mt-1"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="expiration_date" className="text-sm font-medium">תאריך פג תוקף</Label>
+                    <Input
+                      id="expiration_date"
+                      type="date"
+                      value={formData.expiration_date}
+                      onChange={(e) => setFormData({ ...formData, expiration_date: e.target.value })}
+                      className="mt-1"
+                    />
+                  </div>
+
+                  {/* WhatsApp Supplier Notification Toggle */}
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <Label htmlFor="whatsapp_notification" className="text-sm font-medium">
+                        בקש הצעת מחיר אוטומטית מהספק
+                      </Label>
+                      <p className="text-xs text-gray-600 mt-1">
+                        כאשר המוצר אוזל מהמלאי, תישלח הודעת WhatsApp לספק באופן אוטומטי
+                      </p>
+                    </div>
+                    <Switch
+                      id="whatsapp_notification"
+                      checked={formData.enable_whatsapp_supplier_notification}
+                      onCheckedChange={(checked) => setFormData({
+                        ...formData,
+                        enable_whatsapp_supplier_notification: checked
+                      })}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium block mb-2">תמונת מוצר</Label>
+                    <div className="border-2 border-dashed border-gray-200 rounded-lg p-4">
+                      <ImageUpload
+                        currentImageUrl={formData.image}
+                        onImageUpload={handleImageUpload}
+                        onImageRemove={handleImageRemove}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <Switch
-                  id="whatsapp-notification"
-                  checked={formData.enable_whatsapp_supplier_notification}
-                  onCheckedChange={(checked) => setFormData({ ...formData, enable_whatsapp_supplier_notification: checked })}
-                />
-                <Label htmlFor="whatsapp-notification">
-                  שלח התרעת WhatsApp לספק כאשר המוצר אוזל
-                </Label>
-              </div>
-
-              <div className="flex gap-4 pt-6">
+              <div className="flex gap-3 pt-6 border-t">
                 <Button 
                   type="submit" 
-                  className="flex-1"
                   disabled={createProduct.isPending}
+                  className="flex-1"
                 >
-                  {createProduct.isPending ? 'שומר...' : 'הוסף מוצר'}
+                  {createProduct.isPending ? 'שומר...' : 'שמור מוצר'}
                 </Button>
-                <Button type="button" variant="outline">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/inventory')}
+                  className="flex-1"
+                >
                   ביטול
                 </Button>
               </div>
@@ -421,40 +359,26 @@ export const AddProduct: React.FC = () => {
           </CardContent>
         </Card>
 
-        <AddProductCategoryDialog
-          open={showAddCategory}
-          onOpenChange={setShowAddCategory}
-          businessCategoryId={business?.business_category_id || 'default'}
+        {/* Dialogs */}
+        <BarcodeScanner
+          open={showBarcodeScanner}
+          onClose={() => setShowBarcodeScanner(false)}
+          onBarcodeScanned={handleBarcodeScanned}
         />
+
+        {business?.business_category_id && (
+          <AddProductCategoryDialog
+            open={showAddCategory}
+            onOpenChange={setShowAddCategory}
+            businessCategoryId={business.business_category_id}
+          />
+        )}
 
         <AddSupplierDialog
           open={showAddSupplier}
           onOpenChange={setShowAddSupplier}
         />
       </div>
-
-      {/* Camera Modal */}
-      {showCamera && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <Card className="max-w-md w-full">
-            <CardHeader>
-              <CardTitle>צלם תמונה</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <video ref={cameraRef} autoPlay className="w-full aspect-video" />
-              <canvas ref={canvasRef} style={{ display: 'none' }} />
-              <div className="flex justify-between">
-                <Button type="button" variant="secondary" onClick={handleCapture}>
-                  צלם
-                </Button>
-                <Button type="button" variant="outline" onClick={handleCloseCamera}>
-                  ביטול
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </MainLayout>
   );
 };

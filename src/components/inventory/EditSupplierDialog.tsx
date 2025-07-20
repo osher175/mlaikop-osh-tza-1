@@ -1,136 +1,194 @@
 
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { useBusinessAccess } from '@/hooks/useBusinessAccess';
+import type { Database } from '@/integrations/supabase/types';
 
-// Define local types
-interface Supplier {
-  id: string;
-  name: string;
-  contact_email?: string;
-  phone?: string;
-  business_id?: string;
-}
+type Supplier = Database['public']['Tables']['suppliers']['Row'];
 
 interface EditSupplierDialogProps {
-  supplier: Supplier;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-interface SupplierFormData {
-  name: string;
-  contact_email?: string;
-  phone?: string;
+  supplier: Supplier | null;
 }
 
 export const EditSupplierDialog: React.FC<EditSupplierDialogProps> = ({
-  supplier,
   open,
   onOpenChange,
+  supplier
 }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { businessContext } = useBusinessAccess();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { register, handleSubmit, reset } = useForm<SupplierFormData>({
-    defaultValues: {
-      name: supplier.name,
-      contact_email: supplier.contact_email || '',
-      phone: supplier.phone || '',
-    },
+  const [formData, setFormData] = useState({
+    name: '',
+    agent_name: '',
+    contact_email: '',
+    phone: ''
   });
 
-  const updateSupplierMutation = useMutation({
-    mutationFn: async (data: SupplierFormData) => {
-      const { error } = await supabase
-        .from('suppliers')
-        .update(data)
-        .eq('id', supplier.id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      toast({
-        title: 'ספק עודכן בהצלחה',
-        description: `הספק ${supplier.name} עודכן במערכת`,
+  useEffect(() => {
+    if (supplier) {
+      setFormData({
+        name: supplier.name || '',
+        agent_name: supplier.agent_name || '',
+        contact_email: supplier.contact_email || '',
+        phone: supplier.phone || ''
       });
-      onOpenChange(false);
-      reset();
-    },
-    onError: (error) => {
-      console.error('Error updating supplier:', error);
+    }
+  }, [supplier]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!supplier || !businessContext?.business_id) {
       toast({
-        title: 'שגיאה בעדכון הספק',
-        description: 'אירעה שגיאה בעדכון הספק. נסה שוב.',
+        title: 'שגיאה',
+        description: 'לא ניתן לעדכן את הספק',
         variant: 'destructive',
       });
-    },
-  });
+      return;
+    }
 
-  const onSubmit = (data: SupplierFormData) => {
-    updateSupplierMutation.mutate(data);
+    if (!formData.name.trim()) {
+      toast({
+        title: 'שגיאה',
+        description: 'שם הספק הוא שדה חובה',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase
+        .from('suppliers')
+        .update({
+          name: formData.name.trim(),
+          agent_name: formData.agent_name.trim() || null,
+          contact_email: formData.contact_email.trim() || null,
+          phone: formData.phone.trim() || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', supplier.id)
+        .eq('business_id', businessContext.business_id);
+
+      if (error) {
+        console.error('Error updating supplier:', error);
+        toast({
+          title: 'שגיאה',
+          description: 'אירעה שגיאה בעדכון הספק',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      toast({
+        title: 'הצלחה!',
+        description: 'הספק עודכן בהצלחה',
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      onOpenChange(false);
+      
+      // Reset form
+      setFormData({
+        name: '',
+        agent_name: '',
+        contact_email: '',
+        phone: ''
+      });
+
+    } catch (error) {
+      console.error('Error updating supplier:', error);
+      toast({
+        title: 'שגיאה',
+        description: 'אירעה שגיאה בלתי צפויה',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent dir="rtl" className="max-w-md">
+      <DialogContent className="sm:max-w-[425px]" dir="rtl">
         <DialogHeader>
-          <DialogTitle>עריכת ספק</DialogTitle>
+          <DialogTitle className="text-right">עריכת ספק</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <Label htmlFor="name">שם הספק</Label>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-supplier-name">שם הספק *</Label>
             <Input
-              id="name"
-              {...register('name', { required: true })}
+              id="edit-supplier-name"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               placeholder="הכנס שם ספק"
+              className="text-right"
+              required
             />
           </div>
-          
-          <div>
-            <Label htmlFor="contact_email">אימייל ליצירת קשר</Label>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-agent-name">שם הסוכן</Label>
             <Input
-              id="contact_email"
+              id="edit-agent-name"
+              value={formData.agent_name}
+              onChange={(e) => setFormData(prev => ({ ...prev, agent_name: e.target.value }))}
+              placeholder="הכנס שם סוכן (אופציונלי)"
+              className="text-right"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-contact-email">כתובת אימייל</Label>
+            <Input
+              id="edit-contact-email"
               type="email"
-              {...register('contact_email')}
-              placeholder="הכנס אימייל"
+              value={formData.contact_email}
+              onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
+              placeholder="הכנס כתובת אימייל (אופציונלי)"
+              className="text-right"
             />
           </div>
 
-          <div>
-            <Label htmlFor="phone">טלפון</Label>
+          <div className="space-y-2">
+            <Label htmlFor="edit-phone">מספר טלפון</Label>
             <Input
-              id="phone"
-              {...register('phone')}
-              placeholder="הכנס מספר טלפון"
+              id="edit-phone"
+              value={formData.phone}
+              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+              placeholder="הכנס מספר טלפון (אופציונלי)"
+              className="text-right"
             />
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex gap-2 justify-end pt-4">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
             >
               ביטול
             </Button>
             <Button
               type="submit"
-              disabled={updateSupplierMutation.isPending}
+              disabled={isSubmitting}
+              className="bg-turquoise hover:bg-turquoise/90"
             >
-              {updateSupplierMutation.isPending ? 'מעדכן...' : 'עדכן'}
+              {isSubmitting ? 'מעדכן...' : 'עדכן ספק'}
             </Button>
           </div>
         </form>

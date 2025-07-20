@@ -1,31 +1,20 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
-import { useBusinessAccess } from './useBusinessAccess';
+import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useToast } from '@/hooks/use-toast';
+import type { Database } from '@/integrations/supabase/types';
 
-// Define local types
-interface SupplierInvoice {
-  id: string;
-  business_id: string;
-  supplier_id: string;
-  invoice_date: string;
-  amount: number;
-  file_url?: string;
-  created_at: string;
-  updated_at: string;
-}
+type SupplierInvoice = Database['public']['Tables']['supplier_invoices']['Row'];
+type SupplierInvoiceInsert = Database['public']['Tables']['supplier_invoices']['Insert'];
 
-interface CreateSupplierInvoiceData {
-  supplier_id: string;
-  invoice_date: string;
-  amount: number;
-  file?: File;
+interface SupplierInvoiceWithSupplier extends SupplierInvoice {
+  supplier: {
+    name: string;
+  } | null;
 }
 
 export const useSupplierInvoices = () => {
-  const { user } = useAuth();
   const { businessContext } = useBusinessAccess();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -39,7 +28,7 @@ export const useSupplierInvoices = () => {
         .from('supplier_invoices')
         .select(`
           *,
-          suppliers!inner(name)
+          supplier:suppliers(name)
         `)
         .eq('business_id', businessContext.business_id)
         .order('invoice_date', { ascending: false });
@@ -49,64 +38,82 @@ export const useSupplierInvoices = () => {
         throw error;
       }
       
-      return data || [];
+      return data as SupplierInvoiceWithSupplier[];
     },
     enabled: !!businessContext?.business_id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
+  const uploadFile = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${businessContext?.business_id}/${Date.now()}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('supplier-invoices')
+      .upload(fileName, file);
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('supplier-invoices')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
+
   const createInvoice = useMutation({
-    mutationFn: async (invoiceData: CreateSupplierInvoiceData) => {
-      if (!user?.id || !businessContext?.business_id) {
-        throw new Error('User or business not found');
+    mutationFn: async (data: { 
+      supplier_id: string; 
+      invoice_date: string; 
+      amount: number; 
+      file?: File;
+    }) => {
+      if (!businessContext?.business_id) {
+        throw new Error('Business context not found');
       }
 
-      let fileUrl = null;
-      
-      // Upload file if provided
-      if (invoiceData.file) {
-        const fileExt = invoiceData.file.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('supplier-invoices')
-          .upload(fileName, invoiceData.file);
-
-        if (uploadError) throw uploadError;
-        
-        const { data: { publicUrl } } = supabase.storage
-          .from('supplier-invoices')
-          .getPublicUrl(fileName);
-        
-        fileUrl = publicUrl;
+      let file_url = null;
+      if (data.file) {
+        file_url = await uploadFile(data.file);
       }
 
-      const { data, error } = await supabase
+      const insertData: SupplierInvoiceInsert = {
+        business_id: businessContext.business_id,
+        supplier_id: data.supplier_id,
+        invoice_date: data.invoice_date,
+        amount: data.amount,
+        file_url,
+      };
+
+      const { data: invoice, error } = await supabase
         .from('supplier_invoices')
-        .insert({
-          business_id: businessContext.business_id,
-          supplier_id: invoiceData.supplier_id,
-          invoice_date: invoiceData.invoice_date,
-          amount: invoiceData.amount,
-          file_url: fileUrl,
-        })
+        .insert(insertData)
         .select()
         .single();
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Error creating supplier invoice:', error);
+        throw error;
+      }
+
+      return invoice;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supplier-invoices'] });
       toast({
-        title: "חשבונית נוצרה בהצלחה",
-        description: "החשבונית נוספה למערכת",
+        title: 'הצלחה!',
+        description: 'החשבונית נוספה בהצלחה',
       });
     },
     onError: (error: any) => {
       toast({
-        title: "שגיאה",
-        description: error.message || "שגיאה ביצירת החשבונית",
-        variant: "destructive",
+        title: 'שגיאה',
+        description: error.message || 'אירעה שגיאה בהוספת החשבונית',
+        variant: 'destructive',
       });
     },
   });
@@ -116,22 +123,28 @@ export const useSupplierInvoices = () => {
       const { error } = await supabase
         .from('supplier_invoices')
         .delete()
-        .eq('id', invoiceId);
+        .eq('id', invoiceId)
+        .eq('business_id', businessContext?.business_id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting supplier invoice:', error);
+        throw error;
+      }
+
+      return true;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supplier-invoices'] });
       toast({
-        title: "חשבונית נמחקה בהצלחה",
-        description: "החשבונית הוסרה מהמערכת",
+        title: 'הצלחה!',
+        description: 'החשבונית נמחקה בהצלחה',
       });
     },
     onError: (error: any) => {
       toast({
-        title: "שגיאה",
-        description: error.message || "שגיאה במחיקת החשבונית",
-        variant: "destructive",
+        title: 'שגיאה',
+        description: error.message || 'אירעה שגיאה במחיקת החשבונית',
+        variant: 'destructive',
       });
     },
   });

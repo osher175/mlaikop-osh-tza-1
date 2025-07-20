@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -8,12 +9,18 @@ import { ProductImageViewer } from '@/components/inventory/ProductImageViewer';
 import { ExpirationAlertsPanel } from '@/components/inventory/ExpirationAlertsPanel';
 import { InventoryHeader } from '@/components/inventory/InventoryHeader';
 import { InventoryStats } from '@/components/inventory/InventoryStats';
-import { InventoryFilters } from '@/components/inventory/InventoryFilters';
 import { MobileSearchBar } from '@/components/inventory/MobileSearchBar';
 import { InventoryTable } from '@/components/inventory/InventoryTable';
-import { useProducts, type Product } from '@/hooks/useProducts';
+import { useProducts } from '@/hooks/useProducts';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useNavigate } from 'react-router-dom';
+import type { Database } from '@/integrations/supabase/types';
+
+// Use the database type directly - this matches what useProducts returns
+type Product = Database['public']['Tables']['products']['Row'] & {
+  product_categories?: { name: string } | null;
+  product_thresholds?: { low_stock_threshold: number } | null;
+};
 
 export const Inventory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,18 +40,6 @@ export const Inventory: React.FC = () => {
     
     return { inStock, lowStock, outOfStock };
   }, [products]);
-
-  const handleEditProduct = (product: Product) => {
-    setEditingProduct(product);
-  };
-
-  const handleDeleteProduct = (product: Product) => {
-    setDeletingProduct(product);
-  };
-
-  const handleViewProductImage = (product: Product) => {
-    setViewingProductImage(product);
-  };
 
   const handleProductUpdated = React.useCallback(() => {
     refetch();
@@ -98,14 +93,11 @@ export const Inventory: React.FC = () => {
         {/* התראות תפוגה */}
         <ExpirationAlertsPanel />
 
-        {/* שורת החיפוש החדשה - ממוקמת מתחת לכותרת ומעל הפילטרים */}
+        {/* שורת החיפוש */}
         <MobileSearchBar
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
         />
-
-        {/* פילטרים - ללא החיפוש שעבר לקומפוננטה החדשה */}
-        <InventoryFilters />
 
         {/* סטטיסטיקות המלאי */}
         <InventoryStats
@@ -121,9 +113,9 @@ export const Inventory: React.FC = () => {
         <InventoryTable
           products={products}
           searchTerm={searchTerm}
-          onEditProduct={handleEditProduct}
-          onDeleteProduct={handleDeleteProduct}
-          onViewProductImage={handleViewProductImage}
+          onEditProduct={setEditingProduct}
+          onDeleteProduct={setDeletingProduct}
+          onViewProductImage={setViewingProductImage}
           activeStockFilter={activeStockFilter}
         />
 

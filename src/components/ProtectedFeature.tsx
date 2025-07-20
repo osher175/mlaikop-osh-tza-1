@@ -4,14 +4,14 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Lock, Crown, Zap, Star, Shield } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
 
-// Use string literal instead of importing types that don't exist
-type UserRole = 'admin' | 'free_user' | 'pro_starter_user' | 'smart_master_user' | 'elite_pilot_user' | 'OWNER';
+type UserRole = Database['public']['Enums']['user_role'];
 
 interface ProtectedFeatureProps {
   children: React.ReactNode;
   requiredRole?: UserRole;
-  requiredPermission?: string;
+  requiredPermission?: keyof ReturnType<typeof useUserRole>['permissions'];
   fallback?: React.ReactNode;
   showUpgradePrompt?: boolean;
 }
@@ -27,18 +27,18 @@ export const ProtectedFeature: React.FC<ProtectedFeatureProps> = ({
 
   // Check permission-based access
   if (requiredPermission) {
-    if (permissions && permissions[requiredPermission]) {
+    if (permissions[requiredPermission]) {
       return <>{children}</>;
     }
   }
   
   // Check role-based access
-  if (requiredRole && hasRole && hasRole(requiredRole)) {
+  if (requiredRole && hasRole(requiredRole)) {
     return <>{children}</>;
   }
 
   // If both checks fail, show fallback or upgrade prompt
-  if (requiredPermission && permissions && !permissions[requiredPermission]) {
+  if (requiredPermission && !permissions[requiredPermission]) {
     // Permission-based access denied
     if (fallback) {
       return <>{fallback}</>;
@@ -61,7 +61,7 @@ export const ProtectedFeature: React.FC<ProtectedFeatureProps> = ({
         </CardHeader>
         <CardContent className="text-center">
           <p className="text-sm text-gray-600 mb-4">
-            התפקיד הנוכחי שלך: {getRoleDisplayName && getRoleDisplayName(userRole)}
+            התפקיד הנוכחי שלך: {getRoleDisplayName(userRole)}
           </p>
           <Button className="bg-primary hover:bg-primary-600">
             בקש הרשאה
@@ -72,7 +72,7 @@ export const ProtectedFeature: React.FC<ProtectedFeatureProps> = ({
   }
 
   // Role-based access denied
-  if (requiredRole && hasRole && !hasRole(requiredRole)) {
+  if (requiredRole && !hasRole(requiredRole)) {
     if (fallback) {
       return <>{fallback}</>;
     }
@@ -104,12 +104,12 @@ export const ProtectedFeature: React.FC<ProtectedFeatureProps> = ({
           </div>
           <CardTitle className="text-lg">תכונה מוגבלת</CardTitle>
           <CardDescription>
-            תכונה זו זמינה למשתמשי {getRoleDisplayName && getRoleDisplayName(requiredRole)} ומעלה
+            תכונה זו זמינה למשתמשי {getRoleDisplayName(requiredRole)} ומעלה
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center">
           <p className="text-sm text-gray-600 mb-4">
-            התפקיד הנוכחי שלך: {getRoleDisplayName && getRoleDisplayName(userRole)}
+            התפקיד הנוכחי שלך: {getRoleDisplayName(userRole)}
           </p>
           <Button className="bg-primary hover:bg-primary-600">
             שדרג חשבון

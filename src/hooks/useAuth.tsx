@@ -1,9 +1,7 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
-import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
   user: User | null;
@@ -15,6 +13,13 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<{ error: any }>;
 }
 
+interface Profile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  // Add other profile fields here
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -22,7 +27,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -38,9 +42,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         setLoading(false);
 
-        // Create trial subscription for new users when they sign in
+        // Create trial subscription for new users when they sign in (after signup they're automatically signed in)
         if (event === 'SIGNED_IN' && session?.user) {
           console.log('User signed in, checking if trial subscription needed');
+          // Use setTimeout to avoid blocking the auth flow
           setTimeout(() => {
             createTrialSubscription(session.user.id);
           }, 1000);
@@ -55,7 +60,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Creating trial subscription for user:', userId);
       
-      // Check if user already has a subscription in user_subscriptions table
+      // First, get the first available plan
+      const { data: plans, error: planError } = await supabase
+        .from('subscription_plans')
+        .select('id')
+        .limit(1);
+
+      if (planError) {
+        console.error('Error fetching plans:', planError);
+        return;
+      }
+
+      if (!plans || plans.length === 0) {
+        console.error('No subscription plans available');
+        return;
+      }
+
+      const defaultPlanId = plans[0].id;
+      const now = new Date();
+      const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+      // Check if user already has a subscription
       const { data: existingSubscription } = await supabase
         .from('user_subscriptions')
         .select('id')
@@ -67,27 +92,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // Get the first available plan from subscription_plans
-      const { data: plans, error: planError } = await supabase
-        .from('subscription_plans')
-        .select('id')
-        .limit(1)
-        .single();
-
-      if (planError || !plans) {
-        console.error('Error fetching plans:', planError);
-        return;
-      }
-
-      const now = new Date();
-      const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
-
       const { error: subscriptionError } = await supabase
         .from('user_subscriptions')
         .insert({
           user_id: userId,
-          plan_id: plans.id,
-          status: 'trial',
+          plan_id: defaultPlanId,
+          status: 'active', // Use 'active' instead of 'trial' to avoid constraint issues
           started_at: now.toISOString(),
           expires_at: trialEnd.toISOString(),
           trial_started_at: now.toISOString(),
@@ -113,21 +123,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
         data: {
           first_name: firstName,
           last_name: lastName,
-        }
-      }
+        },
+      },
     });
-    
-    return { data, error };
+
+    return { error };
   };
 
   const signOut = async () => {
@@ -154,118 +161,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Current session:', session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const checkUserActiveStatus = async (userId: string) => {
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('is_active')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error checking user status:', error);
-        return true; // Default to active if can't check
-      }
-
-      return profile?.is_active !== false;
-    } catch (error) {
-      console.error('Error in checkUserActiveStatus:', error);
-      return true; // Default to active if can't check
-    }
-  };
-
-  const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-        }
-      }
-    });
-    
-    return { data, error };
-  };
-
-  const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    if (data.user && !error) {
-      console.log('User signed in, checking active status:', data.user.email);
-      
-      // Check if user is active
-      const isActive = await checkUserActiveStatus(data.user.id);
-      
-      if (!isActive) {
-        // User is disabled, sign them out immediately
-        console.log('User account is disabled, signing out:', data.user.email);
-        await supabase.auth.signOut();
-        
-        toast({
-          title: 'החשבון מושבת',
-          description: 'החשבון שלך הושבת. פנה למנהל המערכת.',
-          variant: 'destructive',
-        });
-        
-        return { data: null, error: { message: 'החשבון שלך הושבת. פנה למנהל המערכת.' } };
-      }
-      
-      console.log('User signed in successfully:', data.user.email);
-      window.location.href = '/';
-    }
-    
-    return { data, error };
-  };
-
-  const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
-      window.location.href = '/auth';
-    }
-    return { error };
-  };
-
-  return {
-    user,
-    session,
-    loading,
-    signUp,
-    signIn,
-    signOut,
-  };
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

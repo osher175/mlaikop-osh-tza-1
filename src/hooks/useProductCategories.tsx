@@ -1,32 +1,24 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import type { Database } from '@/integrations/supabase/types';
 
-// Define local types
-export interface ProductCategory {
-  id: string;
-  name: string;
-  business_category_id: string;
-  created_at: string;
-  updated_at: string;
-}
+type ProductCategory = Database['public']['Tables']['product_categories']['Row'];
+type ProductCategoryInsert = Database['public']['Tables']['product_categories']['Insert'];
 
-interface CreateProductCategoryData {
-  name: string;
-  business_category_id: string;
-}
-
-export const useProductCategories = () => {
+export const useProductCategories = (businessCategoryId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: productCategories = [], isLoading, error } = useQuery({
-    queryKey: ['product-categories'],
+    queryKey: ['product-categories', businessCategoryId],
     queryFn: async () => {
+      if (!businessCategoryId) return [];
+      
       const { data, error } = await supabase
         .from('product_categories')
-        .select('*')
+        .select('id, name, description, business_category_id, created_at')
+        .eq('business_category_id', businessCategoryId)
         .order('name');
       
       if (error) {
@@ -34,35 +26,42 @@ export const useProductCategories = () => {
         throw error;
       }
       
-      return data as ProductCategory[];
+      return data;
     },
+    enabled: !!businessCategoryId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  const createProductCategoryMutation = useMutation({
-    mutationFn: async (categoryData: CreateProductCategoryData) => {
+  const createProductCategory = useMutation({
+    mutationFn: async (categoryData: Omit<ProductCategoryInsert, 'created_at' | 'updated_at'>) => {
       const { data, error } = await supabase
         .from('product_categories')
-        .insert([categoryData])
+        .insert(categoryData)
         .select()
         .single();
-
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Error creating product category:', error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product-categories'] });
       toast({
-        title: 'קטגוריה נוצרה בהצלחה',
-        description: 'הקטגוריה נוספה למערכת',
+        title: "קטגוריה נוצרה בהצלחה",
+        description: "הקטגוריה החדשה נוספה למערכת",
       });
     },
-    onError: (error) => {
-      console.error('Error creating product category:', error);
+    onError: (error: any) => {
       toast({
-        title: 'שגיאה ביצירת הקטגוריה',
-        description: 'אירעה שגיאה ביצירת הקטגוריה. נסה שוב.',
-        variant: 'destructive',
+        title: "שגיאה",
+        description: error.message || "שגיאה ביצירת הקטגוריה",
+        variant: "destructive",
       });
+      console.error('Error creating product category:', error);
     },
   });
 
@@ -70,7 +69,6 @@ export const useProductCategories = () => {
     productCategories,
     isLoading,
     error,
-    createProductCategory: createProductCategoryMutation,
-    isCreating: createProductCategoryMutation.isPending,
+    createProductCategory,
   };
 };

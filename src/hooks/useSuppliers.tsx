@@ -1,33 +1,14 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
-import { useBusinessAccess } from './useBusinessAccess';
+import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useToast } from '@/hooks/use-toast';
+import type { Database } from '@/integrations/supabase/types';
 
-// Define local types
-interface Supplier {
-  id: string;
-  name: string;
-  contact_email?: string;
-  phone?: string;
-  sales_agent_name?: string;
-  sales_agent_phone?: string;
-  business_id?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-interface CreateSupplierData {
-  name: string;
-  contact_email?: string | null;
-  phone?: string | null;
-  sales_agent_name?: string | null;
-  sales_agent_phone?: string | null;
-}
+type Supplier = Database['public']['Tables']['suppliers']['Row'];
+type CreateSupplierParams = Database['public']['Tables']['suppliers']['Insert'];
 
 export const useSuppliers = () => {
-  const { user } = useAuth();
   const { businessContext } = useBusinessAccess();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -48,15 +29,18 @@ export const useSuppliers = () => {
         throw error;
       }
       
-      return data || [];
+      return data;
     },
     enabled: !!businessContext?.business_id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const createSupplier = useMutation({
-    mutationFn: async (supplierData: CreateSupplierData) => {
-      if (!user?.id || !businessContext?.business_id) {
-        throw new Error('User or business not found');
+    mutationFn: async (supplierData: CreateSupplierParams) => {
+      if (!businessContext?.business_id) {
+        throw new Error('Business context not found');
       }
 
       const { data, error } = await supabase
@@ -68,73 +52,21 @@ export const useSuppliers = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating supplier:', error);
+        throw error;
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      toast({
-        title: "ספק נוצר בהצלחה",
-        description: "הספק נוסף למערכת",
-      });
     },
     onError: (error: any) => {
+      console.error('Error creating supplier:', error);
       toast({
         title: "שגיאה",
-        description: error.message || "שגיאה ביצירת הספק",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updateSupplier = useMutation({
-    mutationFn: async ({ id, ...supplierData }: Partial<Supplier> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('suppliers')
-        .update(supplierData)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      toast({
-        title: "ספק עודכן בהצלחה",
-        description: "פרטי הספק עודכנו במערכת",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "שגיאה",
-        description: error.message || "שגיאה בעדכון הספק",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteSupplier = useMutation({
-    mutationFn: async (supplierId: string) => {
-      const { error } = await supabase
-        .from('suppliers')
-        .delete()
-        .eq('id', supplierId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      toast({
-        title: "ספק נמחק בהצלחה",
-        description: "הספק הוסר מהמערכת",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "שגיאה",
-        description: error.message || "שגיאה במחיקת הספק",
+        description: "לא ניתן היה ליצור את הספק",
         variant: "destructive",
       });
     },
@@ -145,7 +77,5 @@ export const useSuppliers = () => {
     isLoading,
     error,
     createSupplier,
-    updateSupplier,
-    deleteSupplier,
   };
 };

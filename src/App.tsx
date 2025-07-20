@@ -1,33 +1,31 @@
 
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-
 import { Auth } from "@/pages/Auth";
 import { Dashboard } from "@/pages/Dashboard";
 import { Inventory } from "@/pages/Inventory";
 import { AddProduct } from "@/pages/AddProduct";
 import { Reports } from "@/pages/Reports";
 import { UserProfile } from "@/pages/UserProfile";
-import { Subscriptions } from "@/pages/Subscriptions";
-import { BusinessSettings } from "@/pages/BusinessSettings";
 import { Unauthorized } from "@/pages/Unauthorized";
 import { UserManagement } from "@/pages/UserManagement";
+import { AdminUserProfile } from "@/pages/admin/UserProfile";
+import { Subscriptions } from "@/pages/Subscriptions";
+import { BusinessSettings } from "@/pages/BusinessSettings";
 import { AdminPanel } from "@/pages/AdminPanel";
 import { AdminDashboard } from "@/pages/AdminDashboard";
 import { AdminSettings } from "@/pages/AdminSettings";
-import { AdminUserProfile } from "@/pages/admin/UserProfile";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,
-      gcTime: 1000 * 60 * 10,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes
     },
   },
 });
@@ -43,14 +41,11 @@ function App() {
               <Route path="/auth" element={<Auth />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               
-              {/* Root route - redirect to dashboard */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-              {/* Business user routes - לא דרושה הרשאה מיידית */}
+              {/* Business user routes */}
               <Route
                 path="/dashboard"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
                     <Dashboard />
                   </ProtectedRoute>
                 }
@@ -58,7 +53,7 @@ function App() {
               <Route
                 path="/inventory"
                 element={
-                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user']}>
+                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
                     <Inventory />
                   </ProtectedRoute>
                 }
@@ -66,7 +61,7 @@ function App() {
               <Route
                 path="/add-product"
                 element={
-                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user']}>
+                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user']}>
                     <AddProduct />
                   </ProtectedRoute>
                 }
@@ -74,15 +69,23 @@ function App() {
               <Route
                 path="/reports"
                 element={
-                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user']}>
+                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user']}>
                     <Reports />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                    <UserProfile />
                   </ProtectedRoute>
                 }
               />
               <Route
                 path="/subscriptions"
                 element={
-                  <ProtectedRoute allowedRoles={['admin', 'OWNER']}>
+                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
                     <Subscriptions />
                   </ProtectedRoute>
                 }
@@ -90,25 +93,17 @@ function App() {
               <Route
                 path="/settings"
                 element={
-                  <ProtectedRoute allowedRoles={['admin', 'OWNER']}>
+                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user']}>
                     <BusinessSettings />
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute requireAuth={true}>
-                    <UserProfile />
-                  </ProtectedRoute>
-                }
-              />
 
-              {/* Admin routes - דורשות הרשאת אדמין */}
+              {/* Admin routes */}
               <Route
                 path="/admin"
                 element={
-                  <ProtectedRoute allowedRoles={['admin']} requireAuth={true}>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <AdminPanel />
                   </ProtectedRoute>
                 }
@@ -116,7 +111,7 @@ function App() {
               <Route
                 path="/admin/dashboard"
                 element={
-                  <ProtectedRoute allowedRoles={['admin']} requireAuth={true}>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <AdminDashboard />
                   </ProtectedRoute>
                 }
@@ -124,7 +119,7 @@ function App() {
               <Route
                 path="/admin/settings"
                 element={
-                  <ProtectedRoute allowedRoles={['admin']} requireAuth={true}>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <AdminSettings />
                   </ProtectedRoute>
                 }
@@ -132,7 +127,7 @@ function App() {
               <Route
                 path="/users"
                 element={
-                  <ProtectedRoute allowedRoles={['admin']} requireAuth={true}>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <UserManagement />
                   </ProtectedRoute>
                 }
@@ -140,13 +135,14 @@ function App() {
               <Route
                 path="/admin/user/:userId"
                 element={
-                  <ProtectedRoute allowedRoles={['admin']} requireAuth={true}>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <AdminUserProfile />
                   </ProtectedRoute>
                 }
               />
 
-              {/* Catch all - redirect to dashboard instead of unauthorized */}
+              {/* Default redirects */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </AuthProvider>

@@ -1,38 +1,40 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useBusiness } from '@/hooks/useBusiness';
+import { useAuth } from './useAuth';
+import { useBusinessAccess } from './useBusinessAccess';
+import { useToast } from '@/hooks/use-toast';
+import type { Database } from '@/integrations/supabase/types';
 
-// Define local types
-export interface Notification {
-  id: string;
-  business_id: string;
-  user_id: string;
-  type: string;
-  title: string;
-  message: string;
-  product_id?: string;
-  is_read: boolean;
-  channel: string;
-  created_at: string;
-  updated_at: string;
-}
+type Notification = Database['public']['Tables']['notifications']['Row'] & {
+  products?: { name: string } | null;
+};
 
 export const useNotifications = () => {
   const { user } = useAuth();
-  const { business } = useBusiness();
+  const { businessContext } = useBusinessAccess();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: notifications = [], isLoading, error } = useQuery({
-    queryKey: ['notifications', business?.id],
+  const { data: notifications = [], isLoading } = useQuery({
+    queryKey: ['notifications', user?.id, businessContext?.business_id],
     queryFn: async () => {
-      if (!business?.id) return [];
+      if (!user?.id || !businessContext?.business_id) return [];
       
       const { data, error } = await supabase
         .from('notifications')
-        .select('*')
-        .eq('business_id', business.id)
+        .select(`
+          id,
+          title,
+          message,
+          type,
+          is_read,
+          created_at,
+          updated_at,
+          product_id,
+          products:product_id(name)
+        `)
+        .eq('business_id', businessContext.business_id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50);
       
@@ -43,49 +45,72 @@ export const useNotifications = () => {
       
       return data as Notification[];
     },
-    enabled: !!business?.id,
+    enabled: !!user?.id && !!businessContext?.business_id,
+    staleTime: 30 * 1000,
+    gcTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
-
-  const markAsReadMutation = useMutation({
+  const markAsRead = useMutation({
     mutationFn: async (notificationId: string) => {
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true, updated_at: new Date().toISOString() })
-        .eq('id', notificationId);
-
+        .eq('id', notificationId)
+        .eq('user_id', user?.id);
+      
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
+    onError: (error) => {
+      toast({
+        title: "שגיאה",
+        description: "שגיאה בעדכון ההתראה",
+        variant: "destructive",
+      });
+      console.error('Error marking notification as read:', error);
+    },
   });
 
-  const markAllAsReadMutation = useMutation({
+  const markAllAsRead = useMutation({
     mutationFn: async () => {
-      if (!business?.id) throw new Error('No business ID');
+      if (!businessContext?.business_id || !user?.id) throw new Error('No business or user found');
       
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true, updated_at: new Date().toISOString() })
-        .eq('business_id', business.id)
+        .eq('business_id', businessContext.business_id)
+        .eq('user_id', user.id)
         .eq('is_read', false);
-
+      
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      toast({
+        title: "הצלחה",
+        description: "כל ההתראות סומנו כנקראו",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "שגיאה",
+        description: "שגיאה בעדכון ההתראות",
+        variant: "destructive",
+      });
+      console.error('Error marking all notifications as read:', error);
     },
   });
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return {
     notifications,
     isLoading,
-    error,
     unreadCount,
-    markAsRead: markAsReadMutation,
-    markAllAsRead: markAllAsReadMutation,
-    isMarkingAsRead: markAsReadMutation.isPending,
+    markAsRead,
+    markAllAsRead,
   };
 };

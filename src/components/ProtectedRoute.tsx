@@ -1,36 +1,31 @@
 
 import React, { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
+import type { Database } from '@/integrations/supabase/types';
+
+type UserRole = Database['public']['Enums']['user_role'];
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: string[];
-  requireAuth?: boolean; // פרמטר חדש
+  allowedRoles?: UserRole[];
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  allowedRoles,
-  requireAuth = false // ברירת מחדל - לא דורש אימות
+  allowedRoles 
 }) => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading } = useAuth();
   const { userRole, isLoading: roleLoading } = useUserRole();
   const { toast } = useToast();
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
 
   useEffect(() => {
     const checkUserStatus = async () => {
-      // אם לא דרוש אימות, אל תבדוק סטטוס משתמש
-      if (!requireAuth) {
-        setIsCheckingStatus(false);
-        return;
-      }
-
       if (!user) {
         setIsCheckingStatus(false);
         return;
@@ -59,6 +54,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             variant: 'destructive',
           });
           
+          window.location.href = '/auth';
           return;
         }
 
@@ -70,9 +66,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     };
 
     checkUserStatus();
-  }, [user, toast, requireAuth]);
+  }, [user, toast]);
 
-  if (authLoading || roleLoading || isCheckingStatus) {
+  if (loading || isCheckingStatus || roleLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -83,14 +79,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // אם דרוש אימות ואין משתמש
-  if (requireAuth && !user) {
+  if (!user) {
     return <Navigate to="/auth" replace />;
   }
 
-  // Check role permissions if allowedRoles is specified
-  if (allowedRoles && allowedRoles.length > 0 && user) {
-    if (!userRole || !allowedRoles.includes(userRole)) {
+  // אם הוגדרו תפקידים מותרים, בדוק אם המשתמש מורשה
+  if (allowedRoles && allowedRoles.length > 0) {
+    if (!allowedRoles.includes(userRole)) {
+      console.log(`Access denied: User role ${userRole} not in allowed roles:`, allowedRoles);
       return <Navigate to="/unauthorized" replace />;
     }
   }
