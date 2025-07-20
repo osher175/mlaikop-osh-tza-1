@@ -81,12 +81,35 @@ export const useSubscription = () => {
     
     const now = new Date();
     const trialEnd = new Date(subscription.trial_ends_at);
-    return trialEnd > now;
+    const isValid = trialEnd > now;
+    
+    // Log trial validation for monitoring
+    console.log('Trial validation check:', {
+      userId: user?.id,
+      status: subscription.status,
+      trialEndsAt: subscription.trial_ends_at,
+      currentTime: now.toISOString(),
+      isValid,
+      daysLeft: getDaysLeftInTrial()
+    });
+    
+    return isValid;
   };
 
   const isSubscriptionActive = () => {
     if (!subscription) return false;
-    return subscription.status === 'active' || isTrialValid();
+    
+    // Active subscription or valid trial
+    const isActive = subscription.status === 'active' || (subscription.status === 'trial' && isTrialValid());
+    
+    console.log('Subscription active check:', {
+      userId: user?.id,
+      status: subscription.status,
+      isTrialValid: isTrialValid(),
+      isActive
+    });
+    
+    return isActive;
   };
 
   const getDaysLeftInTrial = () => {
@@ -120,6 +143,14 @@ export const useSubscription = () => {
         return false;
       }
 
+      console.log('Creating trial subscription:', {
+        userId: user.id,
+        email: user.email,
+        planId: defaultPlanId,
+        trialStart: now.toISOString(),
+        trialEnd: trialEnd.toISOString()
+      });
+
       const { error } = await supabase
         .from('user_subscriptions')
         .insert({
@@ -135,6 +166,7 @@ export const useSubscription = () => {
         return false;
       }
 
+      console.log('Trial subscription created successfully for user:', user.email);
       await refetchSubscription();
       return true;
     } catch (error) {
