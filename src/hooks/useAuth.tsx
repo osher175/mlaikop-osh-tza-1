@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,10 +42,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         setLoading(false);
 
-        // Only create trial subscription for new signups, not sign-ins
-        if (event === 'SIGNED_UP' && session?.user) {
-          console.log('New user signed up, will create trial subscription later');
-          // We'll handle trial creation in a separate function to avoid blocking auth
+        // Create trial subscription for new users when they sign in (after signup they're automatically signed in)
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('User signed in, checking if trial subscription needed');
+          // Use setTimeout to avoid blocking the auth flow
+          setTimeout(() => {
+            createTrialSubscription(session.user.id);
+          }, 1000);
         }
       }
     );
@@ -131,14 +133,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       },
     });
-
-    // Create trial subscription after successful signup
-    if (!error && data.user) {
-      // Use setTimeout to avoid blocking the auth flow
-      setTimeout(() => {
-        createTrialSubscription(data.user.id);
-      }, 1000);
-    }
 
     return { error };
   };
