@@ -15,6 +15,11 @@ import { UserProfile } from "@/pages/UserProfile";
 import { Unauthorized } from "@/pages/Unauthorized";
 import { UserManagement } from "@/pages/UserManagement";
 import { AdminUserProfile } from "@/pages/admin/UserProfile";
+import { Subscriptions } from "@/pages/Subscriptions";
+import { BusinessSettings } from "@/pages/BusinessSettings";
+import { AdminPanel } from "@/pages/AdminPanel";
+import { AdminDashboard } from "@/pages/AdminDashboard";
+import { AdminSettings } from "@/pages/AdminSettings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,8 +34,6 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
         <BrowserRouter>
           <AuthProvider>
             <Routes>
@@ -79,10 +82,50 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/subscriptions"
+                element={
+                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                    <Subscriptions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                    <BusinessSettings />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Admin routes */}
               <Route
                 path="/admin"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminPanel />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/settings"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/users"
                 element={
                   <ProtectedRoute allowedRoles={['admin']}>
                     <UserManagement />
@@ -104,6 +147,8 @@ function App() {
             </Routes>
           </AuthProvider>
         </BrowserRouter>
+        <Toaster />
+        <Sonner />
       </TooltipProvider>
     </QueryClientProvider>
   );
