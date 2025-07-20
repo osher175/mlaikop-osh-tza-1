@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,7 +20,7 @@ export const SubscriptionTable: React.FC = () => {
     queryFn: async () => {
       // First get all active subscriptions
       const { data: subscriptionData, error: subError } = await supabase
-        .from('user_subscriptions_new')
+        .from('user_subscriptions')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -51,19 +50,19 @@ export const SubscriptionTable: React.FC = () => {
     },
   });
 
-  const handleCancelAutoRenewal = async (subscriptionId: string) => {
+  const handleCancelSubscription = async (subscriptionId: string) => {
     try {
       const { error } = await supabase
-        .from('user_subscriptions_new')
-        .update({ auto_renew: false })
+        .from('user_subscriptions')
+        .update({ status: 'cancelled', canceled_at: new Date().toISOString() })
         .eq('id', subscriptionId);
 
       if (error) throw error;
       
-      console.log('Auto renewal cancelled for subscription:', subscriptionId);
+      console.log('Subscription cancelled:', subscriptionId);
       // TODO: Show success toast and refetch data
     } catch (error) {
-      console.error('Error cancelling auto renewal:', error);
+      console.error('Error cancelling subscription:', error);
       // TODO: Show error toast
     }
   };
@@ -121,40 +120,46 @@ export const SubscriptionTable: React.FC = () => {
                     </div>
                   </TableCell>
                   <TableCell className="font-rubik">
-                    <Badge variant="outline">{subscription.plan}</Badge>
+                    <Badge variant="outline">{subscription.plan_id || 'לא זמין'}</Badge>
                   </TableCell>
                   <TableCell className="font-rubik text-sm">
                     {subscription.started_at ? 
                       new Date(subscription.started_at).toLocaleDateString('he-IL') : 
+                      subscription.trial_started_at ?
+                      new Date(subscription.trial_started_at).toLocaleDateString('he-IL') :
                       '-'
                     }
                   </TableCell>
                   <TableCell className="font-rubik text-sm">
                     {subscription.expires_at ? 
                       new Date(subscription.expires_at).toLocaleDateString('he-IL') : 
+                      subscription.trial_ends_at ?
+                      new Date(subscription.trial_ends_at).toLocaleDateString('he-IL') :
                       'ללא הגבלה'
                     }
                   </TableCell>
                   <TableCell>
                     <Badge 
-                      variant={subscription.status === 'active' ? 'default' : 'destructive'}
+                      variant={subscription.status === 'active' ? 'default' : 
+                               subscription.status === 'trial' ? 'secondary' : 'destructive'}
                       className="font-rubik"
                     >
                       {subscription.status === 'active' ? 'פעיל' : 
+                       subscription.status === 'trial' ? 'ניסיון' :
                        subscription.status === 'expired' ? 'פג תוקף' :
                        subscription.status === 'cancelled' ? 'בוטל' : 'ממתין'}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {subscription.auto_renew && subscription.status === 'active' && (
+                    {subscription.status === 'active' && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleCancelAutoRenewal(subscription.id)}
+                        onClick={() => handleCancelSubscription(subscription.id)}
                         className="text-red-600 hover:text-red-800 font-rubik"
                       >
                         <X className="h-4 w-4 ml-2" />
-                        בטל חידוש אוטומטי
+                        בטל מנוי
                       </Button>
                     )}
                   </TableCell>

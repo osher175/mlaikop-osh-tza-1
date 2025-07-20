@@ -6,26 +6,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Pencil, Save, X, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface SubscriptionPlan {
-  plan: string;
-  storage_limit: number;
-  ai_credit: number;
-  user_limit: number;
-  support_level: 'basic' | 'standard' | 'advanced' | 'vip';
+  id: string;
+  name: string;
+  monthly_price: number;
+  storage_gb: number;
+  max_users: number;
+  ai_access: boolean;
   created_at?: string;
   updated_at?: string;
 }
 
 interface PlanFormData {
-  plan: string;
-  storage_limit: number;
-  ai_credit: number;
-  user_limit: number;
-  support_level: 'basic' | 'standard' | 'advanced' | 'vip';
+  name: string;
+  monthly_price: number;
+  storage_gb: number;
+  max_users: number;
+  ai_access: boolean;
 }
 
 export const SubscriptionPlanEditor: React.FC = () => {
@@ -40,9 +40,9 @@ export const SubscriptionPlanEditor: React.FC = () => {
     queryFn: async () => {
       console.log('Fetching subscription plans...');
       const { data, error } = await supabase
-        .from('subscription_plans_new')
+        .from('subscription_plans')
         .select('*')
-        .order('created_at');
+        .order('monthly_price');
       
       if (error) {
         console.error('Error fetching plans:', error);
@@ -62,14 +62,14 @@ export const SubscriptionPlanEditor: React.FC = () => {
         // Update existing plan
         console.log('Updating existing plan:', editingPlan);
         const { error } = await supabase
-          .from('subscription_plans_new')
+          .from('subscription_plans')
           .update({
-            storage_limit: planData.storage_limit,
-            ai_credit: planData.ai_credit,
-            user_limit: planData.user_limit,
-            support_level: planData.support_level
+            monthly_price: planData.monthly_price,
+            storage_gb: planData.storage_gb,
+            max_users: planData.max_users,
+            ai_access: planData.ai_access
           })
-          .eq('plan', editingPlan);
+          .eq('id', editingPlan);
         
         if (error) {
           console.error('Error updating plan:', error);
@@ -79,13 +79,15 @@ export const SubscriptionPlanEditor: React.FC = () => {
         // Create new plan
         console.log('Creating new plan:', planData);
         const { error } = await supabase
-          .from('subscription_plans_new')
+          .from('subscription_plans')
           .insert([{
-            plan: planData.plan,
-            storage_limit: planData.storage_limit,
-            ai_credit: planData.ai_credit,
-            user_limit: planData.user_limit,
-            support_level: planData.support_level
+            name: planData.name,
+            monthly_price: planData.monthly_price,
+            storage_gb: planData.storage_gb,
+            max_users: planData.max_users,
+            ai_access: planData.ai_access,
+            duration_months: 1,
+            role: 'pro_starter_user'
           }]);
         
         if (error) {
@@ -119,9 +121,9 @@ export const SubscriptionPlanEditor: React.FC = () => {
     mutationFn: async (planId: string) => {
       console.log('Deleting plan:', planId);
       const { error } = await supabase
-        .from('subscription_plans_new')
+        .from('subscription_plans')
         .delete()
-        .eq('plan', planId);
+        .eq('id', planId);
       
       if (error) {
         console.error('Error deleting plan:', error);
@@ -147,13 +149,13 @@ export const SubscriptionPlanEditor: React.FC = () => {
   });
 
   const startEditing = (plan: SubscriptionPlan) => {
-    setEditingPlan(plan.plan);
+    setEditingPlan(plan.id);
     setEditForm({
-      plan: plan.plan,
-      storage_limit: plan.storage_limit,
-      ai_credit: plan.ai_credit,
-      user_limit: plan.user_limit,
-      support_level: plan.support_level,
+      name: plan.name,
+      monthly_price: plan.monthly_price,
+      storage_gb: plan.storage_gb,
+      max_users: plan.max_users,
+      ai_access: plan.ai_access,
     });
   };
 
@@ -161,11 +163,11 @@ export const SubscriptionPlanEditor: React.FC = () => {
     setIsCreatingNew(true);
     setEditingPlan('new');
     setEditForm({
-      plan: '',
-      storage_limit: 1,
-      ai_credit: 0,
-      user_limit: 1,
-      support_level: 'basic',
+      name: '',
+      monthly_price: 299,
+      storage_gb: 10,
+      max_users: 3,
+      ai_access: false,
     });
   };
 
@@ -176,9 +178,9 @@ export const SubscriptionPlanEditor: React.FC = () => {
   };
 
   const savePlan = () => {
-    if (editForm && editForm.plan) {
+    if (editForm && editForm.name) {
       // Validate required fields
-      if (!editForm.storage_limit || !editForm.user_limit) {
+      if (!editForm.monthly_price || !editForm.storage_gb || !editForm.max_users) {
         toast({
           title: "שגיאה בנתונים",
           description: "נא למלא את כל השדות הנדרשים",
@@ -245,11 +247,11 @@ export const SubscriptionPlanEditor: React.FC = () => {
       <CardContent>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" dir="rtl">
           {plans?.map((plan) => (
-            <Card key={plan.plan} className="border-2">
+            <Card key={plan.id} className="border-2">
               <CardHeader>
                 <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg font-rubik">{plan.plan}</CardTitle>
-                  {editingPlan === plan.plan ? (
+                  <CardTitle className="text-lg font-rubik">{plan.name}</CardTitle>
+                  {editingPlan === plan.id ? (
                     <div className="flex gap-2">
                       <Button 
                         size="sm" 
@@ -271,7 +273,7 @@ export const SubscriptionPlanEditor: React.FC = () => {
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        onClick={() => deletePlan(plan.plan)}
+                        onClick={() => deletePlan(plan.id)}
                         className="text-red-600 hover:text-red-700"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -281,84 +283,74 @@ export const SubscriptionPlanEditor: React.FC = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {editingPlan === plan.plan && editForm ? (
+                {editingPlan === plan.id && editForm ? (
                   <>
+                    <div>
+                      <Label htmlFor="monthly_price" className="font-rubik">מחיר חודשי (₪)</Label>
+                      <Input
+                        id="monthly_price"
+                        type="number"
+                        value={editForm.monthly_price}
+                        onChange={(e) => updateEditForm('monthly_price', parseInt(e.target.value) || 299)}
+                        className="font-rubik"
+                      />
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="storage_limit" className="font-rubik">מגבלת אחסון (GB)</Label>
+                        <Label htmlFor="storage_gb" className="font-rubik">אחסון (GB)</Label>
                         <Input
-                          id="storage_limit"
+                          id="storage_gb"
                           type="number"
-                          value={editForm.storage_limit}
-                          onChange={(e) => updateEditForm('storage_limit', parseInt(e.target.value) || 1)}
+                          value={editForm.storage_gb}
+                          onChange={(e) => updateEditForm('storage_gb', parseInt(e.target.value) || 10)}
                           className="font-rubik"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="user_limit" className="font-rubik">מגבלת משתמשים</Label>
+                        <Label htmlFor="max_users" className="font-rubik">מגבלת משתמשים</Label>
                         <Input
-                          id="user_limit"
+                          id="max_users"
                           type="number"
-                          value={editForm.user_limit}
-                          onChange={(e) => updateEditForm('user_limit', parseInt(e.target.value) || 1)}
+                          value={editForm.max_users}
+                          onChange={(e) => updateEditForm('max_users', parseInt(e.target.value) || 3)}
                           className="font-rubik"
                         />
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="ai_credit" className="font-rubik">קרדיט AI</Label>
-                        <Input
-                          id="ai_credit"
-                          type="number"
-                          value={editForm.ai_credit}
-                          onChange={(e) => updateEditForm('ai_credit', parseInt(e.target.value) || 0)}
-                          className="font-rubik"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="support_level" className="font-rubik">רמת תמיכה</Label>
-                        <Select value={editForm.support_level} onValueChange={(value: 'basic' | 'standard' | 'advanced' | 'vip') => updateEditForm('support_level', value)}>
-                          <SelectTrigger className="font-rubik">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="basic">בסיסית</SelectItem>
-                            <SelectItem value="standard">רגילה</SelectItem>
-                            <SelectItem value="advanced">מתקדמת</SelectItem>
-                            <SelectItem value="vip">VIP</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    <div>
+                      <Label className="font-rubik">גישה ל-AI</Label>
+                      <Button 
+                        type="button"
+                        variant={editForm.ai_access ? "default" : "outline"}
+                        onClick={() => updateEditForm('ai_access', !editForm.ai_access)}
+                        className="w-full mt-1"
+                      >
+                        {editForm.ai_access ? 'כלול' : 'לא כלול'}
+                      </Button>
                     </div>
                   </>
                 ) : (
                   <>
+                    <div className="text-2xl font-bold text-primary">
+                      ₪{plan.monthly_price}
+                    </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="text-gray-600 font-rubik">אחסון:</span>
-                        <p className="font-semibold font-rubik">{plan.storage_limit}GB</p>
+                        <p className="font-semibold font-rubik">{plan.storage_gb}GB</p>
                       </div>
                       <div>
                         <span className="text-gray-600 font-rubik">משתמשים:</span>
                         <p className="font-semibold font-rubik">
-                          {plan.user_limit === -1 ? 'לא מוגבל' : plan.user_limit}
+                          {plan.max_users === -1 ? 'לא מוגבל' : plan.max_users}
                         </p>
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-600 font-rubik">קרדיט AI:</span>
-                        <p className="font-semibold font-rubik">
-                          {plan.ai_credit === -1 ? 'לא מוגבל' : plan.ai_credit}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-gray-600 font-rubik">תמיכה:</span>
-                        <Badge variant="outline" className="font-rubik">{plan.support_level}</Badge>
-                      </div>
+                    <div>
+                      <span className="text-gray-600 font-rubik">AI גישה:</span>
+                      <Badge variant={plan.ai_access ? "default" : "outline"} className="mr-2 font-rubik">
+                        {plan.ai_access ? 'כלול' : 'לא כלול'}
+                      </Badge>
                     </div>
                   </>
                 )}
@@ -389,13 +381,24 @@ export const SubscriptionPlanEditor: React.FC = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="new_plan" className="font-rubik">מזהה תוכנית *</Label>
+                  <Label htmlFor="new_name" className="font-rubik">שם התוכנית *</Label>
                   <Input
-                    id="new_plan"
-                    value={editForm.plan}
-                    onChange={(e) => updateEditForm('plan', e.target.value)}
+                    id="new_name"
+                    value={editForm.name}
+                    onChange={(e) => updateEditForm('name', e.target.value)}
                     className="font-rubik"
-                    placeholder="למשל: premium_plus"
+                    placeholder="למשל: Premium Plus"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="new_monthly_price" className="font-rubik">מחיר חודשי (₪) *</Label>
+                  <Input
+                    id="new_monthly_price"
+                    type="number"
+                    value={editForm.monthly_price}
+                    onChange={(e) => updateEditForm('monthly_price', parseInt(e.target.value) || 299)}
+                    className="font-rubik"
                   />
                 </div>
 
@@ -405,8 +408,8 @@ export const SubscriptionPlanEditor: React.FC = () => {
                     <Input
                       id="new_storage"
                       type="number"
-                      value={editForm.storage_limit}
-                      onChange={(e) => updateEditForm('storage_limit', parseInt(e.target.value) || 1)}
+                      value={editForm.storage_gb}
+                      onChange={(e) => updateEditForm('storage_gb', parseInt(e.target.value) || 10)}
                       className="font-rubik"
                     />
                   </div>
@@ -415,38 +418,23 @@ export const SubscriptionPlanEditor: React.FC = () => {
                     <Input
                       id="new_users"
                       type="number"
-                      value={editForm.user_limit}
-                      onChange={(e) => updateEditForm('user_limit', parseInt(e.target.value) || 1)}
+                      value={editForm.max_users}
+                      onChange={(e) => updateEditForm('max_users', parseInt(e.target.value) || 3)}
                       className="font-rubik"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="new_ai_credit" className="font-rubik">קרדיט AI</Label>
-                    <Input
-                      id="new_ai_credit"
-                      type="number"
-                      value={editForm.ai_credit}
-                      onChange={(e) => updateEditForm('ai_credit', parseInt(e.target.value) || 0)}
-                      className="font-rubik"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="new_support_level" className="font-rubik">רמת תמיכה</Label>
-                    <Select value={editForm.support_level} onValueChange={(value: 'basic' | 'standard' | 'advanced' | 'vip') => updateEditForm('support_level', value)}>
-                      <SelectTrigger className="font-rubik">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="basic">בסיסית</SelectItem>
-                        <SelectItem value="standard">רגילה</SelectItem>
-                        <SelectItem value="advanced">מתקדמת</SelectItem>
-                        <SelectItem value="vip">VIP</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div>
+                  <Label className="font-rubik">גישה ל-AI</Label>
+                  <Button 
+                    type="button"
+                    variant={editForm.ai_access ? "default" : "outline"}
+                    onClick={() => updateEditForm('ai_access', !editForm.ai_access)}
+                    className="w-full mt-1"
+                  >
+                    {editForm.ai_access ? 'כלול' : 'לא כלול'}
+                  </Button>
                 </div>
               </CardContent>
             </Card>

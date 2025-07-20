@@ -10,7 +10,7 @@ import { Reports } from '@/pages/Reports';
 import { Settings } from '@/pages/Settings';
 import { Auth } from '@/pages/Auth';
 import { Subscribe } from '@/pages/Subscribe';
-import { NotificationManagement } from '@/pages/NotificationManagement';
+import { NotificationManagementPage as NotificationManagement } from '@/pages/NotificationManagementPage';
 import { Suppliers } from '@/pages/Suppliers';
 import { Subscriptions } from '@/pages/Subscriptions';
 import { UserManagement } from '@/pages/UserManagement';

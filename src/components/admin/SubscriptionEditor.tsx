@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,9 +36,9 @@ export const SubscriptionEditor: React.FC<SubscriptionEditorProps> = ({
     queryKey: ['subscription-plans'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('subscription_plans_new')
+        .from('subscription_plans')
         .select('*')
-        .order('storage_limit', { ascending: true });
+        .order('monthly_price', { ascending: true });
 
       if (error) throw error;
       return data;
@@ -50,7 +49,7 @@ export const SubscriptionEditor: React.FC<SubscriptionEditorProps> = ({
     mutationFn: async ({ plan, expiryDate }: { plan: string; expiryDate: Date }) => {
       // First, mark current subscription as expired
       const { error: updateError } = await supabase
-        .from('user_subscriptions_new')
+        .from('user_subscriptions')
         .update({ status: 'expired' })
         .eq('user_id', userId)
         .eq('status', 'active');
@@ -59,13 +58,12 @@ export const SubscriptionEditor: React.FC<SubscriptionEditorProps> = ({
 
       // Create new subscription
       const { error: insertError } = await supabase
-        .from('user_subscriptions_new')
+        .from('user_subscriptions')
         .insert({
           user_id: userId,
-          plan: plan,
+          plan_id: plan,
           status: 'active',
           expires_at: expiryDate.toISOString(),
-          auto_renew: true
         });
 
       if (insertError) throw insertError;
@@ -85,16 +83,10 @@ export const SubscriptionEditor: React.FC<SubscriptionEditorProps> = ({
 
   const getPlanBadgeColor = (planId: string) => {
     switch (planId) {
-      case 'free':
-        return 'bg-gray-500';
-      case 'starter':
-        return 'bg-green-500';
-      case 'premium1':
+      case 'Basic':
         return 'bg-amber-500';
-      case 'premium2':
+      case 'Pro':
         return 'bg-blue-500';
-      case 'premium3':
-        return 'bg-purple-500';
       default:
         return 'bg-gray-500';
     }
@@ -125,8 +117,8 @@ export const SubscriptionEditor: React.FC<SubscriptionEditorProps> = ({
             </SelectTrigger>
             <SelectContent>
               {availablePlans?.map((plan) => (
-                <SelectItem key={plan.plan} value={plan.plan} className="font-rubik">
-                  {plan.plan} - {plan.storage_limit}GB, {plan.user_limit === -1 ? 'ללא הגבלה' : plan.user_limit} משתמשים
+                <SelectItem key={plan.id} value={plan.name} className="font-rubik">
+                  {plan.name} - {plan.storage_gb}GB, {plan.max_users === -1 ? 'ללא הגבלה' : plan.max_users} משתמשים
                 </SelectItem>
               ))}
             </SelectContent>
