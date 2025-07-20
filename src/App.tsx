@@ -46,11 +46,11 @@ function App() {
               {/* Root route - redirect to dashboard */}
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-              {/* Business user routes */}
+              {/* Business user routes - לא דרושה הרשאה מיידית */}
               <Route
                 path="/dashboard"
                 element={
-                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'pro_starter_user']}>
+                  <ProtectedRoute>
                     <Dashboard />
                   </ProtectedRoute>
                 }
@@ -98,17 +98,17 @@ function App() {
               <Route
                 path="/profile"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requireAuth={true}>
                     <UserProfile />
                   </ProtectedRoute>
                 }
               />
 
-              {/* Admin routes */}
+              {/* Admin routes - דורשות הרשאת אדמין */}
               <Route
                 path="/admin"
                 element={
-                  <ProtectedRoute allowedRoles={['admin']}>
+                  <ProtectedRoute allowedRoles={['admin']} requireAuth={true}>
                     <AdminPanel />
                   </ProtectedRoute>
                 }
@@ -116,7 +116,7 @@ function App() {
               <Route
                 path="/admin/dashboard"
                 element={
-                  <ProtectedRoute allowedRoles={['admin']}>
+                  <ProtectedRoute allowedRoles={['admin']} requireAuth={true}>
                     <AdminDashboard />
                   </ProtectedRoute>
                 }
@@ -124,7 +124,7 @@ function App() {
               <Route
                 path="/admin/settings"
                 element={
-                  <ProtectedRoute allowedRoles={['admin']}>
+                  <ProtectedRoute allowedRoles={['admin']} requireAuth={true}>
                     <AdminSettings />
                   </ProtectedRoute>
                 }
@@ -132,7 +132,7 @@ function App() {
               <Route
                 path="/users"
                 element={
-                  <ProtectedRoute allowedRoles={['admin']}>
+                  <ProtectedRoute allowedRoles={['admin']} requireAuth={true}>
                     <UserManagement />
                   </ProtectedRoute>
                 }
@@ -140,14 +140,14 @@ function App() {
               <Route
                 path="/admin/user/:userId"
                 element={
-                  <ProtectedRoute allowedRoles={['admin']}>
+                  <ProtectedRoute allowedRoles={['admin']} requireAuth={true}>
                     <AdminUserProfile />
                   </ProtectedRoute>
                 }
               />
 
-              {/* Catch all - redirect to unauthorized */}
-              <Route path="*" element={<Navigate to="/unauthorized" replace />} />
+              {/* Catch all - redirect to dashboard instead of unauthorized */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </AuthProvider>
         </BrowserRouter>

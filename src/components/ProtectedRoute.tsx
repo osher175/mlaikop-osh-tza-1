@@ -10,9 +10,14 @@ import { Navigate } from 'react-router-dom';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: string[];
+  requireAuth?: boolean; // פרמטר חדש
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  children, 
+  allowedRoles,
+  requireAuth = false // ברירת מחדל - לא דורש אימות
+}) => {
   const { user, loading: authLoading } = useAuth();
   const { userRole, isLoading: roleLoading } = useUserRole();
   const { toast } = useToast();
@@ -20,6 +25,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
 
   useEffect(() => {
     const checkUserStatus = async () => {
+      // אם לא דרוש אימות, אל תבדוק סטטוס משתמש
+      if (!requireAuth) {
+        setIsCheckingStatus(false);
+        return;
+      }
+
       if (!user) {
         setIsCheckingStatus(false);
         return;
@@ -59,7 +70,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
     };
 
     checkUserStatus();
-  }, [user, toast]);
+  }, [user, toast, requireAuth]);
 
   if (authLoading || roleLoading || isCheckingStatus) {
     return (
@@ -72,12 +83,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
     );
   }
 
-  if (!user) {
+  // אם דרוש אימות ואין משתמש
+  if (requireAuth && !user) {
     return <Navigate to="/auth" replace />;
   }
 
   // Check role permissions if allowedRoles is specified
-  if (allowedRoles && allowedRoles.length > 0) {
+  if (allowedRoles && allowedRoles.length > 0 && user) {
     if (!userRole || !allowedRoles.includes(userRole)) {
       return <Navigate to="/unauthorized" replace />;
     }

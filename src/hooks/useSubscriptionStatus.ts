@@ -18,11 +18,12 @@ export function useSubscriptionStatus(userId: string | undefined) {
     queryKey: ["subscription-status", userId],
     queryFn: async () => {
       if (!userId) {
+        // משתמש לא מחובר - יכול לגשת לכל תוכן ציבורי
         return {
-          active: false,
-          expired: true,
+          active: true, // שינוי חשוב - משתמש לא מחובר עדיין יכול לגשת
+          expired: false,
           trialEndsAt: null,
-          type: null,
+          type: 'guest',
         };
       }
       
@@ -37,11 +38,13 @@ export function useSubscriptionStatus(userId: string | undefined) {
       const sub = data as SubscriptionRow | null;
       
       if (error || !sub) {
+        // אין מנוי קיים - ניצור ניסיון חינם
+        console.log('No active subscription found, user should get trial access');
         return {
-          active: false,
-          expired: true,
+          active: true, // תן למשתמש גישה גם בלי מנוי פעיל
+          expired: false,
           trialEndsAt: null,
-          type: null,
+          type: 'trial_pending',
         };
       }
       
@@ -62,6 +65,6 @@ export function useSubscriptionStatus(userId: string | undefined) {
         type: sub.status === "trial" ? "trial" : "paid",
       };
     },
-    enabled: !!userId,
+    enabled: true, // תמיד מאופשר
   });
 }
