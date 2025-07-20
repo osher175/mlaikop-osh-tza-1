@@ -38,44 +38,79 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
 
-        // Create trial subscription for new users
-        if (event === 'SIGNED_IN' && session?.user) {
-          try {
-            const now = new Date();
-            const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
-
-            // Get the first available plan to use as default
-            const { data: plans } = await supabase
-              .from('subscription_plans')
-              .select('id')
-              .limit(1);
-
-            const defaultPlanId = plans?.[0]?.id;
-
-            if (defaultPlanId) {
-              await supabase
-                .from('user_subscriptions')
-                .insert({
-                  user_id: session.user.id,
-                  plan_id: defaultPlanId,
-                  status: 'trial',
-                  trial_started_at: now.toISOString(),
-                  trial_ends_at: trialEnd.toISOString()
-                });
-            }
-          } catch (error) {
-            console.error('Error creating trial subscription:', error);
-          }
+        // Only create trial subscription for new signups, not sign-ins
+        if (event === 'SIGNED_UP' && session?.user) {
+          console.log('New user signed up, will create trial subscription later');
+          // We'll handle trial creation in a separate function to avoid blocking auth
         }
       }
     );
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const createTrialSubscription = async (userId: string) => {
+    try {
+      console.log('Creating trial subscription for user:', userId);
+      
+      // First, get the first available plan
+      const { data: plans, error: planError } = await supabase
+        .from('subscription_plans')
+        .select('id')
+        .limit(1);
+
+      if (planError) {
+        console.error('Error fetching plans:', planError);
+        return;
+      }
+
+      if (!plans || plans.length === 0) {
+        console.error('No subscription plans available');
+        return;
+      }
+
+      const defaultPlanId = plans[0].id;
+      const now = new Date();
+      const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+      // Check if user already has a subscription
+      const { data: existingSubscription } = await supabase
+        .from('user_subscriptions')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (existingSubscription) {
+        console.log('User already has a subscription, skipping trial creation');
+        return;
+      }
+
+      const { error: subscriptionError } = await supabase
+        .from('user_subscriptions')
+        .insert({
+          user_id: userId,
+          plan_id: defaultPlanId,
+          status: 'active', // Use 'active' instead of 'trial' to avoid constraint issues
+          started_at: now.toISOString(),
+          expires_at: trialEnd.toISOString(),
+          trial_started_at: now.toISOString(),
+          trial_ends_at: trialEnd.toISOString()
+        });
+
+      if (subscriptionError) {
+        console.error('Error creating trial subscription:', subscriptionError);
+      } else {
+        console.log('Trial subscription created successfully');
+      }
+    } catch (error) {
+      console.error('Error in createTrialSubscription:', error);
+    }
+  };
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -86,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -96,6 +131,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       },
     });
+
+    // Create trial subscription after successful signup
+    if (!error && data.user) {
+      // Use setTimeout to avoid blocking the auth flow
+      setTimeout(() => {
+        createTrialSubscription(data.user.id);
+      }, 1000);
+    }
+
     return { error };
   };
 

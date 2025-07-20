@@ -9,15 +9,20 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading) {
-      if (user) {
-        // If user is authenticated, redirect to dashboard
-        navigate('/dashboard', { replace: true });
-      } else {
-        // If user is not authenticated, redirect to auth page
-        navigate('/auth', { replace: true });
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (!loading) {
+        if (user) {
+          console.log('User authenticated, redirecting to dashboard');
+          navigate('/dashboard', { replace: true });
+        } else {
+          console.log('User not authenticated, redirecting to auth');
+          navigate('/auth', { replace: true });
+        }
       }
-    }
+    }, 100); // Small delay to ensure auth state is settled
+
+    return () => clearTimeout(timeoutId);
   }, [user, loading, navigate]);
 
   // Show loading spinner while checking authentication
