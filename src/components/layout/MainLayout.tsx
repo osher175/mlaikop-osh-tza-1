@@ -43,7 +43,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </DrawerTrigger>
               <DrawerContent className="h-full max-h-full z-50">
                 <div className="h-full overflow-hidden">
-                  <Sidebar isOpen={true} onClose={() => setIsDrawerOpen(false)} />
+                  <Sidebar onNavigate={() => setIsDrawerOpen(false)} />
                 </div>
               </DrawerContent>
             </Drawer>
@@ -67,7 +67,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         {/* Fixed Sidebar for >=1024px (lg) */}
         {!isSidebarDrawer && sidebarOpen && (
           <div className="w-64 fixed right-0 top-0 h-screen z-30 border-l border-gray-200 bg-white transition-all duration-300">
-            <Sidebar isOpen={true} onClose={() => setSidebarOpen(false)} />
+            <Sidebar />
           </div>
         )}
 
