@@ -5,16 +5,37 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, Package, AlertTriangle, Calendar, Edit, Trash2 } from 'lucide-react';
-import { useProducts, Product } from '@/hooks/useProducts';
+import { useProducts } from '@/hooks/useProducts';
 import { useBusiness } from '@/hooks/useBusiness';
 import { EditProductDialog } from './EditProductDialog';
 import { DeleteProductDialog } from './DeleteProductDialog';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 
+// Define local Product type to match what we're using
+interface Product {
+  id: string;
+  name: string;
+  barcode?: string;
+  quantity: number;
+  price?: number;
+  cost?: number;
+  location?: string;
+  expiration_date?: string;
+  business_id: string;
+  created_by: string;
+  supplier_id?: string;
+  product_category_id?: string;
+  image?: string;
+  alert_dismissed?: boolean;
+  enable_whatsapp_supplier_notification?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export const OptimizedInventory: React.FC = () => {
   const { business } = useBusiness();
-  const { products = [], isLoading } = useProducts(business?.id);
+  const { products = [], isLoading } = useProducts();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);

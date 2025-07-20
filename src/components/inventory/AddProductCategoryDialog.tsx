@@ -30,9 +30,7 @@ export const AddProductCategoryDialog: React.FC<AddProductCategoryDialogProps> =
   const queryClient = useQueryClient();
   
   // Use the hook only if we have a proper business_category_id
-  const { createProductCategory } = useProductCategories(
-    businessCategoryId !== 'default' ? businessCategoryId : null
-  );
+  const { createProductCategory } = useProductCategories();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

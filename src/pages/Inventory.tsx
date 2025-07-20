@@ -14,13 +14,29 @@ import { InventoryTable } from '@/components/inventory/InventoryTable';
 import { useProducts } from '@/hooks/useProducts';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useNavigate } from 'react-router-dom';
-import type { Database } from '@/integrations/supabase/types';
 
-// Use the database type directly - this matches what useProducts returns
-type Product = Database['public']['Tables']['products']['Row'] & {
+// Define consistent Product type
+interface Product {
+  id: string;
+  name: string;  
+  barcode?: string;
+  quantity: number;
+  price?: number;
+  cost?: number;
+  location?: string;
+  expiration_date?: string;
+  business_id: string;
+  created_by: string;
+  supplier_id?: string;
+  product_category_id?: string;
+  image?: string;
+  alert_dismissed?: boolean;
+  enable_whatsapp_supplier_notification?: boolean;
+  created_at?: string;
+  updated_at?: string;
   product_categories?: { name: string } | null;
   product_thresholds?: { low_stock_threshold: number } | null;
-};
+}
 
 export const Inventory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,23 +47,16 @@ export const Inventory: React.FC = () => {
   const navigate = useNavigate();
   
   const { businessContext, isLoading: businessLoading } = useBusinessAccess();
-  const { products, isLoading: productsLoading, refetch } = useProducts();
+  const { products, isLoading: productsLoading } = useProducts();
 
   const getStatusCounts = React.useMemo(() => {
-    const inStock = products.filter(p => p.quantity > 5).length;
-    const lowStock = products.filter(p => p.quantity > 0 && p.quantity <= 5).length;
-    const outOfStock = products.filter(p => p.quantity === 0).length;
+    const productsTyped = products as Product[];
+    const inStock = productsTyped.filter(p => p.quantity > 5).length;
+    const lowStock = productsTyped.filter(p => p.quantity > 0 && p.quantity <= 5).length;
+    const outOfStock = productsTyped.filter(p => p.quantity === 0).length;
     
     return { inStock, lowStock, outOfStock };
   }, [products]);
-
-  const handleProductUpdated = React.useCallback(() => {
-    refetch();
-  }, [refetch]);
-
-  const handleProductDeleted = React.useCallback(() => {
-    refetch();
-  }, [refetch]);
 
   const { inStock, lowStock, outOfStock } = getStatusCounts;
 
@@ -111,7 +120,7 @@ export const Inventory: React.FC = () => {
 
         {/* טבלת המוצרים */}
         <InventoryTable
-          products={products}
+          products={products as Product[]}
           searchTerm={searchTerm}
           onEditProduct={setEditingProduct}
           onDeleteProduct={setDeletingProduct}
@@ -124,14 +133,12 @@ export const Inventory: React.FC = () => {
           product={editingProduct}
           open={!!editingProduct}
           onOpenChange={(open) => !open && setEditingProduct(null)}
-          onProductUpdated={handleProductUpdated}
         />
 
         <DeleteProductDialog
           product={deletingProduct}
           open={!!deletingProduct}
           onOpenChange={(open) => !open && setDeletingProduct(null)}
-          onProductDeleted={handleProductDeleted}
         />
 
         <ProductImageViewer

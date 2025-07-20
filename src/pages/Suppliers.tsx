@@ -13,43 +13,33 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu';
 import { useSuppliers } from '@/hooks/useSuppliers';
-import { AddSupplierDialog } from '@/components/inventory/AddSupplierDialog';
-import { EditSupplierDialog } from '@/components/inventory/EditSupplierDialog';
-import { DeleteSupplierDialog } from '@/components/inventory/DeleteSupplierDialog';
-import { Plus, Search, Users, Phone, Mail, UserCheck, Edit, Trash } from 'lucide-react';
-import type { Database } from '@/integrations/supabase/types';
+import { AddSupplierDialog } from '@/components/suppliers/AddSupplierDialog';
+import { Plus, Users, Search, Edit, Trash, Mail, Phone, User } from 'lucide-react';
 
-type Supplier = Database['public']['Tables']['suppliers']['Row'];
+// Define local types
+interface Supplier {
+  id: string;
+  name: string;
+  contact_email?: string;
+  phone?: string;
+  sales_agent_name?: string;
+  sales_agent_phone?: string;
+  business_id?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export const Suppliers: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddSupplier, setShowAddSupplier] = useState(false);
-  const [showEditSupplier, setShowEditSupplier] = useState(false);
-  const [showDeleteSupplier, setShowDeleteSupplier] = useState(false);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const { suppliers, isLoading } = useSuppliers();
 
-  const filteredSuppliers = suppliers.filter((supplier) =>
+  const filteredSuppliers = suppliers.filter(supplier =>
     supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (supplier.agent_name && supplier.agent_name.toLowerCase().includes(searchTerm.toLowerCase()))
+    (supplier.contact_email && supplier.contact_email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (supplier.sales_agent_name && supplier.sales_agent_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
-
-  const handleEditSupplier = (supplier: Supplier) => {
-    setSelectedSupplier(supplier);
-    setShowEditSupplier(true);
-  };
-
-  const handleDeleteSupplier = (supplier: Supplier) => {
-    setSelectedSupplier(supplier);
-    setShowDeleteSupplier(true);
-  };
 
   return (
     <MainLayout>
@@ -59,23 +49,24 @@ export const Suppliers: React.FC = () => {
           <div className="flex items-center gap-3">
             <Users className="w-8 h-8 text-turquoise" />
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">רשימת ספקים</h1>
-              <p className="text-gray-600">ניהול ספקים ואנשי קשר</p>
+              <h1 className="text-3xl font-bold text-gray-900">ספקים</h1>
+              <p className="text-gray-600">ניהול פרטי הספקים והקשר איתם</p>
             </div>
           </div>
         </div>
 
-        {/* Search and Actions */}
+        {/* Search and Add Button */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">חיפוש וניהול ספקים</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-col md:flex-row gap-4">
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4">
               <div className="relative flex-1">
                 <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="חיפוש לפי שם ספק או שם סוכן..."
+                  type="text"
+                  placeholder="חפש ספקים..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pr-10"
@@ -97,7 +88,7 @@ export const Suppliers: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              ספקים ({filteredSuppliers.length})
+              רשימת ספקים ({filteredSuppliers.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -113,10 +104,7 @@ export const Suppliers: React.FC = () => {
                   {searchTerm ? 'לא נמצאו ספקים' : 'אין ספקים'}
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  {searchTerm 
-                    ? 'נסה לשנות את מילות החיפוש'
-                    : 'התחל בהוספת הספק הראשון שלך'
-                  }
+                  {searchTerm ? 'נסה לשנות את מונחי החיפוש' : 'התחל בהוספת הספק הראשון שלך'}
                 </p>
                 {!searchTerm && (
                   <Button onClick={() => setShowAddSupplier(true)}>
@@ -133,85 +121,68 @@ export const Suppliers: React.FC = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="text-right">שם הספק</TableHead>
-                        <TableHead className="text-right">שם הסוכן</TableHead>
-                        <TableHead className="text-right">טלפון</TableHead>
-                        <TableHead className="text-right">אימייל</TableHead>
+                        <TableHead className="text-right">פרטי קשר</TableHead>
+                        <TableHead className="text-right">נציג מכירות</TableHead>
                         <TableHead className="text-right">פעולות</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredSuppliers.map((supplier) => (
-                        <ContextMenu key={supplier.id}>
-                          <ContextMenuTrigger asChild>
-                            <TableRow className="cursor-context-menu">
-                              <TableCell className="font-medium">
+                        <TableRow key={supplier.id}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary">
                                 {supplier.name}
-                              </TableCell>
-                              <TableCell>
-                                {supplier.agent_name ? (
-                                  <div className="flex items-center gap-2">
-                                    <UserCheck className="w-4 h-4 text-green-600" />
-                                    {supplier.agent_name}
-                                  </div>
-                                ) : (
-                                  <span className="text-gray-400">לא צוין</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {supplier.phone ? (
-                                  <div className="flex items-center gap-2">
-                                    <Phone className="w-4 h-4 text-blue-600" />
-                                    {supplier.phone}
-                                  </div>
-                                ) : (
-                                  <span className="text-gray-400">לא צוין</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {supplier.contact_email ? (
-                                  <div className="flex items-center gap-2">
-                                    <Mail className="w-4 h-4 text-purple-600" />
-                                    {supplier.contact_email}
-                                  </div>
-                                ) : (
-                                  <span className="text-gray-400">לא צוין</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleEditSupplier(supplier)}
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleDeleteSupplier(supplier)}
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    <Trash className="w-4 h-4" />
-                                  </Button>
+                              </Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              {supplier.contact_email && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Mail className="w-4 h-4 text-gray-400" />
+                                  <span>{supplier.contact_email}</span>
                                 </div>
-                              </TableCell>
-                            </TableRow>
-                          </ContextMenuTrigger>
-                          <ContextMenuContent>
-                            <ContextMenuItem onClick={() => handleEditSupplier(supplier)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              ערוך ספק
-                            </ContextMenuItem>
-                            <ContextMenuItem 
-                              onClick={() => handleDeleteSupplier(supplier)}
-                              className="text-red-600"
-                            >
-                              <Trash className="w-4 h-4 mr-2" />
-                              מחק ספק
-                            </ContextMenuItem>
-                          </ContextMenuContent>
-                        </ContextMenu>
+                              )}
+                              {supplier.phone && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Phone className="w-4 h-4 text-gray-400" />
+                                  <span>{supplier.phone}</span>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              {supplier.sales_agent_name && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <User className="w-4 h-4 text-gray-400" />
+                                  <span>{supplier.sales_agent_name}</span>
+                                </div>
+                              )}
+                              {supplier.sales_agent_phone && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Phone className="w-4 h-4 text-gray-400" />
+                                  <span>{supplier.sales_agent_phone}</span>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" variant="outline">
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
                       ))}
                     </TableBody>
                   </Table>
@@ -220,78 +191,67 @@ export const Suppliers: React.FC = () => {
                 {/* Mobile Card View */}
                 <div className="md:hidden space-y-4">
                   {filteredSuppliers.map((supplier) => (
-                    <ContextMenu key={supplier.id}>
-                      <ContextMenuTrigger asChild>
-                        <Card className="border-l-4 border-l-turquoise cursor-context-menu">
-                          <CardContent className="p-4">
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <h3 className="font-semibold text-lg">{supplier.name}</h3>
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline">ספק</Badge>
-                                  <div className="flex gap-1">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleEditSupplier(supplier)}
-                                    >
-                                      <Edit className="w-4 h-4" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleDeleteSupplier(supplier)}
-                                      className="text-red-600 hover:text-red-700"
-                                    >
-                                      <Trash className="w-4 h-4" />
-                                    </Button>
+                    <Card key={supplier.id} className="border-l-4 border-l-turquoise">
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Badge variant="secondary" className="text-base">
+                              {supplier.name}
+                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" variant="outline">
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <h4 className="font-medium text-sm text-gray-700">פרטי קשר:</h4>
+                            <div className="space-y-1">
+                              {supplier.contact_email && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Mail className="w-4 h-4 text-gray-400" />
+                                  <span>{supplier.contact_email}</span>
+                                </div>
+                              )}
+                              {supplier.phone && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Phone className="w-4 h-4 text-gray-400" />
+                                  <span>{supplier.phone}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {(supplier.sales_agent_name || supplier.sales_agent_phone) && (
+                            <div className="space-y-2">
+                              <h4 className="font-medium text-sm text-gray-700">נציג מכירות:</h4>
+                              <div className="space-y-1">
+                                {supplier.sales_agent_name && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <User className="w-4 h-4 text-gray-400" />
+                                    <span>{supplier.sales_agent_name}</span>
                                   </div>
-                                </div>
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <UserCheck className="w-4 h-4 text-green-600" />
-                                  <span className="text-sm text-gray-600">סוכן:</span>
-                                  <span className="text-sm">
-                                    {supplier.agent_name || 'לא צוין'}
-                                  </span>
-                                </div>
-                                
-                                <div className="flex items-center gap-2">
-                                  <Phone className="w-4 h-4 text-blue-600" />
-                                  <span className="text-sm text-gray-600">טלפון:</span>
-                                  <span className="text-sm">
-                                    {supplier.phone || 'לא צוין'}
-                                  </span>
-                                </div>
-                                
-                                <div className="flex items-center gap-2">
-                                  <Mail className="w-4 h-4 text-purple-600" />
-                                  <span className="text-sm text-gray-600">אימייל:</span>
-                                  <span className="text-sm">
-                                    {supplier.contact_email || 'לא צוין'}
-                                  </span>
-                                </div>
+                                )}
+                                {supplier.sales_agent_phone && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Phone className="w-4 h-4 text-gray-400" />
+                                    <span>{supplier.sales_agent_phone}</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent>
-                        <ContextMenuItem onClick={() => handleEditSupplier(supplier)}>
-                          <Edit className="w-4 h-4 mr-2" />
-                          ערוך ספק
-                        </ContextMenuItem>
-                        <ContextMenuItem 
-                          onClick={() => handleDeleteSupplier(supplier)}
-                          className="text-red-600"
-                        >
-                          <Trash className="w-4 h-4 mr-2" />
-                          מחק ספק
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               </>
@@ -299,22 +259,10 @@ export const Suppliers: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Dialogs */}
+        {/* Add Supplier Dialog */}
         <AddSupplierDialog
           open={showAddSupplier}
           onOpenChange={setShowAddSupplier}
-        />
-        
-        <EditSupplierDialog
-          open={showEditSupplier}
-          onOpenChange={setShowEditSupplier}
-          supplier={selectedSupplier}
-        />
-        
-        <DeleteSupplierDialog
-          open={showDeleteSupplier}
-          onOpenChange={setShowDeleteSupplier}
-          supplier={selectedSupplier}
         />
       </div>
     </MainLayout>
