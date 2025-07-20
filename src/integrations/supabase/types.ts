@@ -1384,6 +1384,21 @@ export type Database = {
           is_owner: boolean
         }[]
       }
+      get_user_profile_for_admin: {
+        Args: { target_user_id: string }
+        Returns: {
+          user_id: string
+          email: string
+          first_name: string
+          last_name: string
+          is_active: boolean
+          created_at: string
+          role: Database["public"]["Enums"]["user_role"]
+          business_name: string
+          subscription_status: string
+          subscription_plan: string
+        }[]
+      }
       get_user_role: {
         Args: { user_uuid?: string }
         Returns: Database["public"]["Enums"]["user_role"]

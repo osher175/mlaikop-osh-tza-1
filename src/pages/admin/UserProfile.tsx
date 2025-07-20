@@ -71,7 +71,8 @@ export const AdminUserProfile: React.FC = () => {
         throw profileError;
       }
 
-      return profileData as UserProfileData;
+      // The function returns an array, we need the first item
+      return (profileData && profileData.length > 0 ? profileData[0] : null) as UserProfileData | null;
     },
     enabled: !!userId,
   });
