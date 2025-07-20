@@ -14,7 +14,7 @@ import { he } from 'date-fns/locale';
 
 export const OptimizedInventory: React.FC = () => {
   const { business } = useBusiness();
-  const { products = [], isLoading } = useProducts();
+  const { products = [], isLoading, refetch } = useProducts();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -55,6 +55,18 @@ export const OptimizedInventory: React.FC = () => {
   const handleDeleteProduct = (product: Product) => {
     setSelectedProduct(product);
     setIsDeleteDialogOpen(true);
+  };
+
+  const handleProductUpdated = () => {
+    refetch();
+    setSelectedProduct(null);
+    setIsEditDialogOpen(false);
+  };
+
+  const handleProductDeleted = () => {
+    refetch();
+    setSelectedProduct(null);
+    setIsDeleteDialogOpen(false);
   };
 
   if (isLoading) {
@@ -203,6 +215,7 @@ export const OptimizedInventory: React.FC = () => {
           product={selectedProduct}
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
+          onProductUpdated={handleProductUpdated}
         />
       )}
 
@@ -212,6 +225,7 @@ export const OptimizedInventory: React.FC = () => {
           product={selectedProduct}
           open={isDeleteDialogOpen}
           onOpenChange={setIsDeleteDialogOpen}
+          onProductDeleted={handleProductDeleted}
         />
       )}
     </div>
