@@ -29,9 +29,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true); // for manual toggle on tablet
 
-  // If sidebar is a drawer, open/close with drawer state
-  // If sidebar is fixed, allow manual collapse/expand
-
   return (
     <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
       {/* Header with Hamburger Menu for <1024px */}
@@ -46,7 +43,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </DrawerTrigger>
               <DrawerContent className="h-full max-h-full z-50">
                 <div className="h-full overflow-hidden">
-                  <Sidebar onNavigate={() => setIsDrawerOpen(false)} />
+                  <Sidebar isOpen={true} onClose={() => setIsDrawerOpen(false)} />
                 </div>
               </DrawerContent>
             </Drawer>
@@ -70,7 +67,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         {/* Fixed Sidebar for >=1024px (lg) */}
         {!isSidebarDrawer && sidebarOpen && (
           <div className="w-64 fixed right-0 top-0 h-screen z-30 border-l border-gray-200 bg-white transition-all duration-300">
-            <Sidebar />
+            <Sidebar isOpen={true} onClose={() => setSidebarOpen(false)} />
           </div>
         )}
 

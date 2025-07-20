@@ -107,10 +107,24 @@ export const useSubscription = () => {
       const now = new Date();
       const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
+      // Get the first available plan to use as default
+      const { data: plans } = await supabase
+        .from('subscription_plans')
+        .select('id')
+        .limit(1);
+
+      const defaultPlanId = plans?.[0]?.id;
+
+      if (!defaultPlanId) {
+        console.error('No subscription plans available');
+        return false;
+      }
+
       const { error } = await supabase
         .from('user_subscriptions')
         .insert({
           user_id: user.id,
+          plan_id: defaultPlanId,
           status: 'trial',
           trial_started_at: now.toISOString(),
           trial_ends_at: trialEnd.toISOString()

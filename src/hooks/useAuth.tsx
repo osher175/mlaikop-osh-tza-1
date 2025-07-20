@@ -1,7 +1,8 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import type { User, Session } from '@supabase/supabase-js';
+import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
@@ -36,7 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: AuthChangeEvent, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -47,14 +48,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const now = new Date();
             const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
-            await supabase
-              .from('user_subscriptions')
-              .insert({
-                user_id: session.user.id,
-                status: 'trial',
-                trial_started_at: now.toISOString(),
-                trial_ends_at: trialEnd.toISOString()
-              });
+            // Get the first available plan to use as default
+            const { data: plans } = await supabase
+              .from('subscription_plans')
+              .select('id')
+              .limit(1);
+
+            const defaultPlanId = plans?.[0]?.id;
+
+            if (defaultPlanId) {
+              await supabase
+                .from('user_subscriptions')
+                .insert({
+                  user_id: session.user.id,
+                  plan_id: defaultPlanId,
+                  status: 'trial',
+                  trial_started_at: now.toISOString(),
+                  trial_ends_at: trialEnd.toISOString()
+                });
+            }
           } catch (error) {
             console.error('Error creating trial subscription:', error);
           }
