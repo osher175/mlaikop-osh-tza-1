@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +44,7 @@ export const UserCard: React.FC<UserCardProps> = ({
   isDeleting
 }) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const navigate = useNavigate();
 
   const fullName = `${user.first_name} ${user.last_name}`.trim() || 'לא צוין';
 
@@ -54,6 +56,10 @@ export const UserCard: React.FC<UserCardProps> = ({
     console.log('Confirming deletion for user:', user.user_id, user.email);
     onDelete(user.user_id);
     setShowDeleteDialog(false);
+  };
+
+  const handleViewProfile = () => {
+    navigate(`/admin/user/${user.user_id}`);
   };
 
   return (
@@ -91,6 +97,7 @@ export const UserCard: React.FC<UserCardProps> = ({
             size="sm"
             variant="outline"
             className="flex items-center gap-1"
+            onClick={handleViewProfile}
           >
             <Eye className="h-3 w-3" />
             צפייה בפרופיל
