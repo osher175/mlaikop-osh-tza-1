@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
 import { Dashboard } from "./pages/Dashboard";
 import { Auth } from "./pages/Auth";
 import { ForgotPassword } from "./pages/ForgotPassword";
@@ -33,156 +34,158 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          {/* Public routes - no auth required */}
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          
-          {/* Onboarding Routes */}
-          <Route 
-            path="/onboarding" 
-            element={
-              <ProtectedRoute>
-                <OnboardingDecision />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/create-business" 
-            element={
-              <ProtectedRoute>
-                <CreateBusiness />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/join-business" 
-            element={
-              <ProtectedRoute>
-                <JoinBusiness />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* Protected Routes with Onboarding Guard */}
-          <Route 
-            path="/" 
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <Dashboard />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <Dashboard />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/inventory" 
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <Inventory />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/add-product" 
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <AddProduct />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/reports" 
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <Reports />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/users" 
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <UserManagement />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/settings" 
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <BusinessSettings />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/profile" 
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <UserProfile />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/admin" 
-            element={
-              <ProtectedRoute>
-                <AdminPanel />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/admin-dashboard" 
-            element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/admin/settings" 
-            element={
-              <ProtectedRoute>
-                <AdminSettings />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/subscriptions" 
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <Subscriptions />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            } 
-          />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            {/* Public routes - no auth required */}
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            
+            {/* Onboarding Routes */}
+            <Route 
+              path="/onboarding" 
+              element={
+                <ProtectedRoute>
+                  <OnboardingDecision />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/create-business" 
+              element={
+                <ProtectedRoute>
+                  <CreateBusiness />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/join-business" 
+              element={
+                <ProtectedRoute>
+                  <JoinBusiness />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Protected Routes with Onboarding Guard */}
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute>
+                  <OnboardingGuard>
+                    <Dashboard />
+                  </OnboardingGuard>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <OnboardingGuard>
+                    <Dashboard />
+                  </OnboardingGuard>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/inventory" 
+              element={
+                <ProtectedRoute>
+                  <OnboardingGuard>
+                    <Inventory />
+                  </OnboardingGuard>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/add-product" 
+              element={
+                <ProtectedRoute>
+                  <OnboardingGuard>
+                    <AddProduct />
+                  </OnboardingGuard>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reports" 
+              element={
+                <ProtectedRoute>
+                  <OnboardingGuard>
+                    <Reports />
+                  </OnboardingGuard>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/users" 
+              element={
+                <ProtectedRoute>
+                  <OnboardingGuard>
+                    <UserManagement />
+                  </OnboardingGuard>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <ProtectedRoute>
+                  <OnboardingGuard>
+                    <BusinessSettings />
+                  </OnboardingGuard>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute>
+                  <OnboardingGuard>
+                    <UserProfile />
+                  </OnboardingGuard>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin" 
+              element={
+                <ProtectedRoute>
+                  <AdminPanel />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin-dashboard" 
+              element={
+                <ProtectedRoute>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/settings" 
+              element={
+                <ProtectedRoute>
+                  <AdminSettings />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/subscriptions" 
+              element={
+                <ProtectedRoute>
+                  <OnboardingGuard>
+                    <Subscriptions />
+                  </OnboardingGuard>
+                </ProtectedRoute>
+              } 
+            />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
