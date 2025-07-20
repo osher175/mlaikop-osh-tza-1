@@ -1,16 +1,26 @@
 
 import React, { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
+
+type UserRole = Database['public']['Enums']['user_role'];
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  allowedRoles?: UserRole[];
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  children, 
+  allowedRoles 
+}) => {
   const { user, loading } = useAuth();
+  const { userRole, isLoading: roleLoading } = useUserRole();
   const { toast } = useToast();
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
 
@@ -58,7 +68,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     checkUserStatus();
   }, [user, toast]);
 
-  if (loading || isCheckingStatus) {
+  if (loading || isCheckingStatus || roleLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -70,8 +80,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!user) {
-    window.location.href = '/auth';
-    return null;
+    return <Navigate to="/auth" replace />;
+  }
+
+  // אם הוגדרו תפקידים מותרים, בדוק אם המשתמש מורשה
+  if (allowedRoles && allowedRoles.length > 0) {
+    if (!allowedRoles.includes(userRole)) {
+      console.log(`Access denied: User role ${userRole} not in allowed roles:`, allowedRoles);
+      return <Navigate to="/unauthorized" replace />;
+    }
   }
 
   return <>{children}</>;

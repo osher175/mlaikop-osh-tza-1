@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,7 +25,6 @@ import { JoinBusiness } from "./pages/JoinBusiness";
 import { Unauthorized } from "./pages/Unauthorized";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { OnboardingGuard } from "./components/OnboardingGuard";
-import { RoleBasedRoute } from "./components/RoleBasedRoute";
 import { useUserRole } from "./hooks/useUserRole";
 import NotFound from "./pages/NotFound";
 
@@ -48,30 +48,24 @@ const App = () => (
             <Route 
               path="/onboarding" 
               element={
-                <ProtectedRoute>
-                  <RoleBasedRoute allowedForBusiness={true}>
-                    <OnboardingDecision />
-                  </RoleBasedRoute>
+                <ProtectedRoute allowedRoles={['free_user', 'pro_starter_user', 'smart_master_user', 'elite_pilot_user', 'OWNER']}>
+                  <OnboardingDecision />
                 </ProtectedRoute>
               } 
             />
             <Route 
               path="/create-business" 
               element={
-                <ProtectedRoute>
-                  <RoleBasedRoute allowedForBusiness={true}>
-                    <CreateBusiness />
-                  </RoleBasedRoute>
+                <ProtectedRoute allowedRoles={['free_user', 'pro_starter_user', 'smart_master_user', 'elite_pilot_user', 'OWNER']}>
+                  <CreateBusiness />
                 </ProtectedRoute>
               } 
             />
             <Route 
               path="/join-business" 
               element={
-                <ProtectedRoute>
-                  <RoleBasedRoute allowedForBusiness={true}>
-                    <JoinBusiness />
-                  </RoleBasedRoute>
+                <ProtectedRoute allowedRoles={['free_user', 'pro_starter_user', 'smart_master_user', 'elite_pilot_user', 'OWNER']}>
+                  <JoinBusiness />
                 </ProtectedRoute>
               } 
             />
@@ -80,40 +74,32 @@ const App = () => (
             <Route 
               path="/admin" 
               element={
-                <ProtectedRoute>
-                  <RoleBasedRoute allowedForAdmin={true}>
-                    <AdminPanel />
-                  </RoleBasedRoute>
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminPanel />
                 </ProtectedRoute>
               } 
             />
             <Route 
               path="/admin/dashboard" 
               element={
-                <ProtectedRoute>
-                  <RoleBasedRoute allowedForAdmin={true}>
-                    <AdminDashboard />
-                  </RoleBasedRoute>
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminDashboard />
                 </ProtectedRoute>
               } 
             />
             <Route 
               path="/admin/settings" 
               element={
-                <ProtectedRoute>
-                  <RoleBasedRoute allowedForAdmin={true}>
-                    <AdminSettings />
-                  </RoleBasedRoute>
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminSettings />
                 </ProtectedRoute>
               } 
             />
             <Route 
               path="/users" 
               element={
-                <ProtectedRoute>
-                  <RoleBasedRoute allowedForAdmin={true}>
-                    <UserManagement />
-                  </RoleBasedRoute>
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <UserManagement />
                 </ProtectedRoute>
               } 
             />
@@ -122,72 +108,60 @@ const App = () => (
             <Route 
               path="/dashboard" 
               element={
-                <ProtectedRoute>
-                  <RoleBasedRoute allowedForBusiness={true}>
-                    <OnboardingGuard>
-                      <Dashboard />
-                    </OnboardingGuard>
-                  </RoleBasedRoute>
+                <ProtectedRoute allowedRoles={['free_user', 'pro_starter_user', 'smart_master_user', 'elite_pilot_user', 'OWNER']}>
+                  <OnboardingGuard>
+                    <Dashboard />
+                  </OnboardingGuard>
                 </ProtectedRoute>
               } 
             />
             <Route 
               path="/inventory" 
               element={
-                <ProtectedRoute>
-                  <RoleBasedRoute allowedForBusiness={true}>
-                    <OnboardingGuard>
-                      <Inventory />
-                    </OnboardingGuard>
-                  </RoleBasedRoute>
+                <ProtectedRoute allowedRoles={['free_user', 'pro_starter_user', 'smart_master_user', 'elite_pilot_user', 'OWNER']}>
+                  <OnboardingGuard>
+                    <Inventory />
+                  </OnboardingGuard>
                 </ProtectedRoute>
               } 
             />
             <Route 
               path="/add-product" 
               element={
-                <ProtectedRoute>
-                  <RoleBasedRoute allowedForBusiness={true}>
-                    <OnboardingGuard>
-                      <AddProduct />
-                    </OnboardingGuard>
-                  </RoleBasedRoute>
+                <ProtectedRoute allowedRoles={['smart_master_user', 'elite_pilot_user', 'OWNER']}>
+                  <OnboardingGuard>
+                    <AddProduct />
+                  </OnboardingGuard>
                 </ProtectedRoute>
               } 
             />
             <Route 
               path="/reports" 
               element={
-                <ProtectedRoute>
-                  <RoleBasedRoute allowedForBusiness={true}>
-                    <OnboardingGuard>
-                      <Reports />
-                    </OnboardingGuard>
-                  </RoleBasedRoute>
+                <ProtectedRoute allowedRoles={['smart_master_user', 'elite_pilot_user', 'OWNER']}>
+                  <OnboardingGuard>
+                    <Reports />
+                  </OnboardingGuard>
                 </ProtectedRoute>
               } 
             />
             <Route 
               path="/settings" 
               element={
-                <ProtectedRoute>
-                  <RoleBasedRoute allowedForBusiness={true}>
-                    <OnboardingGuard>
-                      <BusinessSettings />
-                    </OnboardingGuard>
-                  </RoleBasedRoute>
+                <ProtectedRoute allowedRoles={['free_user', 'pro_starter_user', 'smart_master_user', 'elite_pilot_user', 'OWNER']}>
+                  <OnboardingGuard>
+                    <BusinessSettings />
+                  </OnboardingGuard>
                 </ProtectedRoute>
               } 
             />
             <Route 
               path="/subscriptions" 
               element={
-                <ProtectedRoute>
-                  <RoleBasedRoute allowedForBusiness={true}>
-                    <OnboardingGuard>
-                      <Subscriptions />
-                    </OnboardingGuard>
-                  </RoleBasedRoute>
+                <ProtectedRoute allowedRoles={['free_user', 'pro_starter_user', 'smart_master_user', 'elite_pilot_user', 'OWNER']}>
+                  <OnboardingGuard>
+                    <Subscriptions />
+                  </OnboardingGuard>
                 </ProtectedRoute>
               } 
             />
@@ -197,9 +171,7 @@ const App = () => (
               path="/profile" 
               element={
                 <ProtectedRoute>
-                  <RoleBasedRoute allowedForAdmin={true} allowedForBusiness={true}>
-                    <UserProfile />
-                  </RoleBasedRoute>
+                  <UserProfile />
                 </ProtectedRoute>
               } 
             />

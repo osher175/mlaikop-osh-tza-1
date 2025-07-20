@@ -8,10 +8,10 @@ import { useUserRole } from '@/hooks/useUserRole';
 
 export const Unauthorized: React.FC = () => {
   const navigate = useNavigate();
-  const { permissions } = useUserRole();
+  const { userRole, permissions, getRoleDisplayName } = useUserRole();
 
   const handleGoHome = () => {
-    // Redirect based on user role
+    // הפניה לפי תפקיד המשתמש
     if (permissions.isPlatformAdmin) {
       navigate('/admin/dashboard');
     } else {
@@ -34,12 +34,20 @@ export const Unauthorized: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center space-y-4">
+          <div className="bg-gray-100 p-3 rounded-lg">
+            <p className="text-sm text-gray-600">
+              <strong>התפקיד שלך:</strong> {getRoleDisplayName(userRole)}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              ({userRole})
+            </p>
+          </div>
           <p className="text-sm text-gray-500">
             אם אתה חושב שזו טעות, אנא פנה למנהל המערכת
           </p>
           <Button onClick={handleGoHome} className="w-full">
             <ArrowRight className="w-4 h-4 ml-2" />
-            חזור לעמוד הבית
+            חזור לתפקיד שלי
           </Button>
         </CardContent>
       </Card>
