@@ -1,175 +1,164 @@
+
 import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { useSubscription } from '@/hooks/useSubscription';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   Home, 
   Package, 
+  PlusCircle, 
   BarChart3, 
-  Settings, 
-  Bell, 
   Users, 
-  Building2,
+  Settings,
+  Shield,
   Crown,
-  AlertTriangle
+  User
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { useUserRole } from '@/hooks/useUserRole';
 
-interface SidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface SidebarItemProps {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  isActive?: boolean;
+  badge?: React.ReactNode;
+  onClick?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { subscription, isTrialValid, daysLeftInTrial, isSubscriptionActive } = useSubscription();
+const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, label, isActive, badge, onClick }) => (
+  <Link
+    to={to}
+    onClick={onClick}
+    className={cn(
+      "flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors rounded-lg mx-2",
+      isActive && "bg-primary/10 text-primary border-l-4 border-primary"
+    )}
+  >
+    {icon}
+    <span className="font-medium truncate">{label}</span>
+    {badge && <span className="mr-auto">{badge}</span>}
+  </Link>
+);
 
-  const navigationItems = [
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
+  const location = useLocation();
+  const { userRole, permissions } = useUserRole();
+
+  // Admin menu items - only for platform admins
+  const adminMenuItems = [
     {
-      to: '/',
-      icon: Home,
-      label: 'דף הבית',
-      requiresSubscription: true
+      to: '/admin/dashboard',
+      icon: <BarChart3 className="w-5 h-5" />,
+      label: 'דשבורד מנהל',
+      show: permissions.isPlatformAdmin
     },
     {
-      to: '/inventory',
-      icon: Package,
-      label: 'מלאי',
-      requiresSubscription: true
+      to: '/admin',
+      icon: <Shield className="w-5 h-5" />,
+      label: 'פאנל מנהל',
+      show: permissions.isPlatformAdmin
     },
     {
-      to: '/reports',
-      icon: BarChart3,
-      label: 'דוחות',
-      requiresSubscription: true
-    },
-    {
-      to: '/suppliers',
-      icon: Building2,
-      label: 'ספקים',
-      requiresSubscription: true
-    },
-    {
-      to: '/notification-management',
-      icon: Bell,
-      label: 'ניהול התראות',
-      requiresSubscription: true
-    },
-    {
-      to: '/settings',
-      icon: Settings,
-      label: 'הגדרות',
-      requiresSubscription: false
-    },
-    {
-      to: '/subscriptions',
-      icon: Crown,
-      label: 'מנויים',
-      requiresSubscription: false
-    },
-    {
-      to: '/user-management',
-      icon: Users,
+      to: '/users',
+      icon: <Users className="w-5 h-5" />,
       label: 'ניהול משתמשים',
-      requiresSubscription: false
+      show: permissions.isPlatformAdmin
+    },
+    {
+      to: '/admin/settings',
+      icon: <Settings className="w-5 h-5" />,
+      label: 'הגדרות מערכת',
+      show: permissions.isPlatformAdmin
+    },
+    {
+      to: '/profile',
+      icon: <User className="w-5 h-5" />,
+      label: 'פרופיל אישי',
+      show: permissions.isPlatformAdmin
     }
   ];
 
+  // Business menu items - only for non-admin users
+  const businessMenuItems = [
+    {
+      to: '/dashboard',
+      icon: <Home className="w-5 h-5" />,
+      label: 'לוח הבקרה',
+      show: !permissions.isPlatformAdmin
+    },
+    {
+      to: '/inventory',
+      icon: <Package className="w-5 h-5" />,
+      label: 'מלאי',
+      show: !permissions.isPlatformAdmin && permissions.canViewProducts
+    },
+    {
+      to: '/add-product',
+      icon: <PlusCircle className="w-5 h-5" />,
+      label: 'הוספת מוצר',
+      show: !permissions.isPlatformAdmin && permissions.canEditProducts
+    },
+    {
+      to: '/reports',
+      icon: <BarChart3 className="w-5 h-5" />,
+      label: 'דוחות',
+      show: !permissions.isPlatformAdmin && permissions.canViewReports
+    },
+    {
+      to: '/settings',
+      icon: <Settings className="w-5 h-5" />,
+      label: 'הגדרות עסק',
+      show: !permissions.isPlatformAdmin && permissions.canManageSettings
+    },
+    {
+      to: '/subscriptions',
+      icon: <Crown className="w-5 h-5" />,
+      label: 'ניהול מנוי',
+      show: !permissions.isPlatformAdmin
+    }
+  ];
+
+  const currentMenuItems = permissions.isPlatformAdmin ? adminMenuItems : businessMenuItems;
+
   return (
-    <>
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={onClose}
-        />
-      )}
-      
-      <aside className={`
-        fixed top-0 right-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50
-        ${isOpen ? 'translate-x-0' : 'translate-x-full'}
-        lg:relative lg:translate-x-0
-      `}>
-        <div className="flex flex-col h-full">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-bold text-gray-800" dir="rtl">מלאיקו</h2>
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      {/* Header */}
+      <div className="p-6 border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-center justify-center w-full h-32">
+          <div className="w-24 h-24 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+            <Package className="w-16 h-16 text-white" />
           </div>
-
-          {subscription && (
-            <div className="p-4 border-b bg-gray-50">
-              {subscription.status === 'trial' && isTrialValid && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-orange-600">
-                    <Crown className="h-4 w-4" />
-                    <span className="text-sm font-medium">ניסיון חינם</span>
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    נותרו {daysLeftInTrial} ימים
-                  </div>
-                  <Button 
-                    size="sm" 
-                    className="w-full"
-                    onClick={() => window.location.href = '/subscribe'}
-                  >
-                    שדרג עכשיו
-                  </Button>
-                </div>
-              )}
-              {subscription.status === 'active' && (
-                <div className="flex items-center gap-2 text-green-600">
-                  <Crown className="h-4 w-4" />
-                  <span className="text-sm font-medium">מנוי פעיל</span>
-                </div>
-              )}
-              {!isSubscriptionActive && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-red-600">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm font-medium">מנוי לא פעיל</span>
-                  </div>
-                  <Button 
-                    size="sm" 
-                    className="w-full"
-                    onClick={() => window.location.href = '/subscribe'}
-                  >
-                    חדש מנוי
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          <nav className="flex-1 p-4 space-y-2" dir="rtl">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-              const isRestricted = item.requiresSubscription && !isSubscriptionActive;
-              
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  onClick={onClose}
-                  className={({ isActive }) => `
-                    flex items-center gap-3 px-3 py-2 rounded-lg transition-colors
-                    ${isActive ? 'bg-primary text-primary-foreground' : 'text-gray-700 hover:bg-gray-100'}
-                    ${isRestricted ? 'opacity-50 cursor-not-allowed' : ''}
-                  `}
-                  {...(isRestricted && { 
-                    onClick: (e) => {
-                      e.preventDefault();
-                      window.location.href = '/subscribe?expired=true';
-                    }
-                  })}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span>{item.label}</span>
-                  {isRestricted && (
-                    <Badge variant="secondary" className="text-xs">נדרש מנוי</Badge>
-                  )}
-                </NavLink>
-              );
-            })}
-          </nav>
+          <span className="text-2xl font-bold text-gray-900 truncate mr-3">Mlaiko</span>
         </div>
-      </aside>
-    </>
+      </div>
+
+      {/* Navigation Menu - Scrollable */}
+      <div className="flex-1 overflow-y-auto">
+        <nav className="space-y-1 py-4">
+          {/* Display appropriate menu items based on user role */}
+          {currentMenuItems.filter(item => item.show).map((item) => (
+            <SidebarItem
+              key={item.to}
+              to={item.to}
+              icon={item.icon}
+              label={item.label}
+              isActive={location.pathname === item.to}
+              badge={permissions.isPlatformAdmin ? <Crown className="w-4 h-4 text-red-500 flex-shrink-0" /> : undefined}
+              onClick={onNavigate}
+            />
+          ))}
+        </nav>
+      </div>
+
+      {/* Footer - Always at bottom */}
+      <div className="p-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+        <div className="text-xs text-gray-500 text-center">
+          © 2024 Mlaiko
+        </div>
+      </div>
+    </div>
   );
 };

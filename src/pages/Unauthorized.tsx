@@ -1,43 +1,46 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Shield, ArrowRight, Home } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Shield, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useUserRole } from '@/hooks/useUserRole';
 
 export const Unauthorized: React.FC = () => {
+  const navigate = useNavigate();
+  const { permissions } = useUserRole();
+
+  const handleGoHome = () => {
+    // Redirect based on user role
+    if (permissions.isPlatformAdmin) {
+      navigate('/admin/dashboard');
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4" dir="rtl">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-            <Shield className="w-6 h-6 text-red-600" />
+          <div className="flex justify-center mb-4">
+            <Shield className="h-16 w-16 text-red-500" />
           </div>
-          <CardTitle className="text-xl font-bold text-gray-900">
-            אין הרשאת גישה
+          <CardTitle className="text-2xl font-bold text-gray-900">
+            גישה לא מורשית
           </CardTitle>
           <CardDescription className="text-gray-600">
-            אין לך הרשאות מספיקות כדי לגשת לדף זה
+            אין לך הרשאה לגשת לעמוד זה
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-sm text-gray-500 text-center">
-            אם אתה חושב שזה טעות, אנא פנה למנהל המערכת או לבעל העסק
-          </div>
-          <div className="flex flex-col gap-2">
-            <Button asChild className="w-full">
-              <Link to="/">
-                <Home className="w-4 h-4 ml-2" />
-                חזור לדף הבית
-              </Link>
-            </Button>
-            <Button variant="outline" asChild className="w-full">
-              <Link to="/profile">
-                <ArrowRight className="w-4 h-4 ml-2" />
-                עבור לפרופיל
-              </Link>
-            </Button>
-          </div>
+        <CardContent className="text-center space-y-4">
+          <p className="text-sm text-gray-500">
+            אם אתה חושב שזו טעות, אנא פנה למנהל המערכת
+          </p>
+          <Button onClick={handleGoHome} className="w-full">
+            <ArrowRight className="w-4 h-4 ml-2" />
+            חזור לעמוד הבית
+          </Button>
         </CardContent>
       </Card>
     </div>

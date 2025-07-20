@@ -1,9 +1,8 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Dashboard } from "./pages/Dashboard";
 import { Auth } from "./pages/Auth";
@@ -22,8 +21,11 @@ import { AdminSettings } from "./pages/AdminSettings";
 import { OnboardingDecision } from "./pages/OnboardingDecision";
 import { CreateBusiness } from "./pages/CreateBusiness";
 import { JoinBusiness } from "./pages/JoinBusiness";
+import { Unauthorized } from "./pages/Unauthorized";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { OnboardingGuard } from "./components/OnboardingGuard";
+import { RoleBasedRoute } from "./components/RoleBasedRoute";
+import { useUserRole } from "./hooks/useUserRole";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,13 +42,16 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
             
-            {/* Onboarding Routes */}
+            {/* Onboarding Routes - only for business users */}
             <Route 
               path="/onboarding" 
               element={
                 <ProtectedRoute>
-                  <OnboardingDecision />
+                  <RoleBasedRoute allowedForBusiness={true}>
+                    <OnboardingDecision />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -54,7 +59,9 @@ const App = () => (
               path="/create-business" 
               element={
                 <ProtectedRoute>
-                  <CreateBusiness />
+                  <RoleBasedRoute allowedForBusiness={true}>
+                    <CreateBusiness />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -62,105 +69,31 @@ const App = () => (
               path="/join-business" 
               element={
                 <ProtectedRoute>
-                  <JoinBusiness />
+                  <RoleBasedRoute allowedForBusiness={true}>
+                    <JoinBusiness />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
             
-            {/* Protected Routes with Onboarding Guard */}
-            <Route 
-              path="/" 
-              element={
-                <ProtectedRoute>
-                  <OnboardingGuard>
-                    <Dashboard />
-                  </OnboardingGuard>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <OnboardingGuard>
-                    <Dashboard />
-                  </OnboardingGuard>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/inventory" 
-              element={
-                <ProtectedRoute>
-                  <OnboardingGuard>
-                    <Inventory />
-                  </OnboardingGuard>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/add-product" 
-              element={
-                <ProtectedRoute>
-                  <OnboardingGuard>
-                    <AddProduct />
-                  </OnboardingGuard>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/reports" 
-              element={
-                <ProtectedRoute>
-                  <OnboardingGuard>
-                    <Reports />
-                  </OnboardingGuard>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/users" 
-              element={
-                <ProtectedRoute>
-                  <OnboardingGuard>
-                    <UserManagement />
-                  </OnboardingGuard>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/settings" 
-              element={
-                <ProtectedRoute>
-                  <OnboardingGuard>
-                    <BusinessSettings />
-                  </OnboardingGuard>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/profile" 
-              element={
-                <ProtectedRoute>
-                  <OnboardingGuard>
-                    <UserProfile />
-                  </OnboardingGuard>
-                </ProtectedRoute>
-              } 
-            />
+            {/* Admin Routes - only for platform admins */}
             <Route 
               path="/admin" 
               element={
                 <ProtectedRoute>
-                  <AdminPanel />
+                  <RoleBasedRoute allowedForAdmin={true}>
+                    <AdminPanel />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
             <Route 
-              path="/admin-dashboard" 
+              path="/admin/dashboard" 
               element={
                 <ProtectedRoute>
-                  <AdminDashboard />
+                  <RoleBasedRoute allowedForAdmin={true}>
+                    <AdminDashboard />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -168,7 +101,81 @@ const App = () => (
               path="/admin/settings" 
               element={
                 <ProtectedRoute>
-                  <AdminSettings />
+                  <RoleBasedRoute allowedForAdmin={true}>
+                    <AdminSettings />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/users" 
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedForAdmin={true}>
+                    <UserManagement />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Business Routes - only for business users */}
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedForBusiness={true}>
+                    <OnboardingGuard>
+                      <Dashboard />
+                    </OnboardingGuard>
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/inventory" 
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedForBusiness={true}>
+                    <OnboardingGuard>
+                      <Inventory />
+                    </OnboardingGuard>
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/add-product" 
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedForBusiness={true}>
+                    <OnboardingGuard>
+                      <AddProduct />
+                    </OnboardingGuard>
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reports" 
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedForBusiness={true}>
+                    <OnboardingGuard>
+                      <Reports />
+                    </OnboardingGuard>
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedForBusiness={true}>
+                    <OnboardingGuard>
+                      <BusinessSettings />
+                    </OnboardingGuard>
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -176,13 +183,38 @@ const App = () => (
               path="/subscriptions" 
               element={
                 <ProtectedRoute>
-                  <OnboardingGuard>
-                    <Subscriptions />
-                  </OnboardingGuard>
+                  <RoleBasedRoute allowedForBusiness={true}>
+                    <OnboardingGuard>
+                      <Subscriptions />
+                    </OnboardingGuard>
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            
+            {/* Profile - available for both admin and business users */}
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedForAdmin={true} allowedForBusiness={true}>
+                    <UserProfile />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Root route - redirect based on user role */}
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute>
+                  <AdminDashboardRedirect />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
@@ -190,5 +222,20 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
+
+// Component to redirect admin to admin dashboard and business users to business dashboard
+const AdminDashboardRedirect = () => {
+  const { permissions } = useUserRole();
+  
+  if (permissions.isPlatformAdmin) {
+    return <Navigate to="/admin/dashboard" replace />;
+  } else {
+    return (
+      <OnboardingGuard>
+        <Dashboard />
+      </OnboardingGuard>
+    );
+  }
+};
 
 export default App;
