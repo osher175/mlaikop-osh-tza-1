@@ -1,19 +1,10 @@
 
 import React, { useState } from 'react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
-import { useBusinessAccess } from '@/hooks/useBusinessAccess';
+import { AlertTriangle } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type Supplier = Database['public']['Tables']['suppliers']['Row'];
@@ -27,112 +18,78 @@ interface DeleteSupplierDialogProps {
 export const DeleteSupplierDialog: React.FC<DeleteSupplierDialogProps> = ({
   open,
   onOpenChange,
-  supplier
+  supplier,
 }) => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const { businessContext } = useBusinessAccess();
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
-    if (!supplier || !businessContext?.business_id) {
-      toast({
-        title: 'שגיאה',
-        description: 'לא ניתן למחוק את הספק',
-        variant: 'destructive',
-      });
-      return;
-    }
+    if (!supplier) return;
 
-    setIsDeleting(true);
-
+    setLoading(true);
     try {
-      // First check if supplier is being used by any products
-      const { data: products, error: productsError } = await supabase
-        .from('products')
-        .select('id, name')
-        .eq('supplier_id', supplier.id)
-        .eq('business_id', businessContext.business_id)
-        .limit(1);
-
-      if (productsError) {
-        console.error('Error checking products:', productsError);
-        throw productsError;
-      }
-
-      if (products && products.length > 0) {
-        toast({
-          title: 'לא ניתן למחוק',
-          description: 'לא ניתן למחוק ספק שמשויך למוצרים. הסר תחילה את השיוך למוצרים.',
-          variant: 'destructive',
-        });
-        setIsDeleting(false);
-        return;
-      }
-
-      // Delete the supplier
       const { error } = await supabase
         .from('suppliers')
         .delete()
-        .eq('id', supplier.id)
-        .eq('business_id', businessContext.business_id);
+        .eq('id', supplier.id);
 
-      if (error) {
-        console.error('Error deleting supplier:', error);
-        toast({
-          title: 'שגיאה',
-          description: 'אירעה שגיאה במחיקת הספק',
-          variant: 'destructive',
-        });
-        return;
-      }
+      if (error) throw error;
 
       toast({
-        title: 'הצלחה!',
-        description: `הספק "${supplier.name}" נמחק בהצלחה`,
+        title: "ספק נמחק בהצלחה",
+        description: `הספק "${supplier.name}" נמחק מהמערכת`,
       });
 
-      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       onOpenChange(false);
-
     } catch (error) {
       console.error('Error deleting supplier:', error);
       toast({
-        title: 'שגיאה',
-        description: 'אירעה שגיאה בלתי צפויה',
-        variant: 'destructive',
+        title: "שגיאה במחיקת הספק",
+        description: "אנא נסה שוב",
+        variant: "destructive",
       });
     } finally {
-      setIsDeleting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent dir="rtl">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="text-right">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-red-600">
+            <AlertTriangle className="w-5 h-5" />
             מחיקת ספק
-          </AlertDialogTitle>
-          <AlertDialogDescription className="text-right">
-            האם אתה בטוח שברצונך למחוק את הספק "{supplier?.name}"?
-            <br />
-            פעולה זו אינה הפיכה.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter className="flex-row-reverse gap-2">
-          <AlertDialogCancel disabled={isDeleting}>
-            ביטול
-          </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="bg-red-600 hover:bg-red-700"
-          >
-            {isDeleting ? 'מוחק...' : 'מחק'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            האם אתה בטוח שברצונך למחוק את הספק{' '}
+            <span className="font-semibold">"{supplier?.name}"</span>?
+          </p>
+          <p className="text-sm text-gray-500">
+            פעולה זו אינה ניתנת לביטול. כל המוצרים המקושרים לספק זה יישארו ללא ספק.
+          </p>
+          
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={loading}
+              className="flex-1"
+            >
+              {loading ? 'מוחק...' : 'מחק ספק'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="flex-1"
+            >
+              ביטול
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };

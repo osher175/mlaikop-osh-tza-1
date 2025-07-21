@@ -10,7 +10,8 @@ import {
   Settings,
   Shield,
   Crown,
-  User
+  User,
+  Truck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -93,6 +94,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
       to: '/inventory',
       icon: <Package className="w-5 h-5" />,
       label: 'מלאי',
+      show: !permissions.isPlatformAdmin && permissions.canViewProducts
+    },
+    {
+      to: '/suppliers',
+      icon: <Truck className="w-5 h-5" />,
+      label: 'ספקים',
       show: !permissions.isPlatformAdmin && permissions.canViewProducts
     },
     {

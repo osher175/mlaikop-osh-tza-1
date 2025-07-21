@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Auth } from "@/pages/Auth";
 import { Dashboard } from "@/pages/Dashboard";
 import { Inventory } from "@/pages/Inventory";
+import { Suppliers } from "@/pages/Suppliers";
 import { AddProduct } from "@/pages/AddProduct";
 import { Reports } from "@/pages/Reports";
 import { UserProfile } from "@/pages/UserProfile";
@@ -55,6 +56,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
                     <Inventory />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/suppliers"
+                element={
+                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                    <Suppliers />
                   </ProtectedRoute>
                 }
               />
