@@ -1,3 +1,4 @@
+
 import React, { useMemo, useEffect } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import { Card } from '@/components/ui/card';
@@ -195,6 +196,7 @@ export const VirtualizedInventoryTable: React.FC<VirtualizedInventoryTableProps>
         <div className="h-[500px]">
           <List
             height={500}
+            width="100%"
             itemCount={filteredProducts.length}
             itemSize={120}
             className="scrollbar-thin"
