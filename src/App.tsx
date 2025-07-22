@@ -1,9 +1,15 @@
 
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import StockApprovalRequests from './pages/StockApprovalRequests';
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import StockApprovalRequests from './pages/StockApprovalRequests';
 import Navbar from './components/Navbar';
+
+// Create QueryClient
+const queryClient = new QueryClient();
 
 // Create a minimal Unauthorized component
 const Unauthorized = () => (
@@ -13,32 +19,26 @@ const Unauthorized = () => (
   </div>
 );
 
-// Create a minimal RoleBasedRoute component
-const RoleBasedRoute = ({ 
-  children, 
-  allowedForBusiness = false 
-}: { 
-  children: React.ReactNode, 
-  allowedForBusiness?: boolean 
-}) => {
-  return <>{children}</>;
-};
-
 function App() {
   return (
-    <Router>
-      <Navbar />
-      <Toaster />
-      <Routes>
-        <Route path="/stock-approval" element={<StockApprovalRequests />} />
-        
-        {/* Simplified routes */}
-        <Route path="/" element={<div className="p-10">Inventory Management Home</div>} />
-        
-        {/* Unauthorized Route */}
-        <Route path="/unauthorized" element={<Unauthorized />} />
-      </Routes>
-    </Router>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Router>
+          <Navbar />
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route path="/stock-approval" element={<StockApprovalRequests />} />
+            
+            {/* Simplified routes */}
+            <Route path="/" element={<div className="p-10">Inventory Management Home</div>} />
+            
+            {/* Unauthorized Route */}
+            <Route path="/unauthorized" element={<Unauthorized />} />
+          </Routes>
+        </Router>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
 

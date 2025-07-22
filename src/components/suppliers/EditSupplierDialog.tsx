@@ -1,29 +1,47 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useSuppliers } from '@/hooks/useSuppliers';
-import { useBusinessAccess } from '@/hooks/useBusinessAccess';
+import { Supplier } from '@/hooks/useSuppliers';
 
-interface AddSupplierDialogProps {
+interface EditSupplierDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  supplier: Supplier | null;
+  onSave: (supplier: Supplier) => void;
 }
 
-const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({ isOpen, onClose }) => {
+const EditSupplierDialog: React.FC<EditSupplierDialogProps> = ({
+  isOpen,
+  onClose,
+  supplier,
+  onSave
+}) => {
   const { toast } = useToast();
-  const { createSupplier } = useSuppliers();
-  const { businessContext } = useBusinessAccess();
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [agentName, setAgentName] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
+  const [name, setName] = React.useState('');
+  const [phone, setPhone] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [agentName, setAgentName] = React.useState('');
+  const [contactEmail, setContactEmail] = React.useState('');
+  const [salesAgentName, setSalesAgentName] = React.useState('');
+  const [salesAgentPhone, setSalesAgentPhone] = React.useState('');
 
-  const handleSubmit = () => {
+  React.useEffect(() => {
+    if (supplier) {
+      setName(supplier.name || '');
+      setPhone(supplier.phone || '');
+      setEmail(supplier.email || '');
+      setAgentName(supplier.agent_name || '');
+      setContactEmail(supplier.contact_email || '');
+      setSalesAgentName(supplier.sales_agent_name || '');
+      setSalesAgentPhone(supplier.sales_agent_phone || '');
+    }
+  }, [supplier]);
+
+  const handleSave = () => {
     if (!name.trim()) {
       toast({
         title: "שם ספק נדרש",
@@ -33,46 +51,28 @@ const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({ isOpen, onClose }
       return;
     }
 
-    if (!businessContext?.business_id) {
-      toast({
-        title: "שגיאה",
-        description: "לא ניתן להוסיף ספק - חסר מזהה עסק",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!supplier) return;
 
-    createSupplier({
+    const updatedSupplier: Supplier = {
+      ...supplier,
       name,
       phone,
       email,
       agent_name: agentName,
       contact_email: contactEmail,
-      sales_agent_name: '',
-      sales_agent_phone: '',
-      business_id: businessContext.business_id
-    });
+      sales_agent_name: salesAgentName,
+      sales_agent_phone: salesAgentPhone
+    };
 
-    // Reset form and close dialog
-    setName('');
-    setPhone('');
-    setEmail('');
-    setAgentName('');
-    setContactEmail('');
+    onSave(updatedSupplier);
     onClose();
-
-    toast({
-      title: "ספק נוסף בהצלחה",
-      description: `הספק ${name} נוסף למערכת`,
-      variant: "default",
-    });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>הוספת ספק חדש</DialogTitle>
+          <DialogTitle>עריכת ספק</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
@@ -130,10 +130,32 @@ const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({ isOpen, onClose }
               className="col-span-3"
             />
           </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="salesAgentName" className="text-right">
+              שם סוכן מכירות
+            </Label>
+            <Input
+              id="salesAgentName"
+              value={salesAgentName}
+              onChange={(e) => setSalesAgentName(e.target.value)}
+              className="col-span-3"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="salesAgentPhone" className="text-right">
+              טלפון סוכן מכירות
+            </Label>
+            <Input
+              id="salesAgentPhone"
+              value={salesAgentPhone}
+              onChange={(e) => setSalesAgentPhone(e.target.value)}
+              className="col-span-3"
+            />
+          </div>
         </div>
         <DialogFooter>
-          <Button type="submit" onClick={handleSubmit}>
-            הוסף ספק
+          <Button type="submit" onClick={handleSave}>
+            שמור
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -141,4 +163,4 @@ const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({ isOpen, onClose }
   );
 };
 
-export default AddSupplierDialog;
+export default EditSupplierDialog;
