@@ -1,14 +1,13 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { FixedSizeList as List } from 'react-window';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Eye } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { StockZeroAlert } from './StockZeroAlert';
-import { useStockZeroAlert } from '@/hooks/useStockZeroAlert';
+import { Badge } from '@/components/ui/badge';
+import { Package, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-interface OptimizedProduct {
+interface Product {
   id: string;
   name: string;
   barcode: string | null;
@@ -20,19 +19,21 @@ interface OptimizedProduct {
   category_name: string | null;
   supplier_name: string | null;
   stock_status: string;
-  search_rank: number;
 }
 
 interface VirtualizedInventoryTableProps {
-  products: OptimizedProduct[];
+  products: Product[];
   searchTerm: string;
-  onEditProduct: (product: any) => void;
-  onDeleteProduct: (product: any) => void;
-  onViewProductImage: (product: any) => void;
+  onEditProduct: (product: Product) => void;
+  onDeleteProduct: (product: Product) => void;
+  onViewProductImage: (product: Product) => void;
   activeStockFilter: 'all' | 'inStock' | 'lowStock' | 'outOfStock';
 }
 
-export const VirtualizedInventoryTable: React.FC<VirtualizedInventoryTableProps> = ({
+const ROW_HEIGHT = 80;
+const HEADER_HEIGHT = 60;
+
+export const VirtualizedInventoryTable: React.FC<VirtualizedInventoryTableProps> = React.memo(({
   products,
   searchTerm,
   onEditProduct,
@@ -40,173 +41,168 @@ export const VirtualizedInventoryTable: React.FC<VirtualizedInventoryTableProps>
   onViewProductImage,
   activeStockFilter,
 }) => {
-  const { alertProduct, hideAlert, triggerSendToSupplier, checkForStockChanges } = useStockZeroAlert();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
-  // Check for stock changes (not just zero stock products)
-  useEffect(() => {
-    checkForStockChanges(products);
-  }, [products, checkForStockChanges]);
+  const getStatusBadge = (product: Product) => {
+    switch (product.stock_status) {
+      case 'out_of_stock':
+        return <Badge className="bg-red-500 text-white text-xs">אזל</Badge>;
+      case 'low_stock':
+        return <Badge className="bg-yellow-500 text-white flex items-center gap-1 text-xs">
+          <AlertTriangle className="w-3 h-3" />
+          נמוך
+        </Badge>;
+      default:
+        return <Badge className="bg-green-500 text-white text-xs">במלאי</Badge>;
+    }
+  };
 
   const filteredProducts = useMemo(() => {
-    let filtered = products;
-
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(product =>
+    return products.filter(product => {
+      // Filter by search term
+      const matchesSearch = !searchTerm || 
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.barcode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.location?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+        (product.barcode && product.barcode.includes(searchTerm)) ||
+        (product.location && product.location.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    // Apply stock filter
-    switch (activeStockFilter) {
-      case 'inStock':
-        filtered = filtered.filter(product => product.stock_status === 'in_stock');
-        break;
-      case 'lowStock':
-        filtered = filtered.filter(product => product.stock_status === 'low_stock');
-        break;
-      case 'outOfStock':
-        filtered = filtered.filter(product => product.stock_status === 'out_of_stock');
-        break;
-    }
+      if (!matchesSearch) return false;
 
-    return filtered.sort((a, b) => b.search_rank - a.search_rank);
+      // Filter by stock status
+      switch (activeStockFilter) {
+        case 'inStock':
+          return product.stock_status === 'in_stock';
+        case 'lowStock':
+          return product.stock_status === 'low_stock';
+        case 'outOfStock':
+          return product.stock_status === 'out_of_stock';
+        case 'all':
+        default:
+          return true;
+      }
+    });
   }, [products, searchTerm, activeStockFilter]);
 
-  const ProductRow = ({ index, style }: { index: number; style: React.CSSProperties }) => {
+  const getFilterTitle = () => {
+    switch (activeStockFilter) {
+      case 'inStock':
+        return 'מוצרים במלאי';
+      case 'lowStock':
+        return 'מוצרים במלאי נמוך';
+      case 'outOfStock':
+        return 'מוצרים שאזלו';
+      case 'all':
+      default:
+        return 'רשימת מוצרים';
+    }
+  };
+
+  const ProductRow = React.memo(({ index, style }: { index: number; style: React.CSSProperties }) => {
     const product = filteredProducts[index];
     
-    const getStockBadge = (stockStatus: string, quantity: number) => {
-      switch (stockStatus) {
-        case 'out_of_stock':
-          return { status: 'אזל', color: 'bg-red-100 text-red-800' };
-        case 'low_stock':
-          return { status: 'נמוך', color: 'bg-yellow-100 text-yellow-800' };
-        case 'in_stock':
-          return { status: 'במלאי', color: 'bg-green-100 text-green-800' };
-        default:
-          return { status: 'לא ידוע', color: 'bg-gray-100 text-gray-800' };
-      }
-    };
-
-    const stockInfo = getStockBadge(product.stock_status, product.quantity);
-
     return (
-      <div style={style} className="px-2">
-        <Card className="p-4 mb-2 hover:shadow-md transition-shadow">
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
-            <div className="md:col-span-2">
-              <div className="font-medium text-gray-900">{product.name}</div>
-              {product.barcode && (
-                <div className="text-sm text-gray-500">ברקוד: {product.barcode}</div>
-              )}
-            </div>
-            
-            <div className="text-center">
-              <Badge className={cn('text-xs', stockInfo.color)}>
-                {stockInfo.status}
-              </Badge>
-              <div className="text-sm text-gray-600 mt-1">{product.quantity} יח'</div>
-            </div>
-            
-            <div className="text-center">
-              <div className="text-sm text-gray-600">
-                {product.category_name || 'ללא קטגוריה'}
+      <div style={style} className="px-2 py-1">
+        <Card className={`h-full ${product.stock_status === 'low_stock' ? 'border-l-4 border-l-yellow-500' : ''}`}>
+          <CardContent className="p-3 h-full">
+            <div className="flex items-center gap-3 h-full">
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Package className="w-6 h-6 text-gray-400" />
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between mb-1">
+                  <h3 className="text-sm font-semibold text-gray-900 truncate">
+                    {product.stock_status === 'low_stock' && (
+                      <AlertTriangle className="w-4 h-4 text-yellow-600 inline ml-2" />
+                    )}
+                    {product.name}
+                  </h3>
+                  {getStatusBadge(product)}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                  <span>כמות: {product.quantity}</span>
+                  <span>מחיר: ₪{product.price || '-'}</span>
+                  <span>מיקום: {product.location || '-'}</span>
+                  <span>קטגוריה: {product.category_name || '-'}</span>
+                </div>
+              </div>
+              
+              <div className="flex gap-1 flex-shrink-0">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => onEditProduct(product)}
+                  className="h-8 w-8 p-0"
+                  title="ערוך מוצר"
+                >
+                  <Edit className="w-3 h-3" />
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
+                  onClick={() => onDeleteProduct(product)}
+                  title="מחק מוצר"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
               </div>
             </div>
-            
-            <div className="text-center">
-              <div className="text-sm text-gray-600">
-                {product.location || 'לא צוין'}
-              </div>
-            </div>
-            
-            <div className="flex justify-center gap-1">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onEditProduct(product)}
-                className="h-8 w-8 p-0"
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onViewProductImage(product)}
-                className="h-8 w-8 p-0"
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-              
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onDeleteProduct(product)}
-                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          </CardContent>
         </Card>
       </div>
     );
-  };
+  });
+
+  ProductRow.displayName = 'ProductRow';
 
   if (filteredProducts.length === 0) {
     return (
-      <>
-        <div className="text-center py-12" dir="rtl">
-          <div className="text-gray-500 mb-2">לא נמצאו מוצרים</div>
-          <div className="text-sm text-gray-400">נסה לשנות את הפילטרים או הוסף מוצרים חדשים</div>
-        </div>
-        
-        <StockZeroAlert
-          open={!!alertProduct}
-          onOpenChange={hideAlert}
-          productName={alertProduct?.name || ''}
-          productId={alertProduct?.id || ''}
-          onConfirm={() => triggerSendToSupplier(alertProduct?.id || '')}
-        />
-      </>
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>{getFilterTitle()} (0)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500 mb-4">
+              {searchTerm || activeStockFilter !== 'all' 
+                ? 'לא נמצאו מוצרים מתאימים' 
+                : 'עדיין לא נוספו מוצרים'}
+            </p>
+            {!searchTerm && activeStockFilter === 'all' && (
+              <Button onClick={() => navigate('/add-product')}>
+                הוסף מוצר ראשון
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <>
-      <Card className="overflow-hidden" dir="rtl">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 bg-gray-50 border-b font-medium text-sm text-gray-700">
-          <div className="md:col-span-2">מוצר</div>
-          <div className="text-center">מלאי</div>
-          <div className="text-center">קטגוריה</div>
-          <div className="text-center">מיקום</div>
-          <div className="text-center">פעולות</div>
-        </div>
-        
-        <div className="h-[500px]">
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>{getFilterTitle()} ({filteredProducts.length})</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="h-[600px]">
           <List
-            height={500}
+            height={600}
             width="100%"
             itemCount={filteredProducts.length}
-            itemSize={120}
-            className="scrollbar-thin"
+            itemSize={ROW_HEIGHT}
+            itemData={filteredProducts}
+            overscanCount={5}
           >
             {ProductRow}
           </List>
         </div>
-      </Card>
-      
-      <StockZeroAlert
-        open={!!alertProduct}
-        onOpenChange={hideAlert}
-        productName={alertProduct?.name || ''}
-        productId={alertProduct?.id || ''}
-        onConfirm={() => triggerSendToSupplier(alertProduct?.id || '')}
-      />
-    </>
+      </CardContent>
+    </Card>
   );
-};
+});
+
+VirtualizedInventoryTable.displayName = 'VirtualizedInventoryTable';
