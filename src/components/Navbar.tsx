@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
@@ -18,9 +19,16 @@ import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 
 const Navbar = () => {
   const { pendingRequests } = useStockApprovalRequests();
-  const { signOut } = useAuth();
-  const { user } = useAuth();
+  const { signOut, user } = useAuth();
   const { businessContext } = useBusinessAccess();
+
+  // Get user initials for avatar fallback
+  const getUserInitials = () => {
+    if (!user) return "UN";
+    const fullName = user.user_metadata?.full_name || user.email || "";
+    if (fullName.includes('@')) return fullName.substring(0, 2).toUpperCase();
+    return fullName.split(' ').map(n => n[0]).join('').toUpperCase() || "UN";
+  };
 
   return (
     <nav className="bg-primary text-primary-foreground shadow-md">
@@ -50,15 +58,15 @@ const Navbar = () => {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.user_metadata?.avatar_url || ""} alt={user?.user_metadata?.full_name || "User Avatar"} />
-                    <AvatarFallback>{user?.user_metadata?.full_name?.slice(0, 2).toUpperCase() || "UN"}</AvatarFallback>
+                    <AvatarImage src={user?.user_metadata?.avatar_url || ""} alt="User Avatar" />
+                    <AvatarFallback>{getUserInitials()}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel>החשבון שלי</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut()}>התנתק</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOut && signOut()}>התנתק</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

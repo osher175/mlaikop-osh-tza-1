@@ -5,6 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 type User = {
   id: string;
   email: string;
+  user_metadata?: {
+    full_name?: string;
+    avatar_url?: string;
+  };
 };
 
 export const useAuth = () => {
@@ -25,6 +29,7 @@ export const useAuth = () => {
           setUser({
             id: session.user.id,
             email: session.user.email || '',
+            user_metadata: session.user.user_metadata
           });
         }
       } catch (error) {
@@ -43,6 +48,7 @@ export const useAuth = () => {
           setUser({
             id: session.user.id,
             email: session.user.email || '',
+            user_metadata: session.user.user_metadata
           });
         } else {
           setUser(null);
@@ -57,5 +63,14 @@ export const useAuth = () => {
     };
   }, []);
 
-  return { user, loading };
+  // Add signOut method
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  return { user, loading, signOut };
 };

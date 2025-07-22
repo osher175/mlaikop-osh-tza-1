@@ -14,6 +14,7 @@ export const useBusinessAccess = () => {
   const [businessContext, setBusinessContext] = useState<BusinessContext | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [hasAccess, setHasAccess] = useState(false);
 
   useEffect(() => {
     const fetchBusinessContext = async () => {
@@ -40,6 +41,7 @@ export const useBusinessAccess = () => {
             business_name: data.name,
             role: 'owner'
           });
+          setHasAccess(true);
         } else {
           // Check if user is part of a business
           const { data: businessUser, error: businessUserError } = await supabase
@@ -59,6 +61,7 @@ export const useBusinessAccess = () => {
               business_name: businessUser.businesses?.name || 'Unknown Business',
               role: businessUser.role as 'admin' | 'user'
             });
+            setHasAccess(true);
           }
         }
       } catch (err) {
@@ -72,5 +75,5 @@ export const useBusinessAccess = () => {
     fetchBusinessContext();
   }, [user]);
 
-  return { businessContext, isLoading, error };
+  return { businessContext, isLoading, error, hasAccess };
 };

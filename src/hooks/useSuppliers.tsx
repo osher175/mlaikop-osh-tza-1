@@ -30,7 +30,14 @@ export const useSuppliers = () => {
         throw error;
       }
       
-      return data as Supplier[];
+      // Map the database fields to our expected Supplier type
+      return (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        phone: item.phone,
+        email: item.contact_email || '', // Map contact_email to email
+        business_id: item.business_id
+      })) as Supplier[];
     },
     enabled: !!businessContext?.business_id,
   });
