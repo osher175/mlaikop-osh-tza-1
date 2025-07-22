@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
-type BusinessContext = {
+export type BusinessContext = {
   business_id: string;
   business_name: string;
   role: 'owner' | 'admin' | 'user';
+  user_role?: string; // Added for compatibility with other components
+  is_owner?: boolean; // Added for compatibility with other components
 };
 
 export const useBusinessAccess = () => {
@@ -39,7 +41,9 @@ export const useBusinessAccess = () => {
           setBusinessContext({
             business_id: data.id,
             business_name: data.name,
-            role: 'owner'
+            role: 'owner',
+            user_role: 'owner', // Add for compatibility
+            is_owner: true // Add for compatibility
           });
           setHasAccess(true);
         } else {
@@ -56,10 +60,13 @@ export const useBusinessAccess = () => {
           }
           
           if (businessUser) {
+            const role = businessUser.role as 'admin' | 'user';
             setBusinessContext({
               business_id: businessUser.business_id,
               business_name: businessUser.businesses?.name || 'Unknown Business',
-              role: businessUser.role as 'admin' | 'user'
+              role: role,
+              user_role: role, // Add for compatibility
+              is_owner: role === 'admin' // Add for compatibility
             });
             setHasAccess(true);
           }

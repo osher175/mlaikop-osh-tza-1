@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -23,7 +22,7 @@ export const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({
     name: '',
     contact_email: '',
     phone: '',
-    sales_agent_name: '',
+    agent_name: '',
     sales_agent_phone: '',
   });
 
@@ -45,7 +44,7 @@ export const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({
         name: formData.name,
         contact_email: formData.contact_email || null,
         phone: formData.phone || null,
-        sales_agent_name: formData.sales_agent_name || null,
+        agent_name: formData.agent_name || null,
         sales_agent_phone: formData.sales_agent_phone || null,
       });
 
@@ -59,7 +58,7 @@ export const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({
         name: '',
         contact_email: '',
         phone: '',
-        sales_agent_name: '',
+        agent_name: '',
         sales_agent_phone: '',
       });
 
@@ -120,11 +119,11 @@ export const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({
           </div>
 
           <div>
-            <Label htmlFor="sales_agent_name" className="text-sm font-medium">שם נציג מכירות</Label>
+            <Label htmlFor="agent_name" className="text-sm font-medium">שם נציג מכירות</Label>
             <Input
-              id="sales_agent_name"
-              value={formData.sales_agent_name}
-              onChange={(e) => setFormData({ ...formData, sales_agent_name: e.target.value })}
+              id="agent_name"
+              value={formData.agent_name}
+              onChange={(e) => setFormData({ ...formData, agent_name: e.target.value })}
               className="mt-1"
               placeholder="שם הנציג"
             />
