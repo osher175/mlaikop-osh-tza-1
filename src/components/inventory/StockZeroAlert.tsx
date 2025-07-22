@@ -27,15 +27,21 @@ export const StockZeroAlert: React.FC<StockZeroAlertProps> = ({
 }) => {
   const handleConfirm = () => {
     onConfirm();
-    onOpenChange(false);
+    // Don't close here - let onConfirm handle closing
   };
 
   const handleCancel = () => {
     onOpenChange(false);
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      onOpenChange(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md" dir="rtl">
         <DialogHeader className="text-center">
           <div className="flex justify-center mb-4">

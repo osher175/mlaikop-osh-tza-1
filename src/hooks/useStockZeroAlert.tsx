@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useBusinessAccess } from './useBusinessAccess';
 
 interface StockZeroProduct {
@@ -10,6 +10,7 @@ interface StockZeroProduct {
 export const useStockZeroAlert = () => {
   const [alertProduct, setAlertProduct] = useState<StockZeroProduct | null>(null);
   const { businessContext } = useBusinessAccess();
+  const previousQuantities = useRef<Record<string, number>>({});
 
   const showAlert = (product: StockZeroProduct) => {
     // Only show alert for owners or inventory managers
@@ -29,6 +30,24 @@ export const useStockZeroAlert = () => {
     
     // TODO: Implement the actual webhook call to clever-service edge function
     // This will be done in the next phase
+    
+    // Close alert after confirming
+    hideAlert();
+  };
+
+  const checkForStockChanges = (products: any[]) => {
+    products.forEach(product => {
+      const previousQuantity = previousQuantities.current[product.id];
+      const currentQuantity = product.quantity;
+      
+      // Show alert only when quantity changes from > 0 to exactly 0
+      if (previousQuantity !== undefined && previousQuantity > 0 && currentQuantity === 0) {
+        showAlert({ id: product.id, name: product.name });
+      }
+      
+      // Update the tracked quantity
+      previousQuantities.current[product.id] = currentQuantity;
+    });
   };
 
   return {
@@ -36,5 +55,6 @@ export const useStockZeroAlert = () => {
     showAlert,
     hideAlert,
     triggerSendToSupplier,
+    checkForStockChanges,
   };
 };

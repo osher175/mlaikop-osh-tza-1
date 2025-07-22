@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import { Card } from '@/components/ui/card';
@@ -31,20 +30,12 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
   onViewProductImage,
   activeStockFilter,
 }) => {
-  const { alertProduct, showAlert, hideAlert, triggerSendToSupplier } = useStockZeroAlert();
+  const { alertProduct, hideAlert, triggerSendToSupplier, checkForStockChanges } = useStockZeroAlert();
 
-  // Check for products that just went to zero stock
+  // Check for stock changes (not just zero stock products)
   useEffect(() => {
-    const zeroStockProducts = products.filter(product => product.quantity === 0);
-    
-    // Show alert for the first zero stock product found
-    // In a real implementation, you might want to track which products
-    // have already shown alerts to avoid showing the same alert multiple times
-    if (zeroStockProducts.length > 0 && !alertProduct) {
-      const product = zeroStockProducts[0];
-      showAlert({ id: product.id, name: product.name });
-    }
-  }, [products, alertProduct, showAlert]);
+    checkForStockChanges(products);
+  }, [products, checkForStockChanges]);
 
   const filteredProducts = useMemo(() => {
     let filtered = products;
