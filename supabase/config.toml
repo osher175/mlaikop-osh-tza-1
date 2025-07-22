@@ -1,1 +1,5 @@
+
 project_id = "gtakgctmtayalcbpnryg"
+
+[functions.clever-service]
+verify_jwt = false
