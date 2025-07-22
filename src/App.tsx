@@ -1,165 +1,85 @@
-
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuth";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { Auth } from "@/pages/Auth";
-import { Dashboard } from "@/pages/Dashboard";
-import { Inventory } from "@/pages/Inventory";
-import { Suppliers } from "@/pages/Suppliers";
-import { AddProduct } from "@/pages/AddProduct";
-import { Reports } from "@/pages/Reports";
-import { UserProfile } from "@/pages/UserProfile";
-import { Unauthorized } from "@/pages/Unauthorized";
-import { UserManagement } from "@/pages/UserManagement";
-import { AdminUserProfile } from "@/pages/admin/UserProfile";
-import { Subscriptions } from "@/pages/Subscriptions";
-import { BusinessSettings } from "@/pages/BusinessSettings";
-import { AdminPanel } from "@/pages/AdminPanel";
-import { AdminDashboard } from "@/pages/AdminDashboard";
-import { AdminSettings } from "@/pages/AdminSettings";
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 10, // 10 minutes
-    },
-  },
-});
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import StockApprovalRequests from './pages/StockApprovalRequests';
+import { SiteHeader } from "@/components/site-header"
+import { SiteFooter } from "@/components/site-footer"
+import { Examples } from "@/components/examples"
+import { Docs } from "@/components/docs"
+import { Pricing } from "@/components/pricing"
+import { Authentication } from "@/components/authentication"
+import { Dashboard } from "@/components/dashboard"
+import { Settings } from "@/components/settings"
+import { Tasks } from "@/components/tasks"
+import { Kanban } from "@/components/kanban"
+import { Analytics } from "@/components/analytics"
+import { Mail } from "@/components/mail"
+import { Chat } from "@/components/chat"
+import { Calendar } from "@/components/calendar"
+import { Customers } from "@/components/customers"
+import { Products } from "@/components/products"
+import { Invoices } from "@/components/invoices"
+import { Suppliers } from "@/components/suppliers"
+import { StockAlerts } from "@/components/stock-alerts"
+import { RecentActivity } from "@/components/recent-activity"
+import { RoleBasedRoute } from './components/RoleBasedRoute';
+import { Unauthorized } from './components/Unauthorized';
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/unauthorized" element={<Unauthorized />} />
-              
-              {/* Business user routes */}
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/inventory"
-                element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
-                    <Inventory />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/suppliers"
-                element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
-                    <Suppliers />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/add-product"
-                element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user']}>
-                    <AddProduct />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/reports"
-                element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user']}>
-                    <Reports />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
-                    <UserProfile />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/subscriptions"
-                element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
-                    <Subscriptions />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/settings"
-                element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user']}>
-                    <BusinessSettings />
-                  </ProtectedRoute>
-                }
-              />
+    <Router>
+      <Routes>
+        <Route path="/stock-approval" element={<StockApprovalRequests />} />
+        <Route path="/" element={<Examples />} />
+        <Route path="/docs" element={<Docs />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/authentication" element={<Authentication />} />
+        
+        {/* Dashboard Routes - Accessible to all authenticated users */}
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/tasks" element={<Tasks />} />
+        <Route path="/kanban" element={<Kanban />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/mail" element={<Mail />} />
+        <Route path="/chat" element={<Chat />} />
+        <Route path="/calendar" element={<Calendar />} />
+        
+        {/* Business Routes - Accessible only to business users */}
+        <Route path="/customers" element={
+          <RoleBasedRoute allowedForBusiness={true}>
+            <Customers />
+          </RoleBasedRoute>
+        } />
+        <Route path="/products" element={
+          <RoleBasedRoute allowedForBusiness={true}>
+            <Products />
+          </RoleBasedRoute>
+        } />
+        <Route path="/invoices" element={
+          <RoleBasedRoute allowedForBusiness={true}>
+            <Invoices />
+          </RoleBasedRoute>
+        } />
+        <Route path="/suppliers" element={
+          <RoleBasedRoute allowedForBusiness={true}>
+            <Suppliers />
+          </RoleBasedRoute>
+        } />
+        <Route path="/stock-alerts" element={
+          <RoleBasedRoute allowedForBusiness={true}>
+            <StockAlerts />
+          </RoleBasedRoute>
+        } />
+        <Route path="/recent-activity" element={
+          <RoleBasedRoute allowedForBusiness={true}>
+            <RecentActivity />
+          </RoleBasedRoute>
+        } />
 
-              {/* Admin routes */}
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <AdminPanel />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/settings"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <AdminSettings />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/users"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <UserManagement />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/user/:userId"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <AdminUserProfile />
-                  </ProtectedRoute>
-                }
-              />
-
-              {/* Default redirects */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </AuthProvider>
-        </BrowserRouter>
-        <Toaster />
-        <Sonner />
-      </TooltipProvider>
-    </QueryClientProvider>
+        {/* Unauthorized Route */}
+        <Route path="/unauthorized" element={<Unauthorized />} />
+      </Routes>
+    </Router>
   );
 }
 
