@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -40,12 +41,15 @@ export const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({
 
     setLoading(true);
     try {
-      await createSupplier.mutateAsync({
+      createSupplier({
         name: formData.name,
-        contact_email: formData.contact_email || null,
-        phone: formData.phone || null,
-        agent_name: formData.agent_name || null,
-        sales_agent_phone: formData.sales_agent_phone || null,
+        contact_email: formData.contact_email || '',
+        phone: formData.phone || '',
+        agent_name: formData.agent_name || '',
+        sales_agent_phone: formData.sales_agent_phone || '',
+        sales_agent_name: '',
+        email: '',
+        business_id: ''
       });
 
       toast({

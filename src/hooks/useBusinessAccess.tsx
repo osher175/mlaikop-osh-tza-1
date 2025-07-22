@@ -72,10 +72,11 @@ export const useBusinessAccess = () => {
       
       // Add the user_role and is_owner properties
       if (context) {
+        const userRoleValue = context.user_role || 'user';
         return {
           ...context,
-          user_role: context.role || 'user',
-          is_owner: context.role === 'OWNER'
+          user_role: userRoleValue,
+          is_owner: userRoleValue === 'OWNER'
         } as BusinessContext;
       }
       
