@@ -1,43 +1,76 @@
 
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
+type BusinessContext = {
+  business_id: string;
+  business_name: string;
+  role: 'owner' | 'admin' | 'user';
+};
+
 export const useBusinessAccess = () => {
   const { user } = useAuth();
+  const [businessContext, setBusinessContext] = useState<BusinessContext | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const { data: hasAccess, isLoading: accessLoading } = useQuery({
-    queryKey: ['business-access', user?.id],
-    queryFn: async () => {
-      // For MVP - always return true for authenticated users
-      return !!user?.id;
-    },
-    enabled: !!user?.id,
-  });
-
-  const { data: businessContext } = useQuery({
-    queryKey: ['business-context', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      
-      // Get user's business context
-      const { data, error } = await supabase.rpc('get_user_business_context', {
-        user_uuid: user.id
-      });
-      
-      if (error) {
-        console.error('Error getting business context:', error);
-        return null;
+  useEffect(() => {
+    const fetchBusinessContext = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
       }
       
-      return data?.[0] || null;
-    },
-    enabled: !!user?.id && hasAccess,
-  });
+      try {
+        // Get user's business context
+        const { data, error } = await supabase
+          .from('businesses')
+          .select('id, name')
+          .eq('owner_id', user.id)
+          .single();
+          
+        if (error && error.code !== 'PGRST116') {
+          throw error;
+        }
+        
+        if (data) {
+          setBusinessContext({
+            business_id: data.id,
+            business_name: data.name,
+            role: 'owner'
+          });
+        } else {
+          // Check if user is part of a business
+          const { data: businessUser, error: businessUserError } = await supabase
+            .from('business_users')
+            .select('business_id, role, businesses(name)')
+            .eq('user_id', user.id)
+            .eq('status', 'approved')
+            .single();
+            
+          if (businessUserError && businessUserError.code !== 'PGRST116') {
+            throw businessUserError;
+          }
+          
+          if (businessUser) {
+            setBusinessContext({
+              business_id: businessUser.business_id,
+              business_name: businessUser.businesses?.name || 'Unknown Business',
+              role: businessUser.role as 'admin' | 'user'
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching business context:', err);
+        setError(err as Error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchBusinessContext();
+  }, [user]);
 
-  return {
-    hasAccess: hasAccess ?? false,
-    businessContext,
-    isLoading: accessLoading,
-  };
+  return { businessContext, isLoading, error };
 };

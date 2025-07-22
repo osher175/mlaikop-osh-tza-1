@@ -93,7 +93,7 @@ const StockApprovalRequests = () => {
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button
-                          variant="success"
+                          variant="default"
                           size="sm"
                           className="bg-green-600 hover:bg-green-700 text-white ml-2"
                           onClick={() => approveRequest.mutate(request.id)}

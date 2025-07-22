@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import StockApprovalRequests from './pages/StockApprovalRequests';
+import { Toaster } from "@/components/ui/toaster";
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Examples } from "@/components/examples"
@@ -27,8 +28,11 @@ import { Unauthorized } from './components/Unauthorized';
 function App() {
   return (
     <Router>
+      <Toaster />
       <Routes>
         <Route path="/stock-approval" element={<StockApprovalRequests />} />
+        
+        {/* Add your existing routes here */}
         <Route path="/" element={<Examples />} />
         <Route path="/docs" element={<Docs />} />
         <Route path="/pricing" element={<Pricing />} />

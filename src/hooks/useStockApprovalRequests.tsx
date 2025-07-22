@@ -71,7 +71,7 @@ export const useStockApprovalRequests = () => {
       toast({
         title: "בקשה אושרה",
         description: "הודעה תישלח לסוכן",
-        variant: "success",
+        variant: "default",
       });
     },
     onError: (error: any) => {
