@@ -1,16 +1,16 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import React, { useMemo, useEffect } from 'react';
+import { FixedSizeList as List } from 'react-window';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Package, Edit, Trash2, AlertTriangle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { LazyImage } from '@/components/inventory/LazyImage';
+import { Button } from '@/components/ui/button';
+import { Edit, Trash2, Eye } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { StockZeroAlert } from './StockZeroAlert';
+import { useStockZeroAlert } from '@/hooks/useStockZeroAlert';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'] & {
   product_categories?: { name: string } | null;
-  product_thresholds?: { low_stock_threshold: number } | null;
 };
 
 interface InventoryTableProps {
@@ -22,7 +22,7 @@ interface InventoryTableProps {
   activeStockFilter: 'all' | 'inStock' | 'lowStock' | 'outOfStock';
 }
 
-export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
+export const InventoryTable: React.FC<InventoryTableProps> = ({
   products,
   searchTerm,
   onEditProduct,
@@ -30,281 +30,175 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
   onViewProductImage,
   activeStockFilter,
 }) => {
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
+  const { alertProduct, showAlert, hideAlert, triggerSendToSupplier } = useStockZeroAlert();
 
-  const getStatusBadge = (product: Product) => {
-    const quantity = product.quantity;
-    const threshold = product.product_thresholds?.low_stock_threshold || 5;
+  // Check for products that just went to zero stock
+  useEffect(() => {
+    const zeroStockProducts = products.filter(product => product.quantity === 0);
     
-    if (quantity === 0) {
-      return <Badge className="bg-red-500 text-white text-xs">אזל</Badge>;
-    } else if (quantity <= threshold && quantity > 0) {
-      return <Badge className="bg-yellow-500 text-white flex items-center gap-1 text-xs">
-        <AlertTriangle className="w-3 h-3" />
-        נמוך
-      </Badge>;
-    } else {
-      return <Badge className="bg-green-500 text-white text-xs">במלאי</Badge>;
+    // Show alert for the first zero stock product found
+    // In a real implementation, you might want to track which products
+    // have already shown alerts to avoid showing the same alert multiple times
+    if (zeroStockProducts.length > 0 && !alertProduct) {
+      const product = zeroStockProducts[0];
+      showAlert({ id: product.id, name: product.name });
     }
-  };
+  }, [products, alertProduct, showAlert]);
 
-  const isLowStock = (product: Product) => {
-    const quantity = product.quantity;
-    const threshold = product.product_thresholds?.low_stock_threshold || 5;
-    return quantity > 0 && quantity <= threshold;
-  };
+  const filteredProducts = useMemo(() => {
+    let filtered = products;
 
-  const getCategoryName = (product: Product) => {
-    return product.product_categories?.name || '-';
-  };
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.barcode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.location?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
 
-  // Filter products by search term first
-  const searchFilteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (product.barcode && product.barcode.includes(searchTerm)) ||
-    (product.location && product.location.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  // Then filter by stock status
-  const filteredProducts = searchFilteredProducts.filter(product => {
-    const quantity = product.quantity;
-    const threshold = product.product_thresholds?.low_stock_threshold || 5;
-    
+    // Apply stock filter
     switch (activeStockFilter) {
       case 'inStock':
-        return quantity > threshold;
+        filtered = filtered.filter(product => product.quantity > 5);
+        break;
       case 'lowStock':
-        return quantity > 0 && quantity <= threshold;
+        filtered = filtered.filter(product => product.quantity > 0 && product.quantity <= 5);
+        break;
       case 'outOfStock':
-        return quantity === 0;
-      case 'all':
-      default:
-        return true;
+        filtered = filtered.filter(product => product.quantity === 0);
+        break;
     }
-  });
 
-  const getFilterTitle = () => {
-    switch (activeStockFilter) {
-      case 'inStock':
-        return 'מוצרים במלאי';
-      case 'lowStock':
-        return 'מוצרים במלאי נמוך';
-      case 'outOfStock':
-        return 'מוצרים שאזלו';
-      case 'all':
-      default:
-        return 'רשימת מוצרים';
-    }
-  };
+    return filtered;
+  }, [products, searchTerm, activeStockFilter]);
 
-  // Mobile optimized card view
-  if (isMobile) {
+  const ProductRow = ({ index, style }: { index: number; style: React.CSSProperties }) => {
+    const product = filteredProducts[index];
+    
+    const getStockStatus = (quantity: number) => {
+      if (quantity === 0) return { status: 'אזל', color: 'bg-red-100 text-red-800' };
+      if (quantity <= 5) return { status: 'נמוך', color: 'bg-yellow-100 text-yellow-800' };
+      return { status: 'במלאי', color: 'bg-green-100 text-green-800' };
+    };
+
+    const stockInfo = getStockStatus(product.quantity);
+
     return (
-      <Card className="w-full">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base md:text-lg">{getFilterTitle()} ({filteredProducts.length})</CardTitle>
-        </CardHeader>
-        <CardContent className="p-2 md:p-4">
-          {filteredProducts.length === 0 ? (
-            <div className="text-center py-8">
-              <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 mb-4 text-sm md:text-base">
-                {searchTerm || activeStockFilter !== 'all' 
-                  ? 'לא נמצאו מוצרים מתאימים' 
-                  : 'עדיין לא נוספו מוצרים'}
-              </p>
-              {!searchTerm && activeStockFilter === 'all' && (
-                <Button 
-                  className="w-full h-12 min-h-[44px] text-base md:text-lg" 
-                  onClick={() => navigate('/add-product')}
-                >
-                  הוסף מוצר ראשון
-                </Button>
+      <div style={style} className="px-2">
+        <Card className="p-4 mb-2 hover:shadow-md transition-shadow">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
+            <div className="md:col-span-2">
+              <div className="font-medium text-gray-900">{product.name}</div>
+              {product.barcode && (
+                <div className="text-sm text-gray-500">ברקוד: {product.barcode}</div>
               )}
             </div>
-          ) : (
-            <div className="space-y-2 md:space-y-3 max-h-[60vh] overflow-y-auto">
-              {filteredProducts.map((product) => (
-                <Card 
-                  key={product.id} 
-                  className={`${isLowStock(product) ? 'border-l-4 border-l-yellow-500 shadow-sm' : 'shadow-sm'}`}
-                >
-                  <CardContent className="p-2 md:p-3">
-                    <div className="flex items-start gap-2 md:gap-3 mb-2 md:mb-3">
-                      <LazyImage
-                        src={product.image}
-                        alt={product.name}
-                        className="w-10 h-10 md:w-12 md:h-12 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity flex-shrink-0"
-                        onClick={() => onViewProductImage(product)}
-                        title="לחץ לצפייה בתמונה מוגדלת"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base md:text-lg font-semibold text-gray-900 truncate">
-                          {product.name}
-                        </h3>
-                        <p className="text-xs md:text-sm text-gray-600 truncate">
-                          {getCategoryName(product)}
-                        </p>
-                        {product.barcode && (
-                          <p className="text-xs md:text-sm text-gray-500 truncate">
-                            {product.barcode}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex-shrink-0">
-                        {getStatusBadge(product)}
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-1 md:gap-2 text-xs md:text-sm mb-2 md:mb-3">
-                      <div className="truncate">
-                        <span className="text-gray-600">כמות: </span>
-                        <span className="font-medium">{product.quantity}</span>
-                      </div>
-                      <div className="truncate">
-                        <span className="text-gray-600">מחיר: </span>
-                        <span className="font-medium">₪{product.price || '-'}</span>
-                      </div>
-                      <div className="truncate">
-                        <span className="text-gray-600">מיקום: </span>
-                        <span className="font-medium">{product.location || '-'}</span>
-                      </div>
-                      <div className="truncate">
-                        <span className="text-gray-600">עלות: </span>
-                        <span className="font-medium">₪{product.cost || '-'}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2 md:gap-4">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => onEditProduct(product)}
-                        className="flex-1 h-10 min-h-[44px] text-base md:text-lg"
-                        title="ערוך מוצר"
-                      >
-                        <Edit className="w-4 h-4 ml-1" />
-                        ערוך
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="text-red-600 hover:text-red-700 h-10 min-h-[44px] px-2 text-base md:text-lg"
-                        onClick={() => onDeleteProduct(product)}
-                        title="מחק מוצר"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            
+            <div className="text-center">
+              <Badge className={cn('text-xs', stockInfo.color)}>
+                {stockInfo.status}
+              </Badge>
+              <div className="text-sm text-gray-600 mt-1">{product.quantity} יח'</div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            
+            <div className="text-center">
+              <div className="text-sm text-gray-600">
+                {product.product_categories?.name || 'ללא קטגוריה'}
+              </div>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-sm text-gray-600">
+                {product.location || 'לא צוין'}
+              </div>
+            </div>
+            
+            <div className="flex justify-center gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onEditProduct(product)}
+                className="h-8 w-8 p-0"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              
+              {product.image && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onViewProductImage(product)}
+                  className="h-8 w-8 p-0"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+              )}
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onDeleteProduct(product)}
+                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  };
+
+  if (filteredProducts.length === 0) {
+    return (
+      <>
+        <div className="text-center py-12" dir="rtl">
+          <div className="text-gray-500 mb-2">לא נמצאו מוצרים</div>
+          <div className="text-sm text-gray-400">נסה לשנות את הפילטרים או הוסף מוצרים חדשים</div>
+        </div>
+        
+        <StockZeroAlert
+          open={!!alertProduct}
+          onOpenChange={hideAlert}
+          productName={alertProduct?.name || ''}
+          productId={alertProduct?.id || ''}
+          onConfirm={() => triggerSendToSupplier(alertProduct?.id || '')}
+        />
+      </>
     );
   }
 
-  // Desktop table view - optimized
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>{getFilterTitle()} ({filteredProducts.length})</CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        {filteredProducts.length === 0 ? (
-          <div className="text-center py-8">
-            <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">
-              {searchTerm || activeStockFilter !== 'all' 
-                ? 'לא נמצאו מוצרים מתאימים' 
-                : 'עדיין לא נוספו מוצרים'}
-            </p>
-            {!searchTerm && activeStockFilter === 'all' && (
-              <Button 
-                className="mt-4" 
-                onClick={() => navigate('/add-product')}
-              >
-                הוסף מוצר ראשון
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="max-h-[70vh] overflow-x-auto overflow-y-auto">
-            <table className="w-full min-w-[900px]">
-              <thead className="sticky top-0 bg-gray-50 z-10">
-                <tr className="border-b">
-                  <th className="text-right p-3 font-medium text-sm min-w-[60px]">תמונה</th>
-                  <th className="text-right p-3 font-medium text-sm min-w-[150px]">שם המוצר</th>
-                  <th className="text-right p-3 font-medium text-sm min-w-[120px] hidden md:table-cell">ברקוד</th>
-                  <th className="text-right p-3 font-medium text-sm min-w-[120px]">קטגוריה</th>
-                  <th className="text-right p-3 font-medium text-sm min-w-[80px]">כמות</th>
-                  <th className="text-right p-3 font-medium text-sm min-w-[100px]">מחיר</th>
-                  <th className="text-right p-3 font-medium text-sm min-w-[120px] hidden md:table-cell">מיקום</th>
-                  <th className="text-right p-3 font-medium text-sm min-w-[100px]">סטטוס</th>
-                  <th className="text-right p-3 font-medium text-sm min-w-[120px]">פעולות</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProducts.map((product) => (
-                  <tr 
-                    key={product.id} 
-                    className={`border-b hover:bg-gray-50 transition-colors ${
-                      isLowStock(product) ? 'bg-yellow-50 border-l-4 border-l-yellow-400' : ''
-                    }`}
-                  >
-                    <td className="p-3 min-w-[60px]">
-                      <LazyImage
-                        src={product.image}
-                        alt={product.name}
-                        className="w-10 h-10 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity"
-                        onClick={() => onViewProductImage(product)}
-                        title="לחץ לצפייה בתמונה מוגדלת"
-                      />
-                    </td>
-                    <td className="p-3 font-medium text-sm max-w-[150px] min-w-[150px] truncate">
-                      {isLowStock(product) && <AlertTriangle className="w-4 h-4 text-yellow-600 inline ml-2" />}
-                      {product.name}
-                    </td>
-                    <td className="p-3 text-gray-600 text-sm max-w-[100px] min-w-[120px] truncate hidden md:table-cell">{product.barcode || '-'}</td>
-                    <td className="p-3 text-gray-600 text-sm max-w-[100px] min-w-[120px] truncate">{getCategoryName(product)}</td>
-                    <td className="p-3 font-medium text-sm min-w-[80px]">{product.quantity}</td>
-                    <td className="p-3 text-sm min-w-[100px]">₪{product.price || '-'}</td>
-                    <td className="p-3 text-sm max-w-[100px] min-w-[120px] truncate hidden md:table-cell">{product.location || '-'}</td>
-                    <td className="p-3 min-w-[100px]">{getStatusBadge(product)}</td>
-                    <td className="p-3 min-w-[120px]">
-                      <div className="flex gap-1">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => onEditProduct(product)}
-                          title="ערוך מוצר"
-                          className="h-7 w-7 p-0"
-                        >
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="text-red-600 hover:text-red-700 h-7 w-7 p-0"
-                          onClick={() => onDeleteProduct(product)}
-                          title="מחק מוצר"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <>
+      <Card className="overflow-hidden" dir="rtl">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 bg-gray-50 border-b font-medium text-sm text-gray-700">
+          <div className="md:col-span-2">מוצר</div>
+          <div className="text-center">מלאי</div>
+          <div className="text-center">קטגוריה</div>
+          <div className="text-center">מיקום</div>
+          <div className="text-center">פעולות</div>
+        </div>
+        
+        <div className="h-[500px]">
+          <List
+            height={500}
+            itemCount={filteredProducts.length}
+            itemSize={120}
+            className="scrollbar-thin"
+          >
+            {ProductRow}
+          </List>
+        </div>
+      </Card>
+      
+      <StockZeroAlert
+        open={!!alertProduct}
+        onOpenChange={hideAlert}
+        productName={alertProduct?.name || ''}
+        productId={alertProduct?.id || ''}
+        onConfirm={() => triggerSendToSupplier(alertProduct?.id || '')}
+      />
+    </>
   );
-});
-
-InventoryTable.displayName = 'InventoryTable';
+};
