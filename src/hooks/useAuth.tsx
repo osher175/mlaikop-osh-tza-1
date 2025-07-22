@@ -1,133 +1,169 @@
-
-import { useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 
-export type User = {
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: any }>;
+}
+
+interface Profile {
   id: string;
-  email: string;
-  user_metadata?: {
-    full_name?: string;
-    avatar_url?: string;
-  };
-};
+  first_name: string;
+  last_name: string;
+  // Add other profile fields here
+}
 
-export const useAuth = () => {
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Get the current user session
-    const getSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          throw error;
-        }
-        
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            user_metadata: session.user.user_metadata
-          });
-        }
-      } catch (error) {
-        console.error('Error getting session:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
-    getSession();
-
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            user_metadata: session.user.user_metadata
-          });
-        } else {
-          setUser(null);
-        }
+      async (event: AuthChangeEvent, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
+        setSession(session);
+        setUser(session?.user ?? null);
         setLoading(false);
+
+        // Create trial subscription for new users when they sign in (after signup they're automatically signed in)
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('User signed in, checking if trial subscription needed');
+          // Use setTimeout to avoid blocking the auth flow
+          setTimeout(() => {
+            createTrialSubscription(session.user.id);
+          }, 1000);
+        }
       }
     );
 
-    // Cleanup subscription on unmount
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Add signIn method
-  const signIn = async (email: string, password: string) => {
+  const createTrialSubscription = async (userId: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      console.log('Creating trial subscription for user:', userId);
       
-      if (error) throw error;
-      return { data, error: null };
-    } catch (error: any) {
-      console.error('Error signing in:', error);
-      toast({
-        title: "שגיאה בהתחברות",
-        description: error.message || "אירעה שגיאה בעת ההתחברות",
-        variant: "destructive",
-      });
-      return { data: null, error };
-    }
-  };
+      // First, get the first available plan
+      const { data: plans, error: planError } = await supabase
+        .from('subscription_plans')
+        .select('id')
+        .limit(1);
 
-  // Add signUp method
-  const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: {
-            first_name: firstName,
-            last_name: lastName
-          }
-        }
-      });
-      
-      if (error) throw error;
-      return { data, error: null };
-    } catch (error: any) {
-      console.error('Error signing up:', error);
-      toast({
-        title: "שגיאה בהרשמה",
-        description: error.message || "אירעה שגיאה בעת ההרשמה",
-        variant: "destructive",
-      });
-      return { data: null, error };
-    }
-  };
+      if (planError) {
+        console.error('Error fetching plans:', planError);
+        return;
+      }
 
-  // Add signOut method
-  const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
+      if (!plans || plans.length === 0) {
+        console.error('No subscription plans available');
+        return;
+      }
+
+      const defaultPlanId = plans[0].id;
+      const now = new Date();
+      const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+      // Check if user already has a subscription
+      const { data: existingSubscription } = await supabase
+        .from('user_subscriptions')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (existingSubscription) {
+        console.log('User already has a subscription, skipping trial creation');
+        return;
+      }
+
+      const { error: subscriptionError } = await supabase
+        .from('user_subscriptions')
+        .insert({
+          user_id: userId,
+          plan_id: defaultPlanId,
+          status: 'active', // Use 'active' instead of 'trial' to avoid constraint issues
+          started_at: now.toISOString(),
+          expires_at: trialEnd.toISOString(),
+          trial_started_at: now.toISOString(),
+          trial_ends_at: trialEnd.toISOString()
+        });
+
+      if (subscriptionError) {
+        console.error('Error creating trial subscription:', subscriptionError);
+      } else {
+        console.log('Trial subscription created successfully');
+      }
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('Error in createTrialSubscription:', error);
     }
   };
 
-  return { 
-    user, 
-    loading, 
-    signIn, 
-    signUp, 
-    signOut 
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { error };
   };
+
+  const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+        },
+      },
+    });
+
+    return { error };
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth');
+  };
+
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    return { error };
+  };
+
+  const value = {
+    user,
+    session,
+    loading,
+    signIn,
+    signUp,
+    signOut,
+    resetPassword,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

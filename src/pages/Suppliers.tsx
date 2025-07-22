@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,11 +19,14 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
-import { useSuppliers, type Supplier } from '@/hooks/useSuppliers';
-import { AddSupplierDialog } from '@/components/suppliers/AddSupplierDialog';
-import { EditSupplierDialog } from '@/components/suppliers/EditSupplierDialog';
-import { DeleteSupplierDialog } from '@/components/suppliers/DeleteSupplierDialog';
+import { useSuppliers } from '@/hooks/useSuppliers';
+import { AddSupplierDialog } from '@/components/inventory/AddSupplierDialog';
+import { EditSupplierDialog } from '@/components/inventory/EditSupplierDialog';
+import { DeleteSupplierDialog } from '@/components/inventory/DeleteSupplierDialog';
 import { Plus, Search, Users, Phone, Mail, UserCheck, Edit, Trash } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
+
+type Supplier = Database['public']['Tables']['suppliers']['Row'];
 
 export const Suppliers: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');

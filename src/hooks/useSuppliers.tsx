@@ -1,30 +1,27 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useBusinessAccess } from '@/hooks/useBusinessAccess';
+import { useToast } from '@/hooks/use-toast';
+import type { Database } from '@/integrations/supabase/types';
 
-export type Supplier = {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  agent_name: string;
-  contact_email: string;
-  sales_agent_name: string;
-  sales_agent_phone: string;
-  business_id: string;
-  created_at: string;
-  updated_at: string;
-};
+type Supplier = Database['public']['Tables']['suppliers']['Row'];
+type CreateSupplierParams = Database['public']['Tables']['suppliers']['Insert'];
 
 export const useSuppliers = () => {
+  const { businessContext } = useBusinessAccess();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: suppliers = [], isLoading, error } = useQuery({
-    queryKey: ['suppliers'],
+    queryKey: ['suppliers', businessContext?.business_id],
     queryFn: async () => {
+      if (!businessContext?.business_id) return [];
+      
       const { data, error } = await supabase
         .from('suppliers')
         .select('*')
+        .eq('business_id', businessContext.business_id)
         .order('name');
       
       if (error) {
@@ -32,23 +29,25 @@ export const useSuppliers = () => {
         throw error;
       }
       
-      return data as Supplier[];
+      return data;
     },
+    enabled: !!businessContext?.business_id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  const createSupplierMutation = useMutation({
-    mutationFn: async (newSupplier: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>) => {
+  const createSupplier = useMutation({
+    mutationFn: async (supplierData: CreateSupplierParams) => {
+      if (!businessContext?.business_id) {
+        throw new Error('Business context not found');
+      }
+
       const { data, error } = await supabase
         .from('suppliers')
         .insert({
-          name: newSupplier.name, // Making name required
-          phone: newSupplier.phone || '',
-          email: newSupplier.email || '',
-          agent_name: newSupplier.agent_name || '',
-          contact_email: newSupplier.contact_email || '',
-          sales_agent_name: newSupplier.sales_agent_name || '',
-          sales_agent_phone: newSupplier.sales_agent_phone || '',
-          business_id: newSupplier.business_id
+          ...supplierData,
+          business_id: businessContext.business_id,
         })
         .select()
         .single();
@@ -58,58 +57,18 @@ export const useSuppliers = () => {
         throw error;
       }
 
-      return data as Supplier;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
     },
-  });
-
-  const updateSupplierMutation = useMutation({
-    mutationFn: async (updatedSupplier: Supplier) => {
-      const { data, error } = await supabase
-        .from('suppliers')
-        .update({
-          name: updatedSupplier.name,
-          phone: updatedSupplier.phone || '',
-          email: updatedSupplier.email || '',
-          agent_name: updatedSupplier.agent_name || '',
-          contact_email: updatedSupplier.contact_email || '',
-          sales_agent_name: updatedSupplier.sales_agent_name || '',
-          sales_agent_phone: updatedSupplier.sales_agent_phone || ''
-        })
-        .eq('id', updatedSupplier.id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error updating supplier:', error);
-        throw error;
-      }
-
-      return data as Supplier;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-    },
-  });
-
-  const deleteSupplierMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('suppliers')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error deleting supplier:', error);
-        throw error;
-      }
-
-      return id;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+    onError: (error: any) => {
+      console.error('Error creating supplier:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן היה ליצור את הספק",
+        variant: "destructive",
+      });
     },
   });
 
@@ -117,8 +76,6 @@ export const useSuppliers = () => {
     suppliers,
     isLoading,
     error,
-    createSupplier: createSupplierMutation.mutate,
-    updateSupplier: updateSupplierMutation.mutate,
-    deleteSupplier: deleteSupplierMutation.mutate
+    createSupplier,
   };
 };

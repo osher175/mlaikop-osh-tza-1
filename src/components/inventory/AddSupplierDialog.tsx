@@ -1,144 +1,166 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 import { useSuppliers } from '@/hooks/useSuppliers';
-import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 
 interface AddSupplierDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({ isOpen, onClose }) => {
+export const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({
+  open,
+  onOpenChange,
+}) => {
   const { toast } = useToast();
   const { createSupplier } = useSuppliers();
-  const { businessContext } = useBusinessAccess();
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [agentName, setAgentName] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    contact_email: '',
+    phone: '',
+    agent_name: '',
+    sales_agent_phone: '',
+  });
 
-  const handleSubmit = () => {
-    if (!name.trim()) {
-      toast({
-        title: "שם ספק נדרש",
-        description: "אנא הכנס שם ספק",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!businessContext?.business_id) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name) {
       toast({
         title: "שגיאה",
-        description: "לא ניתן להוסיף ספק - חסר מזהה עסק",
+        description: "יש להזין שם ספק",
         variant: "destructive",
       });
       return;
     }
 
-    createSupplier({
-      name,
-      phone,
-      email,
-      agent_name: agentName,
-      contact_email: contactEmail,
-      sales_agent_name: '',
-      sales_agent_phone: '',
-      business_id: businessContext.business_id
-    });
+    setLoading(true);
+    try {
+      await createSupplier.mutateAsync({
+        name: formData.name,
+        contact_email: formData.contact_email || null,
+        phone: formData.phone || null,
+        agent_name: formData.agent_name || null,
+        sales_agent_phone: formData.sales_agent_phone || null,
+      });
 
-    // Reset form and close dialog
-    setName('');
-    setPhone('');
-    setEmail('');
-    setAgentName('');
-    setContactEmail('');
-    onClose();
+      toast({
+        title: "ספק נוסף בהצלחה",
+        description: `הספק "${formData.name}" נוסף למערכת`,
+      });
 
-    toast({
-      title: "ספק נוסף בהצלחה",
-      description: `הספק ${name} נוסף למערכת`,
-      variant: "default",
-    });
+      // Reset form
+      setFormData({
+        name: '',
+        contact_email: '',
+        phone: '',
+        agent_name: '',
+        sales_agent_phone: '',
+      });
+
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating supplier:', error);
+      toast({
+        title: "שגיאה בהוספת הספק",
+        description: "אנא נסה שוב",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md" dir="rtl">
         <DialogHeader>
           <DialogTitle>הוספת ספק חדש</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              שם
-            </Label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="supplier_name" className="text-sm font-medium">שם הספק *</Label>
             <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="col-span-3"
+              id="supplier_name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              className="mt-1"
+              placeholder="הזן שם הספק"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="phone" className="text-right">
-              טלפון
-            </Label>
+
+          <div>
+            <Label htmlFor="contact_email" className="text-sm font-medium">אימייל</Label>
+            <Input
+              id="contact_email"
+              type="email"
+              value={formData.contact_email}
+              onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+              className="mt-1"
+              placeholder="supplier@example.com"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="phone" className="text-sm font-medium">טלפון</Label>
             <Input
               id="phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="col-span-3"
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              className="mt-1"
+              placeholder="05X-XXXXXXX"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="email" className="text-right">
-              דוא"ל
-            </Label>
+
+          <div>
+            <Label htmlFor="agent_name" className="text-sm font-medium">שם נציג מכירות</Label>
             <Input
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="col-span-3"
+              id="agent_name"
+              value={formData.agent_name}
+              onChange={(e) => setFormData({ ...formData, agent_name: e.target.value })}
+              className="mt-1"
+              placeholder="שם הנציג"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="agentName" className="text-right">
-              שם סוכן
-            </Label>
+
+          <div>
+            <Label htmlFor="sales_agent_phone" className="text-sm font-medium">טלפון נציג מכירות</Label>
             <Input
-              id="agentName"
-              value={agentName}
-              onChange={(e) => setAgentName(e.target.value)}
-              className="col-span-3"
+              id="sales_agent_phone"
+              type="tel"
+              value={formData.sales_agent_phone}
+              onChange={(e) => setFormData({ ...formData, sales_agent_phone: e.target.value })}
+              className="mt-1"
+              placeholder="05X-XXXXXXX"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="contactEmail" className="text-right">
-              דוא"ל ליצירת קשר
-            </Label>
-            <Input
-              id="contactEmail"
-              value={contactEmail}
-              onChange={(e) => setContactEmail(e.target.value)}
-              className="col-span-3"
-            />
+
+          <div className="flex gap-3 pt-4">
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="flex-1"
+            >
+              {loading ? 'שומר...' : 'הוסף ספק'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="flex-1"
+            >
+              ביטול
+            </Button>
           </div>
-        </div>
-        <DialogFooter>
-          <Button type="submit" onClick={handleSubmit}>
-            הוסף ספק
-          </Button>
-        </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
 };
-
-export default AddSupplierDialog;
