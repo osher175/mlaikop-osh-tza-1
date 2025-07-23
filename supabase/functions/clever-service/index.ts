@@ -40,18 +40,51 @@ serve(async (req) => {
     console.log(`Product out of stock alert: ${product_name} (ID: ${product_id})`);
     console.log(`Quantity: ${quantity}, Supplier ID: ${supplier_id || 'None'}`);
 
-    // Here you can add logic to send to external webhook (n8n) if needed
-    // For now, we'll just log and respond successfully
+    // Send to N8N webhook
+    const n8nWebhookUrl = "https://primary-production-b8cb.up.railway.app/webhook/0b5f6e74-c911-48af-a26b-f4aa6bc9f6ac";
+    
+    try {
+      console.log("Sending data to N8N webhook:", n8nWebhookUrl);
+      
+      const n8nResponse = await fetch(n8nWebhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          product_id,
+          product_name,
+          quantity,
+          supplier_id,
+          timestamp: new Date().toISOString(),
+          source: "mlaiko_inventory_system",
+          event_type: "product_out_of_stock"
+        })
+      });
+
+      console.log("N8N webhook response status:", n8nResponse.status);
+      
+      if (n8nResponse.ok) {
+        console.log("Successfully sent data to N8N webhook");
+      } else {
+        console.error("Failed to send data to N8N webhook:", n8nResponse.status);
+      }
+      
+    } catch (n8nError) {
+      console.error("Error sending to N8N webhook:", n8nError);
+      // Don't fail the entire request if N8N webhook fails
+    }
     
     const response = {
       status: "success",
-      message: "Out of stock webhook received successfully",
+      message: "Out of stock webhook received and processed successfully",
       data: {
         product_id,
         product_name,
         quantity,
         supplier_id,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        n8n_webhook_sent: true
       }
     };
 
