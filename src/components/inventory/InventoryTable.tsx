@@ -37,7 +37,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { businessContext } = useBusinessAccess();
-  const { approveStock, isApproving, isPendingApproval } = useStockApprovals();
+  const { approveStock, isApproving, canSendToSupplier } = useStockApprovals();
 
   // Only show approval button for business owners
   const canApproveStock = businessContext?.is_owner;
@@ -197,12 +197,12 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                         ערוך
                       </Button>
                       
-                      {/* Show approve button only for out of stock products that haven't been approved yet */}
-                      {canApproveStock && product.quantity === 0 && isPendingApproval(product.id) && (
+                      {/* Show approve button only for out of stock products that can be sent to supplier */}
+                      {canApproveStock && product.quantity === 0 && canSendToSupplier(product.id) && (
                         <StockApprovalDialog
                           productName={product.name}
                           productId={product.id}
-                          onApprove={approveStock}
+                          onApprove={(productId) => approveStock({ productId, productName: product.name })}
                           isApproving={isApproving}
                         >
                           <Button 
@@ -316,12 +316,12 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                           <Edit className="w-3 h-3" />
                         </Button>
                         
-                        {/* Show approve button only for out of stock products that haven't been approved yet */}
-                        {canApproveStock && product.quantity === 0 && isPendingApproval(product.id) && (
+                        {/* Show approve button only for out of stock products that can be sent to supplier */}
+                        {canApproveStock && product.quantity === 0 && canSendToSupplier(product.id) && (
                           <StockApprovalDialog
                             productName={product.name}
                             productId={product.id}
-                            onApprove={approveStock}
+                            onApprove={(productId) => approveStock({ productId, productName: product.name })}
                             isApproving={isApproving}
                           >
                             <Button 

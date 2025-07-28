@@ -19,7 +19,7 @@ export const useStockApprovals = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: pendingApprovals = [], isLoading, refetch } = useQuery({
+  const { data: allApprovals = [], isLoading, refetch } = useQuery({
     queryKey: ['stock-approvals', businessContext?.business_id],
     queryFn: async () => {
       if (!businessContext?.business_id) return [];
@@ -28,7 +28,6 @@ export const useStockApprovals = () => {
         .from('stock_approvals')
         .select('*')
         .eq('business_id', businessContext.business_id)
-        .eq('is_approved', false)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -42,24 +41,44 @@ export const useStockApprovals = () => {
   });
 
   const approveStockMutation = useMutation({
-    mutationFn: async (productId: string) => {
+    mutationFn: async ({ productId, productName }: { productId: string; productName: string }) => {
       if (!businessContext?.business_id) {
         throw new Error('Business context not found');
       }
 
-      // Update the approval status
-      const { error } = await supabase
-        .from('stock_approvals')
-        .update({ 
-          is_approved: true, 
-          approved_at: new Date().toISOString() 
-        })
-        .eq('product_id', productId)
-        .eq('business_id', businessContext.business_id);
+      // Check if approval already exists
+      const existingApproval = allApprovals.find(approval => approval.product_id === productId);
+      
+      if (existingApproval) {
+        // Update existing approval
+        const { error } = await supabase
+          .from('stock_approvals')
+          .update({ 
+            is_approved: true, 
+            approved_at: new Date().toISOString() 
+          })
+          .eq('id', existingApproval.id);
 
-      if (error) {
-        console.error('Error approving stock:', error);
-        throw error;
+        if (error) {
+          console.error('Error updating stock approval:', error);
+          throw error;
+        }
+      } else {
+        // Create new approval record
+        const { error } = await supabase
+          .from('stock_approvals')
+          .insert({
+            product_id: productId,
+            product_name: productName,
+            business_id: businessContext.business_id,
+            is_approved: true,
+            approved_at: new Date().toISOString()
+          });
+
+        if (error) {
+          console.error('Error creating stock approval:', error);
+          throw error;
+        }
       }
 
       // Send notification to N8N webhook
@@ -97,16 +116,27 @@ export const useStockApprovals = () => {
     },
   });
 
+  const canSendToSupplier = (productId: string) => {
+    // Check if there's no approved record for this product
+    const approvedRecord = allApprovals.find(approval => 
+      approval.product_id === productId && approval.is_approved
+    );
+    return !approvedRecord;
+  };
+
   const isPendingApproval = (productId: string) => {
-    return pendingApprovals.some(approval => approval.product_id === productId);
+    return allApprovals.some(approval => 
+      approval.product_id === productId && !approval.is_approved
+    );
   };
 
   return {
-    pendingApprovals,
+    allApprovals,
     isLoading,
     refetch,
     approveStock: approveStockMutation.mutate,
     isApproving: approveStockMutation.isPending,
+    canSendToSupplier,
     isPendingApproval,
   };
 };
