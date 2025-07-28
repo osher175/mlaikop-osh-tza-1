@@ -959,6 +959,36 @@ export type Database = {
           },
         ]
       }
+      stock_approvals: {
+        Row: {
+          approved_at: string | null
+          business_id: string
+          created_at: string | null
+          id: string
+          is_approved: boolean | null
+          product_id: string
+          product_name: string
+        }
+        Insert: {
+          approved_at?: string | null
+          business_id: string
+          created_at?: string | null
+          id?: string
+          is_approved?: boolean | null
+          product_id: string
+          product_name: string
+        }
+        Update: {
+          approved_at?: string | null
+          business_id?: string
+          created_at?: string | null
+          id?: string
+          is_approved?: boolean | null
+          product_id?: string
+          product_name?: string
+        }
+        Relationships: []
+      }
       subscription_plans: {
         Row: {
           ai_access: boolean | null

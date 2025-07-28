@@ -1,11 +1,15 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Package, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { Package, Edit, Trash2, AlertTriangle, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { LazyImage } from '@/components/inventory/LazyImage';
+import { StockApprovalDialog } from '@/components/inventory/StockApprovalDialog';
+import { useStockApprovals } from '@/hooks/useStockApprovals';
+import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'] & {
@@ -32,6 +36,11 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
 }) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { businessContext } = useBusinessAccess();
+  const { approveStock, isApproving, isPendingApproval } = useStockApprovals();
+
+  // Only show approval button for business owners
+  const canApproveStock = businessContext?.is_owner;
 
   const getStatusBadge = (product: Product) => {
     const quantity = product.quantity;
@@ -187,6 +196,27 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                         <Edit className="w-4 h-4 ml-1" />
                         ערוך
                       </Button>
+                      
+                      {/* Show approve button only for out of stock products that haven't been approved yet */}
+                      {canApproveStock && product.quantity === 0 && isPendingApproval(product.id) && (
+                        <StockApprovalDialog
+                          productName={product.name}
+                          productId={product.id}
+                          onApprove={approveStock}
+                          isApproving={isApproving}
+                        >
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-blue-600 hover:text-blue-700 h-10 min-h-[44px] px-2 text-base md:text-lg"
+                            title="שלח לספק"
+                          >
+                            <Send className="w-4 h-4 ml-1" />
+                            שלח לספק
+                          </Button>
+                        </StockApprovalDialog>
+                      )}
+                      
                       <Button 
                         size="sm" 
                         variant="outline" 
@@ -244,7 +274,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                   <th className="text-right p-3 font-medium text-sm min-w-[100px]">מחיר</th>
                   <th className="text-right p-3 font-medium text-sm min-w-[120px] hidden md:table-cell">מיקום</th>
                   <th className="text-right p-3 font-medium text-sm min-w-[100px]">סטטוס</th>
-                  <th className="text-right p-3 font-medium text-sm min-w-[120px]">פעולות</th>
+                  <th className="text-right p-3 font-medium text-sm min-w-[150px]">פעולות</th>
                 </tr>
               </thead>
               <tbody>
@@ -274,7 +304,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                     <td className="p-3 text-sm min-w-[100px]">₪{product.price || '-'}</td>
                     <td className="p-3 text-sm max-w-[100px] min-w-[120px] truncate hidden md:table-cell">{product.location || '-'}</td>
                     <td className="p-3 min-w-[100px]">{getStatusBadge(product)}</td>
-                    <td className="p-3 min-w-[120px]">
+                    <td className="p-3 min-w-[150px]">
                       <div className="flex gap-1">
                         <Button 
                           size="sm" 
@@ -285,6 +315,26 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                         >
                           <Edit className="w-3 h-3" />
                         </Button>
+                        
+                        {/* Show approve button only for out of stock products that haven't been approved yet */}
+                        {canApproveStock && product.quantity === 0 && isPendingApproval(product.id) && (
+                          <StockApprovalDialog
+                            productName={product.name}
+                            productId={product.id}
+                            onApprove={approveStock}
+                            isApproving={isApproving}
+                          >
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="text-blue-600 hover:text-blue-700 h-7 w-7 p-0"
+                              title="שלח לספק"
+                            >
+                              <Send className="w-3 h-3" />
+                            </Button>
+                          </StockApprovalDialog>
+                        )}
+                        
                         <Button 
                           size="sm" 
                           variant="outline" 
