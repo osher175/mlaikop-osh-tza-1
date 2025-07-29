@@ -83,7 +83,7 @@ export const useStockApprovals = () => {
 
       // Send notification to N8N webhook
       try {
-        const response = await fetch('https://production-n8n.onrender.com/webhook/approval-confirmed', {
+        const response = await fetch('https://primary-production-b8cb.up.railway.app/webhook/out-of-stock', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ product_id: productId })
