@@ -285,6 +285,13 @@ export type Database = {
             foreignKeyName: "inventory_actions_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "products_automation_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_actions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "stale_products"
             referencedColumns: ["id"]
           },
@@ -461,6 +468,13 @@ export type Database = {
             foreignKeyName: "notifications_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "products_automation_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "stale_products"
             referencedColumns: ["id"]
           },
@@ -560,6 +574,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: true
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_thresholds_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products_automation_view"
             referencedColumns: ["id"]
           },
           {
@@ -774,6 +795,13 @@ export type Database = {
             foreignKeyName: "recent_activity_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "products_automation_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recent_activity_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "stale_products"
             referencedColumns: ["id"]
           },
@@ -889,6 +917,13 @@ export type Database = {
             foreignKeyName: "stock_alerts_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "products_automation_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "stale_products"
             referencedColumns: ["id"]
           },
@@ -941,6 +976,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_approval_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_automation_view"
             referencedColumns: ["id"]
           },
           {
@@ -1370,6 +1412,13 @@ export type Database = {
             foreignKeyName: "whatsapp_notifications_log_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "products_automation_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notifications_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "stale_products"
             referencedColumns: ["id"]
           },
@@ -1384,6 +1433,32 @@ export type Database = {
       }
     }
     Views: {
+      products_automation_view: {
+        Row: {
+          id: string | null
+          name: string | null
+          supplier_id: string | null
+        }
+        Insert: {
+          id?: string | null
+          name?: string | null
+          supplier_id?: string | null
+        }
+        Update: {
+          id?: string | null
+          name?: string | null
+          supplier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stale_products: {
         Row: {
           expiration_date: string | null
