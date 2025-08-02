@@ -672,6 +672,13 @@ export type Database = {
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_automation_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -810,6 +817,13 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recent_activity_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_automation_view"
             referencedColumns: ["id"]
           },
         ]
@@ -999,6 +1013,13 @@ export type Database = {
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "stock_approval_requests_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_automation_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       stock_approvals: {
@@ -1120,6 +1141,13 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_automation_view"
             referencedColumns: ["id"]
           },
         ]
@@ -1429,6 +1457,13 @@ export type Database = {
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "whatsapp_notifications_log_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_automation_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -1455,6 +1490,13 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_automation_view"
             referencedColumns: ["id"]
           },
         ]
@@ -1489,7 +1531,32 @@ export type Database = {
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_automation_view"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      suppliers_automation_view: {
+        Row: {
+          id: string | null
+          name: string | null
+          phone: string | null
+        }
+        Insert: {
+          id?: string | null
+          name?: string | null
+          phone?: string | null
+        }
+        Update: {
+          id?: string | null
+          name?: string | null
+          phone?: string | null
+        }
+        Relationships: []
       }
     }
     Functions: {
