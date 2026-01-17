@@ -281,20 +281,6 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "inventory_actions_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products_automation_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_actions_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "stale_products"
-            referencedColumns: ["id"]
-          },
         ]
       }
       login_attempts: {
@@ -464,20 +450,6 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "notifications_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products_automation_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notifications_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "stale_products"
-            referencedColumns: ["id"]
-          },
         ]
       }
       permissions: {
@@ -576,20 +548,6 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "product_thresholds_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: true
-            referencedRelation: "products_automation_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "product_thresholds_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: true
-            referencedRelation: "stale_products"
-            referencedColumns: ["id"]
-          },
         ]
       }
       products: {
@@ -670,13 +628,6 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers_automation_view"
             referencedColumns: ["id"]
           },
         ]
@@ -799,31 +750,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "recent_activity_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products_automation_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recent_activity_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "stale_products"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "recent_activity_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recent_activity_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers_automation_view"
             referencedColumns: ["id"]
           },
         ]
@@ -927,20 +857,6 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "stock_alerts_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products_automation_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_alerts_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "stale_products"
-            referencedColumns: ["id"]
-          },
         ]
       }
       stock_approval_requests: {
@@ -993,31 +909,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "stock_approval_requests_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products_automation_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_approval_requests_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "stale_products"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "stock_approval_requests_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_approval_requests_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers_automation_view"
             referencedColumns: ["id"]
           },
         ]
@@ -1141,13 +1036,6 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_invoices_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers_automation_view"
             referencedColumns: ["id"]
           },
         ]
@@ -1437,127 +1325,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "whatsapp_notifications_log_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products_automation_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "whatsapp_notifications_log_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "stale_products"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "whatsapp_notifications_log_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "whatsapp_notifications_log_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers_automation_view"
             referencedColumns: ["id"]
           },
         ]
       }
     }
     Views: {
-      products_automation_view: {
-        Row: {
-          id: string | null
-          name: string | null
-          supplier_id: string | null
-        }
-        Insert: {
-          id?: string | null
-          name?: string | null
-          supplier_id?: string | null
-        }
-        Update: {
-          id?: string | null
-          name?: string | null
-          supplier_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "products_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers_automation_view"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      stale_products: {
-        Row: {
-          expiration_date: string | null
-          id: string | null
-          name: string | null
-          quantity: number | null
-          supplier_id: string | null
-        }
-        Insert: {
-          expiration_date?: string | null
-          id?: string | null
-          name?: string | null
-          quantity?: number | null
-          supplier_id?: string | null
-        }
-        Update: {
-          expiration_date?: string | null
-          id?: string | null
-          name?: string | null
-          quantity?: number | null
-          supplier_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "products_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers_automation_view"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      suppliers_automation_view: {
-        Row: {
-          id: string | null
-          name: string | null
-          phone: string | null
-        }
-        Insert: {
-          id?: string | null
-          name?: string | null
-          phone?: string | null
-        }
-        Update: {
-          id?: string | null
-          name?: string | null
-          phone?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       bytea_to_text: { Args: { data: string }; Returns: string }
