@@ -96,16 +96,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check user role
-    const { data: profile } = await supabaseUser
-      .from("profiles")
+    // Check user role from user_roles table (not profiles)
+    const { data: userRoleData } = await supabaseUser
+      .from("user_roles")
       .select("role")
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .single();
 
-    if (!profile || !["admin", "OWNER"].includes(profile.role || "")) {
+    const userRole = userRoleData?.role || '';
+    console.log(`User ${user.id} role: ${userRole}`);
+
+    if (!["admin", "OWNER"].includes(userRole)) {
       return new Response(
-        JSON.stringify({ error: "Only admins can compress storage images" }),
+        JSON.stringify({ error: "Only admins can compress storage images", userRole }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
