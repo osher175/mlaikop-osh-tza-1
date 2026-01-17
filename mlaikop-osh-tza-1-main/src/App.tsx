@@ -23,6 +23,7 @@ import { CreateBusiness } from "./pages/CreateBusiness";
 import { JoinBusiness } from "./pages/JoinBusiness";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { OnboardingGuard } from "./components/OnboardingGuard";
+import { SmartRedirect } from "./components/SmartRedirect";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,14 +65,12 @@ const App = () => (
             } 
           />
           
-          {/* Protected Routes with Onboarding Guard */}
+          {/* Smart Redirect - routes admins to /admin, business users to /dashboard */}
           <Route 
             path="/" 
             element={
               <ProtectedRoute>
-                <OnboardingGuard>
-                  <Dashboard />
-                </OnboardingGuard>
+                <SmartRedirect />
               </ProtectedRoute>
             } 
           />
