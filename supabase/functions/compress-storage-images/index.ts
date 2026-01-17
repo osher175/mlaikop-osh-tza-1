@@ -5,20 +5,62 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Simple image compression using canvas-like approach for JPEG
-async function compressImageBlob(imageData: ArrayBuffer, maxDim: number = 800, quality: number = 0.8): Promise<Blob> {
-  // For server-side, we'll use a different approach - resize using fetch to a compression service
-  // or return original if small enough. For now, we'll use basic re-encoding.
-  
-  // Check if image is already small (< 200KB)
-  if (imageData.byteLength < 200 * 1024) {
-    return new Blob([imageData], { type: "image/jpeg" });
+// Compress JPEG using Canvas API simulation via Deno
+async function compressImage(
+  imageData: Uint8Array,
+  targetWidth: number = 800,
+  quality: number = 0.75
+): Promise<{ data: Uint8Array; originalSize: number; newSize: number }> {
+  const originalSize = imageData.length;
+
+  // For images already smaller than 200KB, skip compression
+  if (originalSize < 200 * 1024) {
+    return { data: imageData, originalSize, newSize: originalSize };
   }
-  
-  // For larger images, we'll create a reduced quality version
-  // This is a simplified approach - in production you might use Sharp via npm
-  const blob = new Blob([imageData], { type: "image/jpeg" });
-  return blob;
+
+  try {
+    // Use ImageScript for Deno image processing
+    const ImageScript = await import("https://deno.land/x/imagescript@1.3.0/mod.ts");
+    
+    // Decode image
+    let image;
+    try {
+      image = await ImageScript.decode(imageData);
+    } catch (e) {
+      console.log("Failed to decode image, returning original:", e.message);
+      return { data: imageData, originalSize, newSize: originalSize };
+    }
+
+    // Calculate new dimensions maintaining aspect ratio
+    const aspectRatio = image.height / image.width;
+    let newWidth = image.width;
+    let newHeight = image.height;
+
+    if (image.width > targetWidth) {
+      newWidth = targetWidth;
+      newHeight = Math.round(targetWidth * aspectRatio);
+    }
+
+    // Resize if needed
+    if (newWidth !== image.width) {
+      image.resize(newWidth, newHeight);
+    }
+
+    // Encode as JPEG with quality
+    const qualityPercent = Math.round(quality * 100);
+    const encoded = await image.encodeJPEG(qualityPercent);
+    
+    console.log(`Compressed: ${(originalSize / 1024).toFixed(0)}KB → ${(encoded.length / 1024).toFixed(0)}KB`);
+    
+    return { 
+      data: encoded, 
+      originalSize, 
+      newSize: encoded.length 
+    };
+  } catch (error) {
+    console.error("Compression error:", error);
+    return { data: imageData, originalSize, newSize: originalSize };
+  }
 }
 
 Deno.serve(async (req) => {
@@ -71,7 +113,8 @@ Deno.serve(async (req) => {
     // Use service role client for storage operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { action } = await req.json();
+    const body = await req.json();
+    const { action } = body;
 
     if (action === "list") {
       // List all files in products bucket with their sizes
@@ -104,8 +147,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (action === "compress") {
-      const { filePath } = await req.json().catch(() => ({}));
+    if (action === "compress-single") {
+      const { filePath } = body;
       
       if (!filePath) {
         return new Response(
@@ -113,6 +156,8 @@ Deno.serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      console.log(`Compressing: ${filePath}`);
 
       // Download the file
       const { data: fileData, error: downloadError } = await supabaseAdmin.storage
@@ -123,37 +168,169 @@ Deno.serve(async (req) => {
         throw downloadError || new Error("Failed to download file");
       }
 
-      const originalSize = fileData.size;
+      const arrayBuffer = await fileData.arrayBuffer();
+      const imageData = new Uint8Array(arrayBuffer);
 
-      // Skip if already small
-      if (originalSize < 200 * 1024) {
+      // Compress the image
+      const { data: compressedData, originalSize, newSize } = await compressImage(imageData);
+
+      // Only re-upload if we achieved compression
+      if (newSize < originalSize * 0.9) {
+        // Delete old file
+        await supabaseAdmin.storage.from("products").remove([filePath]);
+
+        // Upload compressed version with same name
+        const newFileName = filePath.replace(/\.[^.]+$/, '.jpg');
+        const { error: uploadError } = await supabaseAdmin.storage
+          .from("products")
+          .upload(newFileName, compressedData, {
+            contentType: "image/jpeg",
+            upsert: true,
+          });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        // Update product reference if file name changed
+        if (newFileName !== filePath) {
+          const oldUrl = `${supabaseUrl}/storage/v1/object/public/products/${filePath}`;
+          const newUrl = `${supabaseUrl}/storage/v1/object/public/products/${newFileName}`;
+          
+          await supabaseAdmin
+            .from("products")
+            .update({ image: newUrl })
+            .eq("image", oldUrl);
+        }
+
         return new Response(
           JSON.stringify({
             success: true,
-            message: "File already optimized",
             originalSize,
-            newSize: originalSize,
-            saved: 0,
+            newSize,
+            savedBytes: originalSize - newSize,
+            savedMB: ((originalSize - newSize) / (1024 * 1024)).toFixed(2),
+            compressionRatio: ((1 - newSize / originalSize) * 100).toFixed(1),
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } else {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Image already optimized",
+            originalSize,
+            newSize,
+            savedBytes: 0,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+    }
 
-      // For now, we'll just report that compression would need a more robust solution
-      // In production, you'd use Sharp or similar library
+    if (action === "compress-all") {
+      // Get list of large files to compress
+      const { data: files, error: listError } = await supabaseAdmin.storage
+        .from("products")
+        .list("products", { limit: 1000 });
+
+      if (listError) {
+        throw listError;
+      }
+
+      const largeFiles = files?.filter((f) => (f.metadata?.size || 0) > 200 * 1024) || [];
+      
+      console.log(`Found ${largeFiles.length} files to compress`);
+
+      let totalSaved = 0;
+      let processed = 0;
+      let errors = 0;
+      const results: Array<{ file: string; saved: number; error?: string }> = [];
+
+      for (const file of largeFiles) {
+        try {
+          const filePath = `products/${file.name}`;
+          console.log(`Processing ${processed + 1}/${largeFiles.length}: ${file.name}`);
+
+          // Download
+          const { data: fileData, error: downloadError } = await supabaseAdmin.storage
+            .from("products")
+            .download(filePath);
+
+          if (downloadError || !fileData) {
+            errors++;
+            results.push({ file: file.name, saved: 0, error: downloadError?.message || "Download failed" });
+            continue;
+          }
+
+          const arrayBuffer = await fileData.arrayBuffer();
+          const imageData = new Uint8Array(arrayBuffer);
+
+          // Compress
+          const { data: compressedData, originalSize, newSize } = await compressImage(imageData);
+
+          // Only re-upload if we achieved significant compression
+          if (newSize < originalSize * 0.9) {
+            // Delete old file
+            await supabaseAdmin.storage.from("products").remove([filePath]);
+
+            // Upload compressed version
+            const newFileName = filePath.replace(/\.[^.]+$/, '.jpg');
+            const { error: uploadError } = await supabaseAdmin.storage
+              .from("products")
+              .upload(newFileName, compressedData, {
+                contentType: "image/jpeg",
+                upsert: true,
+              });
+
+            if (uploadError) {
+              errors++;
+              results.push({ file: file.name, saved: 0, error: uploadError.message });
+              continue;
+            }
+
+            // Update product reference if file name changed
+            if (newFileName !== filePath) {
+              const oldUrl = `${supabaseUrl}/storage/v1/object/public/products/${filePath}`;
+              const newUrl = `${supabaseUrl}/storage/v1/object/public/products/${newFileName}`;
+              
+              await supabaseAdmin
+                .from("products")
+                .update({ image: newUrl })
+                .eq("image", oldUrl);
+            }
+
+            const saved = originalSize - newSize;
+            totalSaved += saved;
+            results.push({ file: file.name, saved });
+          } else {
+            results.push({ file: file.name, saved: 0 });
+          }
+
+          processed++;
+        } catch (e) {
+          console.error(`Error processing ${file.name}:`, e);
+          errors++;
+          results.push({ file: file.name, saved: 0, error: e.message });
+        }
+      }
+
       return new Response(
         JSON.stringify({
-          success: false,
-          message: "Server-side compression requires additional setup. Consider deleting unused images instead.",
-          originalSize,
-          filePath,
+          success: true,
+          totalFiles: largeFiles.length,
+          processed,
+          errors,
+          totalSavedBytes: totalSaved,
+          totalSavedMB: (totalSaved / (1024 * 1024)).toFixed(2),
+          results: results.slice(0, 50), // Return first 50 results
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (action === "delete") {
-      const { filePath } = await req.json().catch(() => ({}));
+      const { filePath } = body;
       
       if (!filePath) {
         return new Response(
