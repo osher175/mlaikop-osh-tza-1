@@ -1,5 +1,7 @@
-
 project_id = "gtakgctmtayalcbpnryg"
 
 [functions.clever-service]
+verify_jwt = false
+
+[functions.compress-storage-images]
 verify_jwt = false

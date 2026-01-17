@@ -21,6 +21,7 @@ import { BusinessSettings } from "@/pages/BusinessSettings";
 import { AdminPanel } from "@/pages/AdminPanel";
 import { AdminDashboard } from "@/pages/AdminDashboard";
 import { AdminSettings } from "@/pages/AdminSettings";
+import StorageManagement from "@/pages/admin/StorageManagement";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -146,6 +147,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['admin']}>
                     <AdminUserProfile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/storage"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'OWNER']}>
+                    <StorageManagement />
                   </ProtectedRoute>
                 }
               />
