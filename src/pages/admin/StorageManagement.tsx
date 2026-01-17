@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { HardDrive, Trash2, Search, AlertTriangle, FileImage, Loader2 } from 'lucide-react';
+import { HardDrive, Trash2, Search, AlertTriangle, FileImage, Loader2, Shrink, CheckCircle } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,12 +33,25 @@ interface OrphanStats {
   orphanFiles: Array<{ name: string; size: number; path: string }>;
 }
 
+interface CompressionResult {
+  success: boolean;
+  totalFiles: number;
+  processed: number;
+  errors: number;
+  totalSavedBytes: number;
+  totalSavedMB: string;
+  results: Array<{ file: string; saved: number; error?: string }>;
+}
+
 export default function StorageManagement() {
   const [stats, setStats] = useState<StorageStats | null>(null);
   const [orphans, setOrphans] = useState<OrphanStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showCompressDialog, setShowCompressDialog] = useState(false);
+  const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null);
   const { toast } = useToast();
 
   const maxStorageGB = 1.019; // Free plan limit
@@ -123,6 +136,72 @@ export default function StorageManagement() {
     }
   };
 
+  const compressAllImages = async () => {
+    setIsCompressing(true);
+    setCompressionResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('compress-storage-images', {
+        body: { action: 'compress-all' },
+      });
+
+      if (error) throw error;
+
+      setCompressionResult(data);
+      
+      toast({
+        title: 'דחיסה הושלמה!',
+        description: `נחסכו ${data.totalSavedMB} MB מ-${data.processed} תמונות`,
+      });
+
+      fetchStats();
+    } catch (error: any) {
+      console.error('Error compressing images:', error);
+      toast({
+        title: 'שגיאה בדחיסה',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCompressing(false);
+      setShowCompressDialog(false);
+    }
+  };
+
+  const compressSingleImage = async (filePath: string) => {
+    try {
+      toast({
+        title: 'מבצע דחיסה...',
+        description: filePath,
+      });
+
+      const { data, error } = await supabase.functions.invoke('compress-storage-images', {
+        body: { action: 'compress-single', filePath },
+      });
+
+      if (error) throw error;
+
+      if (data.savedBytes > 0) {
+        toast({
+          title: 'נדחס בהצלחה!',
+          description: `נחסכו ${(data.savedBytes / 1024).toFixed(0)} KB (${data.compressionRatio}%)`,
+        });
+      } else {
+        toast({
+          title: 'התמונה כבר מותאמת',
+          description: 'לא ניתן לדחוס יותר',
+        });
+      }
+
+      fetchStats();
+    } catch (error: any) {
+      toast({
+        title: 'שגיאה בדחיסה',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const deleteFile = async (filePath: string) => {
     try {
       const { error } = await supabase.functions.invoke('compress-storage-images', {
@@ -162,7 +241,7 @@ export default function StorageManagement() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground">ניהול אחסון</h1>
-            <p className="text-muted-foreground">נהל ופנה מקום באחסון התמונות</p>
+            <p className="text-muted-foreground">נהל, דחוס ופנה מקום באחסון התמונות</p>
           </div>
           <Button onClick={fetchStats} disabled={isLoading}>
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
@@ -221,6 +300,70 @@ export default function StorageManagement() {
                 <Loader2 className="w-6 h-6 animate-spin" />
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Compression Section */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shrink className="w-5 h-5" />
+              דחיסת תמונות
+            </CardTitle>
+            <CardDescription>
+              דחוס את כל התמונות הגדולות (מעל 200KB) כדי לחסוך מקום
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => setShowCompressDialog(true)} 
+                  disabled={isCompressing || !stats || stats.largeFilesCount === 0}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  {isCompressing ? (
+                    <Loader2 className="w-4 h-4 animate-spin ml-2" />
+                  ) : (
+                    <Shrink className="w-4 h-4 ml-2" />
+                  )}
+                  דחוס את כל התמונות הגדולות
+                </Button>
+              </div>
+
+              {stats && stats.largeFilesCount > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  נמצאו {stats.largeFilesCount} תמונות גדולות שניתן לדחוס
+                </div>
+              )}
+
+              {compressionResult && (
+                <div className="p-4 bg-muted rounded-lg space-y-2">
+                  <div className="flex items-center gap-2 text-primary">
+                    <CheckCircle className="w-5 h-5" />
+                    <span className="font-medium">דחיסה הושלמה!</span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">תמונות שנבדקו: </span>
+                      <span className="font-medium">{compressionResult.totalFiles}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">נדחסו: </span>
+                      <span className="font-medium">{compressionResult.processed}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">שגיאות: </span>
+                      <span className="font-medium">{compressionResult.errors}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">נחסכו: </span>
+                      <span className="font-medium text-primary">{compressionResult.totalSavedMB} MB</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -304,7 +447,7 @@ export default function StorageManagement() {
                 קבצים גדולים
               </CardTitle>
               <CardDescription>
-                תמונות מעל 500KB - שקול להחליף אותן בגרסאות מוקטנות
+                תמונות מעל 500KB - לחץ על דחיסה להקטנת גודל הקובץ
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -319,14 +462,24 @@ export default function StorageManagement() {
                       <span className="text-sm truncate max-w-[200px]">{file.name}</span>
                       <Badge variant="outline">{formatBytes(file.size)}</Badge>
                     </div>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={() => deleteFile(file.path)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => compressSingleImage(file.path)}
+                        className="text-primary hover:text-primary"
+                      >
+                        <Shrink className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => deleteFile(file.path)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -354,6 +507,31 @@ export default function StorageManagement() {
               >
                 {isDeleting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
                 מחק הכל
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Compress Confirmation Dialog */}
+        <AlertDialog open={showCompressDialog} onOpenChange={setShowCompressDialog}>
+          <AlertDialogContent dir="rtl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>דחיסת כל התמונות הגדולות</AlertDialogTitle>
+              <AlertDialogDescription>
+                פעולה זו תדחוס את כל התמונות מעל 200KB.
+                התמונות יוקטנו ל-800 פיקסלים ואיכות 75%.
+                תהליך זה עשוי לקחת כמה דקות בהתאם למספר התמונות.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>ביטול</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={compressAllImages}
+                className="bg-primary hover:bg-primary/90"
+                disabled={isCompressing}
+              >
+                {isCompressing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
+                התחל דחיסה
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
