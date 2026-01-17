@@ -3,7 +3,7 @@ import React from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProtectedFeature } from '@/components/ProtectedFeature';
 import { AdminUserSearch } from '@/components/admin/AdminUserSearch';
-import { Users, Settings, BarChart3 } from 'lucide-react';
+import { Users, Settings, BarChart3, HardDrive } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -25,7 +25,7 @@ export const AdminPanel: React.FC = () => {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin-dashboard')}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -58,6 +58,18 @@ export const AdminPanel: React.FC = () => {
                 </CardTitle>
                 <CardDescription>
                   נהל הגדרות כלליות של המערכת
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/storage')}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <HardDrive className="h-5 w-5 text-primary" />
+                  ניהול אחסון
+                </CardTitle>
+                <CardDescription>
+                  נהל אחסון, דחס תמונות ופנה מקום
                 </CardDescription>
               </CardHeader>
             </Card>
