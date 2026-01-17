@@ -1359,18 +1359,6 @@ export type Database = {
         Args: { target_business_id: string }
         Returns: Json
       }
-      get_expiring_products: {
-        Args: { days_ahead?: number; target_business_id?: string }
-        Returns: {
-          business_id: string
-          days_until_expiry: number
-          expiration_date: string
-          product_id: string
-          product_name: string
-          quantity: number
-          supplier_name: string
-        }[]
-      }
       get_product_autocomplete: {
         Args: {
           business_uuid?: string
@@ -1389,21 +1377,6 @@ export type Database = {
           business_name: string
           is_owner: boolean
           user_role: string
-        }[]
-      }
-      get_user_profile_for_admin: {
-        Args: { target_user_id: string }
-        Returns: {
-          business_name: string
-          created_at: string
-          email: string
-          first_name: string
-          is_active: boolean
-          last_name: string
-          role: Database["public"]["Enums"]["user_role"]
-          subscription_plan: string
-          subscription_status: string
-          user_id: string
         }[]
       }
       get_user_role: {
@@ -1599,26 +1572,6 @@ export type Database = {
       reports_aggregate: {
         Args: { business_id: string; date_from: string; date_to: string }
         Returns: Json
-      }
-      search_products: {
-        Args: {
-          business_uuid?: string
-          limit_count?: number
-          search_term?: string
-        }
-        Returns: {
-          barcode: string
-          category_name: string
-          cost: number
-          expiration_date: string
-          id: string
-          location: string
-          name: string
-          price: number
-          quantity: number
-          search_rank: number
-          supplier_name: string
-        }[]
       }
       search_users_for_admin: {
         Args: { search_pattern: string }
