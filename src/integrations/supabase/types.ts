@@ -1359,17 +1359,6 @@ export type Database = {
         Args: { target_business_id: string }
         Returns: Json
       }
-      get_product_autocomplete: {
-        Args: {
-          business_uuid?: string
-          limit_count?: number
-          search_term: string
-        }
-        Returns: {
-          product_count: number
-          suggestion: string
-        }[]
-      }
       get_user_business_context: {
         Args: { user_uuid?: string }
         Returns: {
