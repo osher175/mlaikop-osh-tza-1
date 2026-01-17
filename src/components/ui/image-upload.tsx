@@ -5,6 +5,70 @@ import { Camera, Upload, X, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+// Compress image using Canvas API - reduces size by 15-20x
+async function compressImage(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      
+      const maxDim = 800;
+      let { width, height } = img;
+      
+      // Calculate new dimensions maintaining aspect ratio
+      if (width > height && width > maxDim) {
+        height = Math.round((height * maxDim) / width);
+        width = maxDim;
+      } else if (height > maxDim) {
+        width = Math.round((width * maxDim) / height);
+        height = maxDim;
+      }
+      
+      // Draw to canvas and compress
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'));
+        return;
+      }
+      
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('Could not create blob'));
+            return;
+          }
+          
+          const compressed = new File(
+            [blob], 
+            file.name.replace(/\.[^.]+$/, '.jpg'),
+            { type: 'image/jpeg' }
+          );
+          
+          console.log(`Image compressed: ${(file.size / 1024).toFixed(0)}KB → ${(compressed.size / 1024).toFixed(0)}KB`);
+          resolve(compressed);
+        },
+        'image/jpeg',
+        0.8 // 80% quality
+      );
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Could not load image'));
+    };
+    
+    img.src = url;
+  });
+}
+
 interface ImageUploadProps {
   currentImageUrl?: string;
   onImageUpload: (imageUrl: string) => void;
@@ -37,11 +101,11 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    // Validate file size (max 10MB before compression)
+    if (file.size > 10 * 1024 * 1024) {
       toast({
         title: "שגיאה",
-        description: "גודל הקובץ לא יכול לעלות על 5MB",
+        description: "גודל הקובץ לא יכול לעלות על 10MB",
         variant: "destructive",
       });
       return;
@@ -50,15 +114,17 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     setIsUploading(true);
 
     try {
-      // Create unique filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      // Compress image before upload
+      const compressedFile = await compressImage(file);
+      
+      // Create unique filename with .jpg extension
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.jpg`;
       const filePath = `products/${fileName}`;
 
-      // Upload to Supabase Storage
+      // Upload compressed image to Supabase Storage
       const { data, error } = await supabase.storage
         .from('products')
-        .upload(filePath, file, {
+        .upload(filePath, compressedFile, {
           cacheControl: '3600',
           upsert: false
         });
