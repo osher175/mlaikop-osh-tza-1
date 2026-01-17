@@ -11,7 +11,8 @@ import {
   Shield,
   Crown,
   User,
-  Truck
+  Truck,
+  HardDrive
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -66,6 +67,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
       to: '/users',
       icon: <Users className="w-5 h-5" />,
       label: 'ניהול משתמשים',
+      show: permissions.isPlatformAdmin
+    },
+    {
+      to: '/admin/storage',
+      icon: <HardDrive className="w-5 h-5" />,
+      label: 'ניהול אחסון',
       show: permissions.isPlatformAdmin
     },
     {
