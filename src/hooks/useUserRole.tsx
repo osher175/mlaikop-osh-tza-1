@@ -1,5 +1,4 @@
 
-import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,7 +19,6 @@ interface RolePermissions {
 
 export const useUserRole = () => {
   const { user } = useAuth();
-  const [userRole, setUserRole] = useState<UserRole>('free_user');
 
   const { data: roleData, isLoading } = useQuery({
     queryKey: ['user-role', user?.id],
@@ -46,12 +44,8 @@ export const useUserRole = () => {
     enabled: !!user?.id,
   });
 
-  useEffect(() => {
-    if (roleData?.role) {
-      console.log('Setting user role to:', roleData.role);
-      setUserRole(roleData.role);
-    }
-  }, [roleData]);
+  // שימוש ישיר ב-roleData - מונע race condition!
+  const userRole: UserRole = roleData?.role ?? 'free_user';
 
   const hasRole = (requiredRole: UserRole): boolean => {
     const roleHierarchy: Record<UserRole, number> = {
