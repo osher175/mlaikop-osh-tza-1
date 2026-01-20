@@ -231,7 +231,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (action === "compress-all") {
+    if (action === "compress-all" || action === "compress-batch") {
+      // Get batch parameters - process in smaller chunks to avoid timeout
+      const batchSize = body.batchSize || 10; // Process 10 files at a time
+      const offset = body.offset || 0;
+      
       // Get list of large files to compress
       const { data: files, error: listError } = await supabaseAdmin.storage
         .from("products")
@@ -241,19 +245,24 @@ Deno.serve(async (req) => {
         throw listError;
       }
 
-      const largeFiles = files?.filter((f) => (f.metadata?.size || 0) > 200 * 1024) || [];
+      const allLargeFiles = files?.filter((f) => (f.metadata?.size || 0) > 200 * 1024) || [];
+      const totalLargeFiles = allLargeFiles.length;
       
-      console.log(`Found ${largeFiles.length} files to compress`);
+      // Get the batch to process
+      const batch = allLargeFiles.slice(offset, offset + batchSize);
+      
+      console.log(`Processing batch: ${offset} to ${offset + batch.length} of ${totalLargeFiles} files`);
 
       let totalSaved = 0;
       let processed = 0;
+      let skipped = 0;
       let errors = 0;
       const results: Array<{ file: string; saved: number; error?: string }> = [];
 
-      for (const file of largeFiles) {
+      for (const file of batch) {
         try {
           const filePath = `products/${file.name}`;
-          console.log(`Processing ${processed + 1}/${largeFiles.length}: ${file.name}`);
+          console.log(`Processing ${processed + 1}/${batch.length}: ${file.name}`);
 
           // Download
           const { data: fileData, error: downloadError } = await supabaseAdmin.storage
@@ -306,11 +315,11 @@ Deno.serve(async (req) => {
             const saved = originalSize - newSize;
             totalSaved += saved;
             results.push({ file: file.name, saved });
+            processed++;
           } else {
+            skipped++;
             results.push({ file: file.name, saved: 0 });
           }
-
-          processed++;
         } catch (e) {
           console.error(`Error processing ${file.name}:`, e);
           errors++;
@@ -318,15 +327,27 @@ Deno.serve(async (req) => {
         }
       }
 
+      const nextOffset = offset + batchSize;
+      const hasMore = nextOffset < totalLargeFiles;
+
       return new Response(
         JSON.stringify({
           success: true,
-          totalFiles: largeFiles.length,
+          batchInfo: {
+            offset,
+            batchSize,
+            processedInBatch: batch.length,
+            totalLargeFiles,
+            nextOffset: hasMore ? nextOffset : null,
+            hasMore,
+            progressPercent: Math.round(((offset + batch.length) / totalLargeFiles) * 100),
+          },
           processed,
+          skipped,
           errors,
           totalSavedBytes: totalSaved,
           totalSavedMB: (totalSaved / (1024 * 1024)).toFixed(2),
-          results: results.slice(0, 50), // Return first 50 results
+          results,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

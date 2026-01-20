@@ -35,8 +35,17 @@ interface OrphanStats {
 
 interface CompressionResult {
   success: boolean;
-  totalFiles: number;
+  batchInfo?: {
+    offset: number;
+    batchSize: number;
+    processedInBatch: number;
+    totalLargeFiles: number;
+    nextOffset: number | null;
+    hasMore: boolean;
+    progressPercent: number;
+  };
   processed: number;
+  skipped: number;
   errors: number;
   totalSavedBytes: number;
   totalSavedMB: string;
@@ -52,6 +61,13 @@ export default function StorageManagement() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCompressDialog, setShowCompressDialog] = useState(false);
   const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null);
+  const [compressionProgress, setCompressionProgress] = useState<{
+    current: number;
+    total: number;
+    savedMB: number;
+    processed: number;
+    errors: number;
+  } | null>(null);
   const { toast } = useToast();
 
   const maxStorageGB = 1.019; // Free plan limit
@@ -139,18 +155,88 @@ export default function StorageManagement() {
   const compressAllImages = async () => {
     setIsCompressing(true);
     setCompressionResult(null);
+    setCompressionProgress(null);
+    
+    let offset = 0;
+    const batchSize = 10;
+    let totalSavedMB = 0;
+    let totalProcessed = 0;
+    let totalErrors = 0;
+    let totalFiles = 0;
+    
     try {
-      const { data, error } = await supabase.functions.invoke('compress-storage-images', {
-        body: { action: 'compress-all' },
+      // First batch to get total count
+      const firstResult = await supabase.functions.invoke('compress-storage-images', {
+        body: { action: 'compress-batch', offset: 0, batchSize },
       });
 
-      if (error) throw error;
+      if (firstResult.error) throw firstResult.error;
+      
+      totalFiles = firstResult.data.batchInfo?.totalLargeFiles || 0;
+      totalSavedMB += parseFloat(firstResult.data.totalSavedMB || '0');
+      totalProcessed += firstResult.data.processed || 0;
+      totalErrors += firstResult.data.errors || 0;
+      offset = firstResult.data.batchInfo?.nextOffset || 0;
+      
+      setCompressionProgress({
+        current: firstResult.data.batchInfo?.processedInBatch || 0,
+        total: totalFiles,
+        savedMB: totalSavedMB,
+        processed: totalProcessed,
+        errors: totalErrors,
+      });
 
-      setCompressionResult(data);
+      // Continue with remaining batches
+      while (firstResult.data.batchInfo?.hasMore && offset < totalFiles) {
+        const { data, error } = await supabase.functions.invoke('compress-storage-images', {
+          body: { action: 'compress-batch', offset, batchSize },
+        });
+
+        if (error) {
+          console.error('Batch error:', error);
+          totalErrors++;
+          break;
+        }
+
+        totalSavedMB += parseFloat(data.totalSavedMB || '0');
+        totalProcessed += data.processed || 0;
+        totalErrors += data.errors || 0;
+        offset = data.batchInfo?.nextOffset || offset + batchSize;
+
+        setCompressionProgress({
+          current: offset,
+          total: totalFiles,
+          savedMB: totalSavedMB,
+          processed: totalProcessed,
+          errors: totalErrors,
+        });
+
+        if (!data.batchInfo?.hasMore) break;
+      }
+
+      // Final result
+      setCompressionResult({
+        success: true,
+        batchInfo: {
+          offset: 0,
+          batchSize,
+          processedInBatch: totalFiles,
+          totalLargeFiles: totalFiles,
+          nextOffset: null,
+          hasMore: false,
+          progressPercent: 100,
+        },
+        processed: totalProcessed,
+        skipped: totalFiles - totalProcessed - totalErrors,
+        errors: totalErrors,
+        totalSavedBytes: totalSavedMB * 1024 * 1024,
+        totalSavedMB: totalSavedMB.toFixed(2),
+        results: [],
+      });
       
       toast({
         title: 'דחיסה הושלמה!',
-        description: `נחסכו ${data.totalSavedMB} MB מ-${data.processed} תמונות`,
+        description: `נחסכו ${totalSavedMB.toFixed(2)} MB מ-${totalProcessed} תמונות`,
       });
 
       fetchStats();
@@ -164,6 +250,7 @@ export default function StorageManagement() {
     } finally {
       setIsCompressing(false);
       setShowCompressDialog(false);
+      setCompressionProgress(null);
     }
   };
 
@@ -337,7 +424,37 @@ export default function StorageManagement() {
                 </div>
               )}
 
-              {compressionResult && (
+              {compressionProgress && (
+                <div className="p-4 bg-muted rounded-lg space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    <span className="font-medium">מבצע דחיסה...</span>
+                  </div>
+                  <Progress 
+                    value={(compressionProgress.current / compressionProgress.total) * 100} 
+                  />
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">התקדמות: </span>
+                      <span className="font-medium">{compressionProgress.current}/{compressionProgress.total}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">נדחסו: </span>
+                      <span className="font-medium">{compressionProgress.processed}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">שגיאות: </span>
+                      <span className="font-medium">{compressionProgress.errors}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">נחסכו: </span>
+                      <span className="font-medium text-primary">{compressionProgress.savedMB.toFixed(2)} MB</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {compressionResult && !compressionProgress && (
                 <div className="p-4 bg-muted rounded-lg space-y-2">
                   <div className="flex items-center gap-2 text-primary">
                     <CheckCircle className="w-5 h-5" />
@@ -346,7 +463,7 @@ export default function StorageManagement() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">תמונות שנבדקו: </span>
-                      <span className="font-medium">{compressionResult.totalFiles}</span>
+                      <span className="font-medium">{compressionResult.batchInfo?.totalLargeFiles || 0}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">נדחסו: </span>
