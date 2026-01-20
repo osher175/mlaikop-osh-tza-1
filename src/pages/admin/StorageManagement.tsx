@@ -157,61 +157,72 @@ export default function StorageManagement() {
     setCompressionResult(null);
     setCompressionProgress(null);
     
-    let offset = 0;
-    const batchSize = 10;
     let totalSavedMB = 0;
     let totalProcessed = 0;
     let totalErrors = 0;
-    let totalFiles = 0;
+    let totalSkipped = 0;
     
     try {
-      // First batch to get total count
-      const firstResult = await supabase.functions.invoke('compress-storage-images', {
-        body: { action: 'compress-batch', offset: 0, batchSize },
+      // Get the list of large files first
+      const { data: listData, error: listError } = await supabase.functions.invoke('compress-storage-images', {
+        body: { action: 'list' },
       });
 
-      if (firstResult.error) throw firstResult.error;
+      if (listError) throw listError;
       
-      totalFiles = firstResult.data.batchInfo?.totalLargeFiles || 0;
-      totalSavedMB += parseFloat(firstResult.data.totalSavedMB || '0');
-      totalProcessed += firstResult.data.processed || 0;
-      totalErrors += firstResult.data.errors || 0;
-      offset = firstResult.data.batchInfo?.nextOffset || 0;
+      const largeFiles = listData.largeFiles || [];
+      const totalFiles = largeFiles.length;
       
-      setCompressionProgress({
-        current: firstResult.data.batchInfo?.processedInBatch || 0,
-        total: totalFiles,
-        savedMB: totalSavedMB,
-        processed: totalProcessed,
-        errors: totalErrors,
-      });
-
-      // Continue with remaining batches
-      while (firstResult.data.batchInfo?.hasMore && offset < totalFiles) {
-        const { data, error } = await supabase.functions.invoke('compress-storage-images', {
-          body: { action: 'compress-batch', offset, batchSize },
+      if (totalFiles === 0) {
+        toast({
+          title: 'אין מה לדחוס',
+          description: 'כל התמונות כבר מותאמות',
         });
+        setIsCompressing(false);
+        return;
+      }
 
-        if (error) {
-          console.error('Batch error:', error);
+      setCompressionProgress({
+        current: 0,
+        total: totalFiles,
+        savedMB: 0,
+        processed: 0,
+        errors: 0,
+      });
+
+      // Process one file at a time to avoid CPU limits
+      for (let i = 0; i < largeFiles.length; i++) {
+        const file = largeFiles[i];
+        
+        try {
+          const { data, error } = await supabase.functions.invoke('compress-storage-images', {
+            body: { action: 'compress-single', filePath: file.path },
+          });
+
+          if (error) {
+            console.error('Compression error:', error);
+            totalErrors++;
+          } else if (data.savedBytes > 0) {
+            totalSavedMB += data.savedBytes / (1024 * 1024);
+            totalProcessed++;
+          } else {
+            totalSkipped++;
+          }
+        } catch (e) {
+          console.error('Error compressing file:', e);
           totalErrors++;
-          break;
         }
 
-        totalSavedMB += parseFloat(data.totalSavedMB || '0');
-        totalProcessed += data.processed || 0;
-        totalErrors += data.errors || 0;
-        offset = data.batchInfo?.nextOffset || offset + batchSize;
-
         setCompressionProgress({
-          current: offset,
+          current: i + 1,
           total: totalFiles,
           savedMB: totalSavedMB,
           processed: totalProcessed,
           errors: totalErrors,
         });
 
-        if (!data.batchInfo?.hasMore) break;
+        // Small delay to prevent overwhelming the edge function
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       // Final result
@@ -219,7 +230,7 @@ export default function StorageManagement() {
         success: true,
         batchInfo: {
           offset: 0,
-          batchSize,
+          batchSize: 1,
           processedInBatch: totalFiles,
           totalLargeFiles: totalFiles,
           nextOffset: null,
@@ -227,7 +238,7 @@ export default function StorageManagement() {
           progressPercent: 100,
         },
         processed: totalProcessed,
-        skipped: totalFiles - totalProcessed - totalErrors,
+        skipped: totalSkipped,
         errors: totalErrors,
         totalSavedBytes: totalSavedMB * 1024 * 1024,
         totalSavedMB: totalSavedMB.toFixed(2),
