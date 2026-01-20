@@ -686,6 +686,13 @@ export type Database = {
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -824,6 +831,13 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recent_activity_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -999,6 +1013,13 @@ export type Database = {
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "stock_approval_requests_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       stock_approvals: {
@@ -1127,6 +1148,13 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -1457,10 +1485,74 @@ export type Database = {
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "whatsapp_notifications_log_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
     Views: {
+      audit_logs_safe: {
+        Row: {
+          action_type: string | null
+          business_id: string | null
+          created_at: string | null
+          details: Json | null
+          id: string | null
+          ip_address: unknown
+          target_id: string | null
+          target_type: string | null
+          timestamp: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_type?: string | null
+          business_id?: string | null
+          created_at?: string | null
+          details?: never
+          id?: string | null
+          ip_address?: never
+          target_id?: string | null
+          target_type?: string | null
+          timestamp?: string | null
+          user_agent?: never
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string | null
+          business_id?: string | null
+          created_at?: string | null
+          details?: never
+          id?: string | null
+          ip_address?: never
+          target_id?: string | null
+          target_type?: string | null
+          timestamp?: string | null
+          user_agent?: never
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_logs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses_safe: {
         Row: {
           address: string | null
@@ -1513,6 +1605,204 @@ export type Database = {
             columns: ["business_category_id"]
             isOneToOne: false
             referencedRelation: "business_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers_safe: {
+        Row: {
+          agent_name: string | null
+          business_id: string | null
+          contact_email: string | null
+          created_at: string | null
+          id: string | null
+          name: string | null
+          phone: string | null
+          sales_agent_name: string | null
+          sales_agent_phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agent_name?: string | null
+          business_id?: string | null
+          contact_email?: never
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          phone?: never
+          sales_agent_name?: string | null
+          sales_agent_phone?: never
+          updated_at?: string | null
+        }
+        Update: {
+          agent_name?: string | null
+          business_id?: string | null
+          contact_email?: never
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          phone?: never
+          sales_agent_name?: string | null
+          sales_agent_phone?: never
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suppliers_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_activity_log_safe: {
+        Row: {
+          action_type: string | null
+          business_id: string | null
+          created_at: string | null
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: string | null
+          id: string | null
+          ip_address: unknown
+          new_values: Json | null
+          old_values: Json | null
+          timestamp: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_type?: string | null
+          business_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string | null
+          id?: string | null
+          ip_address?: never
+          new_values?: never
+          old_values?: never
+          timestamp?: string | null
+          user_agent?: never
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string | null
+          business_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string | null
+          id?: string | null
+          ip_address?: never
+          new_values?: never
+          old_values?: never
+          timestamp?: string | null
+          user_agent?: never
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_activity_log_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_activity_log_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_notifications_log_safe: {
+        Row: {
+          business_id: string | null
+          created_at: string | null
+          id: string | null
+          message_text: string | null
+          product_id: string | null
+          recipient_phone: string | null
+          sales_agent_phone: string | null
+          sent_at: string | null
+          supplier_id: string | null
+          trigger_type: string | null
+          updated_at: string | null
+          was_sent: boolean | null
+        }
+        Insert: {
+          business_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          message_text?: never
+          product_id?: string | null
+          recipient_phone?: never
+          sales_agent_phone?: never
+          sent_at?: string | null
+          supplier_id?: string | null
+          trigger_type?: string | null
+          updated_at?: string | null
+          was_sent?: boolean | null
+        }
+        Update: {
+          business_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          message_text?: never
+          product_id?: string | null
+          recipient_phone?: never
+          sales_agent_phone?: never
+          sent_at?: string | null
+          supplier_id?: string | null
+          trigger_type?: string | null
+          updated_at?: string | null
+          was_sent?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_notifications_log_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notifications_log_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notifications_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notifications_log_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notifications_log_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
             referencedColumns: ["id"]
           },
         ]
