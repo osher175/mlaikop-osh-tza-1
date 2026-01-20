@@ -62,6 +62,13 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "audit_logs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       business_categories: {
@@ -116,6 +123,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_users_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -212,6 +226,13 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "categories_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       emails: {
@@ -272,6 +293,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_actions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
             referencedColumns: ["id"]
           },
           {
@@ -361,6 +389,13 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "notification_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       notification_targets: {
@@ -441,6 +476,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
             referencedColumns: ["id"]
           },
           {
@@ -542,6 +584,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "product_thresholds_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "product_thresholds_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: true
@@ -617,6 +666,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "products_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "products_product_category_id_fkey"
             columns: ["product_category_id"]
             isOneToOne: false
@@ -669,6 +725,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: true
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_owned_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -743,6 +806,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "recent_activity_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "recent_activity_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
@@ -800,6 +870,13 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sales_cycles_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       stock_alerts: {
@@ -848,6 +925,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_alerts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
             referencedColumns: ["id"]
           },
           {
@@ -1032,6 +1116,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "supplier_invoices_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "supplier_invoices_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
@@ -1083,6 +1174,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suppliers_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -1141,6 +1239,13 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_activity_log_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_businesses: {
@@ -1165,6 +1270,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_businesses_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -1200,6 +1312,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -1318,6 +1437,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "whatsapp_notifications_log_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "whatsapp_notifications_log_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
@@ -1335,10 +1461,69 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      businesses_safe: {
+        Row: {
+          address: string | null
+          business_category_id: string | null
+          business_type: string | null
+          created_at: string | null
+          employee_count: number | null
+          id: string | null
+          industry: string | null
+          name: string | null
+          official_email: string | null
+          owner_id: string | null
+          phone: string | null
+          plan_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          business_category_id?: string | null
+          business_type?: string | null
+          created_at?: string | null
+          employee_count?: number | null
+          id?: string | null
+          industry?: string | null
+          name?: string | null
+          official_email?: string | null
+          owner_id?: string | null
+          phone?: string | null
+          plan_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          business_category_id?: string | null
+          business_type?: string | null
+          created_at?: string | null
+          employee_count?: number | null
+          id?: string | null
+          industry?: string | null
+          name?: string | null
+          official_email?: string | null
+          owner_id?: string | null
+          phone?: string | null
+          plan_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "businesses_business_category_id_fkey"
+            columns: ["business_category_id"]
+            isOneToOne: false
+            referencedRelation: "business_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       bytea_to_text: { Args: { data: string }; Returns: string }
+      can_view_business_financials: {
+        Args: { business_uuid: string }
+        Returns: boolean
+      }
       check_expiration_notifications: { Args: never; Returns: undefined }
       check_low_stock_notifications: { Args: never; Returns: undefined }
       check_rate_limit: {
