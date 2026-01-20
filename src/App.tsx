@@ -44,11 +44,11 @@ function App() {
               <Route path="/auth" element={<Auth />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               
-              {/* Business user routes */}
+              {/* Business user routes - admin יכול לגשת לכל הדפים לצורכי ניהול */}
               <Route
                 path="/dashboard"
                 element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
                     <Dashboard />
                   </ProtectedRoute>
                 }
@@ -56,7 +56,7 @@ function App() {
               <Route
                 path="/inventory"
                 element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
                     <Inventory />
                   </ProtectedRoute>
                 }
@@ -64,7 +64,7 @@ function App() {
               <Route
                 path="/suppliers"
                 element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
                     <Suppliers />
                   </ProtectedRoute>
                 }
@@ -72,7 +72,7 @@ function App() {
               <Route
                 path="/add-product"
                 element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
                     <AddProduct />
                   </ProtectedRoute>
                 }
@@ -80,7 +80,7 @@ function App() {
               <Route
                 path="/reports"
                 element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
                     <Reports />
                   </ProtectedRoute>
                 }
@@ -88,7 +88,7 @@ function App() {
               <Route
                 path="/profile"
                 element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
                     <UserProfile />
                   </ProtectedRoute>
                 }
@@ -96,7 +96,7 @@ function App() {
               <Route
                 path="/subscriptions"
                 element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
                     <Subscriptions />
                   </ProtectedRoute>
                 }
@@ -104,7 +104,7 @@ function App() {
               <Route
                 path="/settings"
                 element={
-                  <ProtectedRoute allowedRoles={['OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
                     <BusinessSettings />
                   </ProtectedRoute>
                 }
