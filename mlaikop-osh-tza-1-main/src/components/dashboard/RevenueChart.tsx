@@ -38,18 +38,18 @@ export const RevenueChart: React.FC = () => {
           <div className="h-64 flex items-center justify-center">
             <div className="text-gray-500 animate-pulse">טוען נתונים...</div>
           </div>
-        ) : !analytics?.hasData ? (
+        ) : !analytics?.hasSaleData ? (
           <div className="h-64 flex flex-col items-center justify-center text-center p-4">
-            <div className="text-gray-500 mb-2 text-lg">אין עדיין תנועות מלאי להצגה</div>
+            <div className="text-gray-500 mb-2 text-lg">אין עדיין מכירות להצגה</div>
             <div className="text-sm text-gray-400">
-              גרף זה יציג הכנסות ברוטו ונטו כאשר יתווספו פעולות מלאי
+              גרף זה יציג הכנסות ברוטו ונטו כאשר יירשמו מכירות
             </div>
           </div>
         ) : !analytics.salesData.some(data => data.grossRevenue > 0) ? (
           <div className="h-64 flex flex-col items-center justify-center text-center p-4">
-            <div className="text-gray-500 mb-2">אין עדיין תנועות מלאי רשומות לשנה זו</div>
+            <div className="text-gray-500 mb-2">אין עדיין מכירות רשומות לשנה זו</div>
             <div className="text-sm text-gray-400">
-              הגרף יעודכן אוטומטית כאשר יתווספו פעולות הוספת מלאי
+              הגרף יעודכן אוטומטית כאשר יירשמו מכירות חדשות
             </div>
           </div>
         ) : (

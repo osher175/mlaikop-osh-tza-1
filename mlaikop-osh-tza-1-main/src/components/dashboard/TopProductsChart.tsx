@@ -17,7 +17,7 @@ export const TopProductsChart: React.FC = () => {
           מוצרי המכירה המובילים
         </CardTitle>
         <div className="text-sm text-gray-600" dir="rtl">
-          דירוג לפי כמות יחידות שהתווספו למלאי
+          דירוג לפי הכנסות מכירה בפועל (₪)
         </div>
       </CardHeader>
       <CardContent>
@@ -29,7 +29,7 @@ export const TopProductsChart: React.FC = () => {
           <div className="h-64 flex flex-col items-center justify-center text-center p-4">
             <div className="text-gray-500 mb-2 text-lg">לא קיימות מכירות להצגה</div>
             <div className="text-sm text-gray-400">
-              כאן יוצגו טופ 5 המוצרים עם הכי הרבה פעולות הוספה למלאי
+              כאן יוצגו טופ 5 המוצרים עם הכי הרבה הכנסות מכירה
             </div>
           </div>
         ) : (
@@ -45,7 +45,7 @@ export const TopProductsChart: React.FC = () => {
                     <div className="flex flex-col">
                       <span className="font-medium text-gray-900">{product.productName}</span>
                       <span className="text-sm text-gray-600">
-                        {product.quantity} יחידות נוספו • ₪{product.revenue.toLocaleString()}
+                        {product.quantity} יחידות נמכרו • ₪{product.revenue.toLocaleString()}
                       </span>
                     </div>
                   </div>

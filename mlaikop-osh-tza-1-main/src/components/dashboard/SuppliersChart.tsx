@@ -21,7 +21,7 @@ export const SuppliersChart: React.FC = () => {
           פילוח רכישות לפי ספקים
         </CardTitle>
         <div className="text-sm text-gray-600" dir="rtl">
-          לפי כמות יחידות שהתווספו למלאי
+          לפי כמות יחידות שנרכשו מכל ספק
         </div>
       </CardHeader>
       <CardContent>
@@ -29,11 +29,11 @@ export const SuppliersChart: React.FC = () => {
           <div className="h-64 flex items-center justify-center">
             <div className="text-gray-500 animate-pulse">טוען נתונים...</div>
           </div>
-        ) : !analytics?.hasData || analytics.supplierData.length === 0 ? (
+        ) : !analytics?.hasPurchaseData || analytics.supplierData.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center text-center p-4">
             <div className="text-gray-500 mb-2 text-lg">אין נתוני רכישות להצגה כרגע</div>
             <div className="text-sm text-gray-400">
-              תרשים זה יציג את פילוח פעולות הוספת המלאי לפי ספקים שונים
+              תרשים זה יציג את פילוח הרכישות לפי ספקים שונים
             </div>
           </div>
         ) : (
