@@ -1874,6 +1874,26 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: boolean
       }
+      execute_inventory_transaction: {
+        Args: {
+          p_action_type: string
+          p_business_id: string
+          p_cost_snapshot_ils?: number
+          p_discount_ils?: number
+          p_discount_percent?: number
+          p_list_unit_ils?: number
+          p_notes?: string
+          p_product_id: string
+          p_purchase_total_ils?: number
+          p_purchase_unit_ils?: number
+          p_quantity_changed: number
+          p_sale_total_ils?: number
+          p_sale_unit_ils?: number
+          p_supplier_id?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       generate_weekly_stock_summary: {
         Args: { target_business_id: string }
         Returns: Json
