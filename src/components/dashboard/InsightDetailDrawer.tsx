@@ -186,7 +186,7 @@ export const InsightDetailDrawer: React.FC<InsightDetailDrawerProps> = ({
             <TableHead className="text-right">מוצר</TableHead>
             <TableHead className="text-right">כמות במלאי</TableHead>
             <TableHead className="text-right">ימים מאז מכירה</TableHead>
-            <TableHead className="text-right">שווי משוער</TableHead>
+            <TableHead className="text-right">שווי עלות מלאי</TableHead>
             <TableHead></TableHead>
           </TableRow>
         </TableHeader>
@@ -201,7 +201,12 @@ export const InsightDetailDrawer: React.FC<InsightDetailDrawerProps> = ({
                   : `${item.daysSinceLastSale} ימים`
                 }
               </TableCell>
-              <TableCell>{formatCurrency(item.estimatedValue)}</TableCell>
+              <TableCell>
+                {item.estimatedValue > 0 
+                  ? formatCurrency(item.estimatedValue) 
+                  : <span className="text-muted-foreground">—</span>
+                }
+              </TableCell>
               <TableCell>
                 <Button 
                   variant="ghost" 
