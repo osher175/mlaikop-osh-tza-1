@@ -118,10 +118,14 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       return;
     }
 
-    // No quantity change - just update product data
-    await saveProductUpdate(formData);
+    // No quantity change - just update product data (no financial transaction)
+    await saveProductUpdateOnly(formData);
   };
 
+  /**
+   * Executes a SALE transaction using the atomic RPC
+   * action_type = 'remove', quantity is negative
+   */
   const handleSaleConfirm = async (saleData: SaleData) => {
     if (!product || !business?.id || !user?.id || !pendingFormData) return;
 
@@ -134,42 +138,49 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       const discountIls = listTotal - saleData.saleTotalIls;
       const discountPercent = listTotal > 0 ? (discountIls / listTotal) * 100 : 0;
 
-      // STEP 1: Insert inventory_actions FIRST (action_type = 'remove' for sales)
-      const { error: actionError } = await supabase
-        .from('inventory_actions')
-        .insert({
-          product_id: product.id,
-          business_id: business.id,
-          user_id: user.id,
-          action_type: 'remove', // Using existing 'remove' value for sales
-          quantity_changed: -quantitySold, // Negative for removal
-          currency: 'ILS',
-          sale_total_ils: saleData.saleTotalIls,
-          sale_unit_ils: saleData.saleTotalIls / quantitySold,
-          list_unit_ils: listPrice,
-          discount_ils: discountIls > 0 ? discountIls : null,
-          discount_percent: discountPercent > 0 ? discountPercent : null,
-          cost_snapshot_ils: costPrice,
-          notes: saleData.notes || `מכירה של ${quantitySold} יחידות`,
-          timestamp: new Date().toISOString(),
-        });
+      // Call atomic RPC - handles both inventory_actions INSERT and products UPDATE
+      const { data, error } = await supabase.rpc('execute_inventory_transaction', {
+        p_business_id: business.id,
+        p_user_id: user.id,
+        p_product_id: product.id,
+        p_action_type: 'remove', // Sale = remove
+        p_quantity_changed: -quantitySold, // Negative for removal
+        // Sale fields
+        p_sale_total_ils: saleData.saleTotalIls,
+        p_sale_unit_ils: saleData.saleTotalIls / quantitySold,
+        p_list_unit_ils: listPrice,
+        p_discount_ils: discountIls > 0 ? discountIls : null,
+        p_discount_percent: discountPercent > 0 ? discountPercent : null,
+        p_cost_snapshot_ils: costPrice,
+        // Common
+        p_notes: saleData.notes || `מכירה של ${quantitySold} יחידות`,
+      });
 
-      if (actionError) {
-        console.error('Error logging sale action:', actionError);
-        throw actionError;
+      if (error) {
+        console.error('Atomic sale transaction failed:', error);
+        throw error;
       }
 
-      // STEP 2: Only update product AFTER successful inventory_actions insert
-      await saveProductUpdate(pendingFormData);
+      console.log('Atomic sale transaction succeeded:', data);
+
+      // Update other product fields (name, barcode, etc.) if changed
+      await updateProductNonQuantityFields(pendingFormData);
+
+      toast({
+        title: "מכירה נרשמה בהצלחה",
+        description: `נמכרו ${quantitySold} יחידות • ₪${saleData.saleTotalIls.toLocaleString()}`,
+      });
       
       setShowSaleModal(false);
       setPendingFormData(null);
       setPendingQuantityDiff(0);
-    } catch (error) {
+      onProductUpdated();
+      onOpenChange(false);
+    } catch (error: any) {
       console.error('Error processing sale:', error);
       toast({
         title: "שגיאה ברישום המכירה",
-        description: "אנא נסה שוב",
+        description: error.message || "אנא נסה שוב",
         variant: "destructive",
       });
     } finally {
@@ -177,58 +188,57 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     }
   };
 
+  /**
+   * Executes a PURCHASE transaction using the atomic RPC
+   * action_type = 'add', quantity is positive
+   */
   const handlePurchaseConfirm = async (purchaseData: PurchaseData) => {
     if (!product || !business?.id || !user?.id || !pendingFormData) return;
 
     setLoading(true);
     try {
       const quantityAdded = pendingQuantityDiff;
-      const oldQuantity = product.quantity || 0;
-      const oldCost = product.cost || 0;
 
-      // Calculate rolling average cost
-      const newAverageCost = oldQuantity + quantityAdded > 0
-        ? ((oldQuantity * oldCost) + (quantityAdded * purchaseData.purchaseUnitIls)) / (oldQuantity + quantityAdded)
-        : purchaseData.purchaseUnitIls;
+      // Call atomic RPC - handles both inventory_actions INSERT and products UPDATE (including rolling average cost)
+      const { data, error } = await supabase.rpc('execute_inventory_transaction', {
+        p_business_id: business.id,
+        p_user_id: user.id,
+        p_product_id: product.id,
+        p_action_type: 'add', // Purchase = add
+        p_quantity_changed: quantityAdded, // Positive for addition
+        // Purchase fields
+        p_purchase_unit_ils: purchaseData.purchaseUnitIls,
+        p_purchase_total_ils: purchaseData.purchaseTotalIls,
+        p_supplier_id: purchaseData.supplierId || null,
+        // Common
+        p_notes: purchaseData.notes || `קנייה של ${quantityAdded} יחידות`,
+      });
 
-      // STEP 1: Insert inventory_actions FIRST (action_type = 'add' for purchases)
-      const { error: actionError } = await supabase
-        .from('inventory_actions')
-        .insert({
-          product_id: product.id,
-          business_id: business.id,
-          user_id: user.id,
-          action_type: 'add', // Using existing 'add' value for purchases
-          quantity_changed: quantityAdded, // Positive for addition
-          currency: 'ILS',
-          purchase_unit_ils: purchaseData.purchaseUnitIls,
-          purchase_total_ils: purchaseData.purchaseTotalIls,
-          supplier_id: purchaseData.supplierId || null,
-          notes: purchaseData.notes || `קנייה של ${quantityAdded} יחידות`,
-          timestamp: new Date().toISOString(),
-        });
-
-      if (actionError) {
-        console.error('Error logging purchase action:', actionError);
-        throw actionError;
+      if (error) {
+        console.error('Atomic purchase transaction failed:', error);
+        throw error;
       }
 
-      // STEP 2: Only update product AFTER successful inventory_actions insert
-      // Update cost to rolling average
-      const updatedFormData = {
-        ...pendingFormData,
-        cost: newAverageCost,
-      };
-      await saveProductUpdate(updatedFormData);
+      console.log('Atomic purchase transaction succeeded:', data);
+
+      // Update other product fields (name, barcode, etc.) if changed
+      await updateProductNonQuantityFields(pendingFormData);
+
+      toast({
+        title: "קנייה נרשמה בהצלחה",
+        description: `נוספו ${quantityAdded} יחידות • ₪${purchaseData.purchaseTotalIls.toLocaleString()}`,
+      });
       
       setShowPurchaseModal(false);
       setPendingFormData(null);
       setPendingQuantityDiff(0);
-    } catch (error) {
+      onProductUpdated();
+      onOpenChange(false);
+    } catch (error: any) {
       console.error('Error processing purchase:', error);
       toast({
         title: "שגיאה ברישום הקנייה",
-        description: "אנא נסה שוב",
+        description: error.message || "אנא נסה שוב",
         variant: "destructive",
       });
     } finally {
@@ -236,34 +246,77 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     }
   };
 
-  const saveProductUpdate = async (data: typeof formData) => {
+  /**
+   * Updates product fields that don't affect quantity (name, barcode, location, etc.)
+   * Called after the atomic transaction succeeds
+   */
+  const updateProductNonQuantityFields = async (data: typeof formData) => {
     if (!product || !business?.id) return;
 
-    setLoading(true);
-    try {
-      const updateData: any = {
+    // Update product metadata (NOT quantity or cost - those are handled by RPC)
+    const { error: productError } = await supabase
+      .from('products')
+      .update({
         name: data.name,
         barcode: data.barcode || null,
-        quantity: data.quantity,
         price: data.price || null,
-        cost: data.cost || null,
         location: data.location || null,
         expiration_date: data.expiration_date || null,
         image: data.image || null,
         product_category_id: data.product_category_id || null,
         updated_at: new Date().toISOString(),
-      };
+      })
+      .eq('id', product.id);
 
+    if (productError) {
+      console.error('Error updating product metadata:', productError);
+    }
+
+    // Update threshold
+    if (product.id) {
+      await supabase
+        .from('product_thresholds')
+        .upsert(
+          {
+            product_id: product.id,
+            business_id: business.id,
+            low_stock_threshold: data.low_stock_threshold,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'product_id' }
+        );
+    }
+  };
+
+  /**
+   * Updates product when there's NO quantity change (no financial transaction needed)
+   */
+  const saveProductUpdateOnly = async (data: typeof formData) => {
+    if (!product || !business?.id) return;
+
+    setLoading(true);
+    try {
       const { error: productError } = await supabase
         .from('products')
-        .update(updateData)
+        .update({
+          name: data.name,
+          barcode: data.barcode || null,
+          quantity: data.quantity,
+          price: data.price || null,
+          cost: data.cost || null,
+          location: data.location || null,
+          expiration_date: data.expiration_date || null,
+          image: data.image || null,
+          product_category_id: data.product_category_id || null,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', product.id);
 
       if (productError) throw productError;
 
-      // Update or insert threshold
+      // Update threshold
       if (product.id) {
-        const response = await supabase
+        await supabase
           .from('product_thresholds')
           .upsert(
             {
@@ -272,13 +325,8 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
               low_stock_threshold: data.low_stock_threshold,
               updated_at: new Date().toISOString(),
             },
-            {
-              onConflict: ['product_id']
-            }
+            { onConflict: 'product_id' }
           );
-        if (response.error) {
-          console.error('Threshold update error:', response.error);
-        }
       }
 
       toast({
