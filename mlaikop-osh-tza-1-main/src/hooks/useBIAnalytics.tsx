@@ -34,12 +34,32 @@ interface MonthlyPurchase {
   quantity: number;
 }
 
+interface DiscountSummary {
+  totalDiscountIls: number;
+  averageDiscountPercent: number;
+  discountCount: number;
+}
+
+interface AnalyticsResult {
+  salesData: SalesData[];
+  topProducts: TopProduct[];
+  supplierData: SupplierData[];
+  monthlyPurchases: MonthlyPurchase[];
+  discountSummary: DiscountSummary;
+  hasData: boolean;
+  hasSaleData: boolean;
+  hasPurchaseData: boolean;
+  totalGrossProfit: number;
+  totalRevenue: number;
+  totalPurchases: number;
+}
+
 export const useBIAnalytics = () => {
   const { businessContext } = useBusinessAccess();
 
   const { data: analytics, isLoading } = useQuery({
     queryKey: ['bi-analytics', businessContext?.business_id],
-    queryFn: async () => {
+    queryFn: async (): Promise<AnalyticsResult | null> => {
       if (!businessContext?.business_id) return null;
 
       console.log('Fetching BI analytics for business:', businessContext.business_id);
@@ -62,8 +82,15 @@ export const useBIAnalytics = () => {
       console.log('Inventory actions fetched:', inventoryActions?.length || 0);
 
       const hasData = inventoryActions && inventoryActions.length > 0;
+      
+      // Filter by action type: 'remove' = sales, 'add' = purchases
+      const salesActions = inventoryActions?.filter(a => a.action_type === 'remove') || [];
+      const purchaseActions = inventoryActions?.filter(a => a.action_type === 'add') || [];
+      
+      const hasSaleData = salesActions.length > 0;
+      const hasPurchaseData = purchaseActions.length > 0;
 
-      // Generate monthly revenue data for 2025
+      // Generate monthly revenue data for current year from REAL sales data
       const currentYear = new Date().getFullYear();
       const monthNames = [
         'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
@@ -71,26 +98,35 @@ export const useBIAnalytics = () => {
       ];
 
       const salesData: SalesData[] = [];
+      let totalRevenue = 0;
+      let totalGrossProfit = 0;
       
       for (let month = 0; month < 12; month++) {
         const monthStart = new Date(currentYear, month, 1);
         const monthEnd = new Date(currentYear, month + 1, 0);
         
-        // Filter actions for current month - use "add" actions as revenue proxy
-        const monthlyActions = inventoryActions?.filter(action => {
-          if (action.action_type !== 'add') return false;
-          const actionDate = new Date(action.timestamp);
+        // Filter SALES for current month (action_type = 'remove')
+        const monthlySales = salesActions.filter(action => {
+          const actionDate = new Date(action.timestamp || '');
           return actionDate >= monthStart && actionDate <= monthEnd;
-        }) || [];
-
-        let grossRevenue = 0;
-        monthlyActions.forEach(action => {
-          const product = action.products as any;
-          if (product?.price && action.quantity_changed) {
-            // Use quantity added as revenue indicator
-            grossRevenue += Math.abs(action.quantity_changed) * Number(product.price || 100);
-          }
         });
+
+        // Calculate revenue from ACTUAL sale_total_ils field
+        let grossRevenue = 0;
+        let monthlyGrossProfit = 0;
+        
+        monthlySales.forEach(action => {
+          // Use real financial data from inventory_actions
+          const saleTotalIls = Number(action.sale_total_ils) || 0;
+          const costSnapshotIls = Number(action.cost_snapshot_ils) || 0;
+          const quantitySold = Math.abs(action.quantity_changed || 0);
+          
+          grossRevenue += saleTotalIls;
+          monthlyGrossProfit += saleTotalIls - (costSnapshotIls * quantitySold);
+        });
+
+        totalRevenue += grossRevenue;
+        totalGrossProfit += monthlyGrossProfit;
 
         const netRevenue = grossRevenue / 1.18; // Remove 18% VAT
 
@@ -101,52 +137,55 @@ export const useBIAnalytics = () => {
         });
       }
 
-      // Top 5 products by quantity added (using "add" actions)
-      const productAdditions: Record<string, { name: string; quantity: number; revenue: number }> = {};
+      // Top 5 products by SALES revenue (action_type = 'remove')
+      const productSales: Record<string, { name: string; quantity: number; revenue: number }> = {};
       
-      inventoryActions?.forEach(action => {
-        if (action.action_type === 'add' && action.quantity_changed) {
-          const product = action.products as any;
-          if (product) {
-            const productId = product.id;
-            const quantity = Math.abs(action.quantity_changed);
-            const revenue = quantity * (Number(product.price) || 100);
-            
-            if (!productAdditions[productId]) {
-              productAdditions[productId] = { name: product.name, quantity: 0, revenue: 0 };
-            }
-            productAdditions[productId].quantity += quantity;
-            productAdditions[productId].revenue += revenue;
+      salesActions.forEach(action => {
+        const product = action.products as any;
+        if (product) {
+          const productId = product.id;
+          const quantity = Math.abs(action.quantity_changed || 0);
+          const revenue = Number(action.sale_total_ils) || 0;
+          
+          if (!productSales[productId]) {
+            productSales[productId] = { name: product.name, quantity: 0, revenue: 0 };
           }
+          productSales[productId].quantity += quantity;
+          productSales[productId].revenue += revenue;
         }
       });
 
-      const topProducts: TopProduct[] = Object.entries(productAdditions)
+      const topProducts: TopProduct[] = Object.entries(productSales)
         .map(([productId, data]) => ({
           productId,
           productName: data.name,
           quantity: data.quantity,
           revenue: data.revenue
         }))
-        .sort((a, b) => b.quantity - a.quantity)
+        .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 5);
 
-      // Supplier purchase data (using "add" actions)
-      const supplierPurchases: Record<string, { name: string; volume: number }> = {};
+      // Supplier purchase data (action_type = 'add' with supplier_id)
+      const supplierPurchases: Record<string, { name: string; volume: number; totalCost: number }> = {};
+      let totalPurchases = 0;
       
-      inventoryActions?.forEach(action => {
-        if (action.action_type === 'add' && action.quantity_changed) {
-          const product = action.products as any;
-          const supplier = product?.suppliers;
-          if (supplier) {
-            const supplierId = supplier.id;
-            const volume = Math.abs(action.quantity_changed);
-            
-            if (!supplierPurchases[supplierId]) {
-              supplierPurchases[supplierId] = { name: supplier.name, volume: 0 };
-            }
-            supplierPurchases[supplierId].volume += volume;
+      purchaseActions.forEach(action => {
+        const purchaseTotalIls = Number(action.purchase_total_ils) || 0;
+        totalPurchases += purchaseTotalIls;
+        
+        // Get supplier from action or from product
+        const supplierId = action.supplier_id;
+        const product = action.products as any;
+        const supplier = product?.suppliers;
+        
+        if (supplierId && supplier) {
+          const volume = Math.abs(action.quantity_changed || 0);
+          
+          if (!supplierPurchases[supplierId]) {
+            supplierPurchases[supplierId] = { name: supplier.name, volume: 0, totalCost: 0 };
           }
+          supplierPurchases[supplierId].volume += volume;
+          supplierPurchases[supplierId].totalCost += purchaseTotalIls;
         }
       });
 
@@ -161,36 +200,35 @@ export const useBIAnalytics = () => {
         }))
         .sort((a, b) => b.purchaseVolume - a.purchaseVolume);
 
-      // Monthly purchases by product (current month only)
+      // Monthly purchases by product (action_type = 'add')
       const monthlyPurchases: MonthlyPurchase[] = [];
       
       for (let month = 0; month < 12; month++) {
         const monthStart = new Date(currentYear, month, 1);
         const monthEnd = new Date(currentYear, month + 1, 0);
         
-        const monthlyAdditions = inventoryActions?.filter(action => {
-          if (action.action_type !== 'add') return false;
-          const actionDate = new Date(action.timestamp);
+        const monthlyPurchaseActions = purchaseActions.filter(action => {
+          const actionDate = new Date(action.timestamp || '');
           return actionDate >= monthStart && actionDate <= monthEnd;
-        }) || [];
+        });
 
         // Find the product with highest purchase volume for this month
-        const productPurchases: Record<string, { name: string; quantity: number }> = {};
+        const productPurchasesMap: Record<string, { name: string; quantity: number }> = {};
         
-        monthlyAdditions.forEach(action => {
+        monthlyPurchaseActions.forEach(action => {
           const product = action.products as any;
           if (product && action.quantity_changed) {
             const productId = product.id;
             const quantity = Math.abs(action.quantity_changed);
             
-            if (!productPurchases[productId]) {
-              productPurchases[productId] = { name: product.name, quantity: 0 };
+            if (!productPurchasesMap[productId]) {
+              productPurchasesMap[productId] = { name: product.name, quantity: 0 };
             }
-            productPurchases[productId].quantity += quantity;
+            productPurchasesMap[productId].quantity += quantity;
           }
         });
 
-        const topMonthlyProduct = Object.entries(productPurchases)
+        const topMonthlyProduct = Object.entries(productPurchasesMap)
           .sort(([,a], [,b]) => b.quantity - a.quantity)[0];
 
         monthlyPurchases.push({
@@ -200,12 +238,40 @@ export const useBIAnalytics = () => {
         });
       }
 
+      // Calculate discount summary from REAL sales data
+      let totalDiscountIls = 0;
+      let totalDiscountPercent = 0;
+      let discountCount = 0;
+
+      salesActions.forEach(action => {
+        const discountIls = Number(action.discount_ils) || 0;
+        const discountPercent = Number(action.discount_percent) || 0;
+        
+        if (discountIls > 0) {
+          totalDiscountIls += discountIls;
+          totalDiscountPercent += discountPercent;
+          discountCount++;
+        }
+      });
+
+      const discountSummary: DiscountSummary = {
+        totalDiscountIls: Math.round(totalDiscountIls),
+        averageDiscountPercent: discountCount > 0 ? Math.round(totalDiscountPercent / discountCount * 10) / 10 : 0,
+        discountCount
+      };
+
       return {
         salesData,
         topProducts,
         supplierData,
         monthlyPurchases,
-        hasData
+        discountSummary,
+        hasData,
+        hasSaleData,
+        hasPurchaseData,
+        totalGrossProfit: Math.round(totalGrossProfit),
+        totalRevenue: Math.round(totalRevenue),
+        totalPurchases: Math.round(totalPurchases)
       };
     },
     enabled: !!businessContext?.business_id,

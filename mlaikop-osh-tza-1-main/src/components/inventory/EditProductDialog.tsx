@@ -8,12 +8,13 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import { BarcodeScanner } from '@/components/ui/barcode-scanner';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useProductCategories } from '@/hooks/useProductCategories';
 import { useBusiness } from '@/hooks/useBusiness';
 import { AddProductCategoryDialog } from '@/components/inventory/AddProductCategoryDialog';
+import { SaleModal, SaleData } from '@/components/inventory/SaleModal';
+import { PurchaseModal, PurchaseData } from '@/components/inventory/PurchaseModal';
 import { Plus, Scan } from 'lucide-react';
 import { useCategories } from '@/hooks/useCategories';
-import { useInventoryLogger } from '@/hooks/useInventoryLogger';
+import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'];
@@ -33,11 +34,18 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 }) => {
   const { toast } = useToast();
   const { business } = useBusiness();
+  const { user } = useAuth();
   const { categories } = useCategories();
-  const { logInventoryAction } = useInventoryLogger();
   const [loading, setLoading] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  
+  // Modal states for sale/purchase
+  const [showSaleModal, setShowSaleModal] = useState(false);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [pendingQuantityDiff, setPendingQuantityDiff] = useState(0);
+  const [pendingFormData, setPendingFormData] = useState<any>(null);
+  
   const [formData, setFormData] = useState({
     name: product?.name || '',
     barcode: product?.barcode || '',
@@ -48,12 +56,11 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     expiration_date: product?.expiration_date || '',
     image: product?.image || '',
     product_category_id: product?.product_category_id || '',
-    low_stock_threshold: 5, // Default threshold
+    low_stock_threshold: 5,
   });
 
   React.useEffect(() => {
     if (product) {
-      // Fetch threshold from product_thresholds table
       const fetchThreshold = async () => {
         const { data: thresholdData } = await supabase
           .from('product_thresholds')
@@ -92,23 +99,158 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     e.preventDefault();
     if (!product || !business?.id) return;
 
+    const oldQuantity = product.quantity || 0;
+    const newQuantity = formData.quantity;
+    const quantityDiff = newQuantity - oldQuantity;
+
+    // If quantity changed, show appropriate modal
+    if (quantityDiff < 0) {
+      // Quantity decreased - this is a SALE (action_type = 'remove')
+      setPendingQuantityDiff(quantityDiff);
+      setPendingFormData({ ...formData });
+      setShowSaleModal(true);
+      return;
+    } else if (quantityDiff > 0) {
+      // Quantity increased - this is a PURCHASE (action_type = 'add')
+      setPendingQuantityDiff(quantityDiff);
+      setPendingFormData({ ...formData });
+      setShowPurchaseModal(true);
+      return;
+    }
+
+    // No quantity change - just update product data
+    await saveProductUpdate(formData);
+  };
+
+  const handleSaleConfirm = async (saleData: SaleData) => {
+    if (!product || !business?.id || !user?.id || !pendingFormData) return;
+
     setLoading(true);
     try {
-      const oldQuantity = product.quantity || 0;
-      const newQuantity = formData.quantity;
-      const quantityDiff = newQuantity - oldQuantity;
+      const quantitySold = Math.abs(pendingQuantityDiff);
+      const listPrice = product.price || 0;
+      const costPrice = product.cost || 0;
+      const listTotal = listPrice * quantitySold;
+      const discountIls = listTotal - saleData.saleTotalIls;
+      const discountPercent = listTotal > 0 ? (discountIls / listTotal) * 100 : 0;
 
-      // Update product data
+      // STEP 1: Insert inventory_actions FIRST (action_type = 'remove' for sales)
+      const { error: actionError } = await supabase
+        .from('inventory_actions')
+        .insert({
+          product_id: product.id,
+          business_id: business.id,
+          user_id: user.id,
+          action_type: 'remove', // Using existing 'remove' value for sales
+          quantity_changed: -quantitySold, // Negative for removal
+          currency: 'ILS',
+          sale_total_ils: saleData.saleTotalIls,
+          sale_unit_ils: saleData.saleTotalIls / quantitySold,
+          list_unit_ils: listPrice,
+          discount_ils: discountIls > 0 ? discountIls : null,
+          discount_percent: discountPercent > 0 ? discountPercent : null,
+          cost_snapshot_ils: costPrice,
+          notes: saleData.notes || `מכירה של ${quantitySold} יחידות`,
+          timestamp: new Date().toISOString(),
+        });
+
+      if (actionError) {
+        console.error('Error logging sale action:', actionError);
+        throw actionError;
+      }
+
+      // STEP 2: Only update product AFTER successful inventory_actions insert
+      await saveProductUpdate(pendingFormData);
+      
+      setShowSaleModal(false);
+      setPendingFormData(null);
+      setPendingQuantityDiff(0);
+    } catch (error) {
+      console.error('Error processing sale:', error);
+      toast({
+        title: "שגיאה ברישום המכירה",
+        description: "אנא נסה שוב",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePurchaseConfirm = async (purchaseData: PurchaseData) => {
+    if (!product || !business?.id || !user?.id || !pendingFormData) return;
+
+    setLoading(true);
+    try {
+      const quantityAdded = pendingQuantityDiff;
+      const oldQuantity = product.quantity || 0;
+      const oldCost = product.cost || 0;
+
+      // Calculate rolling average cost
+      const newAverageCost = oldQuantity + quantityAdded > 0
+        ? ((oldQuantity * oldCost) + (quantityAdded * purchaseData.purchaseUnitIls)) / (oldQuantity + quantityAdded)
+        : purchaseData.purchaseUnitIls;
+
+      // STEP 1: Insert inventory_actions FIRST (action_type = 'add' for purchases)
+      const { error: actionError } = await supabase
+        .from('inventory_actions')
+        .insert({
+          product_id: product.id,
+          business_id: business.id,
+          user_id: user.id,
+          action_type: 'add', // Using existing 'add' value for purchases
+          quantity_changed: quantityAdded, // Positive for addition
+          currency: 'ILS',
+          purchase_unit_ils: purchaseData.purchaseUnitIls,
+          purchase_total_ils: purchaseData.purchaseTotalIls,
+          supplier_id: purchaseData.supplierId || null,
+          notes: purchaseData.notes || `קנייה של ${quantityAdded} יחידות`,
+          timestamp: new Date().toISOString(),
+        });
+
+      if (actionError) {
+        console.error('Error logging purchase action:', actionError);
+        throw actionError;
+      }
+
+      // STEP 2: Only update product AFTER successful inventory_actions insert
+      // Update cost to rolling average
+      const updatedFormData = {
+        ...pendingFormData,
+        cost: newAverageCost,
+      };
+      await saveProductUpdate(updatedFormData);
+      
+      setShowPurchaseModal(false);
+      setPendingFormData(null);
+      setPendingQuantityDiff(0);
+    } catch (error) {
+      console.error('Error processing purchase:', error);
+      toast({
+        title: "שגיאה ברישום הקנייה",
+        description: "אנא נסה שוב",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveProductUpdate = async (data: typeof formData) => {
+    if (!product || !business?.id) return;
+
+    setLoading(true);
+    try {
       const updateData: any = {
-        name: formData.name,
-        barcode: formData.barcode || null,
-        quantity: formData.quantity,
-        price: formData.price || null,
-        cost: formData.cost || null,
-        location: formData.location || null,
-        expiration_date: formData.expiration_date || null,
-        image: formData.image || null,
-        product_category_id: formData.product_category_id || null,
+        name: data.name,
+        barcode: data.barcode || null,
+        quantity: data.quantity,
+        price: data.price || null,
+        cost: data.cost || null,
+        location: data.location || null,
+        expiration_date: data.expiration_date || null,
+        image: data.image || null,
+        product_category_id: data.product_category_id || null,
         updated_at: new Date().toISOString(),
       };
 
@@ -120,16 +262,14 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       if (productError) throw productError;
 
       // Update or insert threshold
-      if (!product.id) {
-        console.error("Missing product_id – skipping threshold save.");
-      } else {
+      if (product.id) {
         const response = await supabase
           .from('product_thresholds')
           .upsert(
             {
               product_id: product.id,
               business_id: business.id,
-              low_stock_threshold: formData.low_stock_threshold,
+              low_stock_threshold: data.low_stock_threshold,
               updated_at: new Date().toISOString(),
             },
             {
@@ -137,28 +277,8 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
             }
           );
         if (response.error) {
-          toast({
-            title: "שגיאה",
-            description: "לא ניתן לשמור את סף המלאי: " + response.error.message,
-            variant: "destructive"
-          });
           console.error('Threshold update error:', response.error);
-        } else {
-          toast({
-            title: "הצלחה",
-            description: "סף המלאי עודכן בהצלחה"
-          });
         }
-      }
-
-      // Log inventory action if quantity changed
-      if (quantityDiff !== 0) {
-        const actionType = quantityDiff > 0 ? 'add' : 'remove';
-        const notes = quantityDiff > 0 
-          ? `הוספת ${Math.abs(quantityDiff)} יחידות למלאי`
-          : `הפחתת ${Math.abs(quantityDiff)} יחידות מהמלאי`;
-        
-        await logInventoryAction(product.id, actionType, Math.abs(quantityDiff), notes);
       }
 
       toast({
@@ -391,6 +511,43 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
           businessCategoryId={business.business_category_id}
         />
       )}
+
+      {/* Sale Modal - for quantity decrease (action_type = 'remove') */}
+      <SaleModal
+        open={showSaleModal}
+        onOpenChange={(open) => {
+          setShowSaleModal(open);
+          if (!open) {
+            setPendingFormData(null);
+            setPendingQuantityDiff(0);
+          }
+        }}
+        onConfirm={handleSaleConfirm}
+        quantitySold={Math.abs(pendingQuantityDiff)}
+        productName={product?.name || ''}
+        listPrice={product?.price || 0}
+        costPrice={product?.cost || 0}
+        isLoading={loading}
+      />
+
+      {/* Purchase Modal - for quantity increase (action_type = 'add') */}
+      <PurchaseModal
+        open={showPurchaseModal}
+        onOpenChange={(open) => {
+          setShowPurchaseModal(open);
+          if (!open) {
+            setPendingFormData(null);
+            setPendingQuantityDiff(0);
+          }
+        }}
+        onConfirm={handlePurchaseConfirm}
+        quantityAdded={pendingQuantityDiff}
+        productName={product?.name || ''}
+        currentCost={product?.cost || 0}
+        currentQuantity={product?.quantity || 0}
+        defaultSupplierId={product?.supplier_id}
+        isLoading={loading}
+      />
     </>
   );
 };
