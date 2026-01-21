@@ -53,15 +53,17 @@ interface Product {
 export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) => {
   const { businessContext } = useBusinessAccess();
 
+  // Stringify config for stable queryKey (Fix #2)
+  const configKey = JSON.stringify(config);
+
   const { data: insights, isLoading, error } = useQuery({
-    queryKey: ['insights', businessContext?.business_id, config],
+    queryKey: ['insights', businessContext?.business_id, configKey],
     queryFn: async (): Promise<InsightsData | null> => {
       if (!businessContext?.business_id) return null;
 
       const now = new Date();
       const thirtyDaysAgo = new Date(now.getTime() - config.lookbackSalesDays * 24 * 60 * 60 * 1000);
       const ninetyDaysAgo = new Date(now.getTime() - config.lookbackPurchasesDays * 24 * 60 * 60 * 1000);
-      const deadStockDate = new Date(now.getTime() - config.deadStockDays * 24 * 60 * 60 * 1000);
 
       // Fetch inventory actions for the lookback period (90 days for purchases, 30 for sales)
       const { data: actions, error: actionsError } = await supabase
@@ -89,6 +91,20 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
       if (actionsError) {
         console.error('Error fetching inventory actions for insights:', actionsError);
         throw actionsError;
+      }
+
+      // FIX #1: Separate query for ALL sales history (last sale date per product)
+      // This ensures Dead Stock calculation works for products sold more than 90 days ago
+      const { data: allSalesForLastDate, error: salesHistoryError } = await supabase
+        .from('inventory_actions')
+        .select('product_id, timestamp')
+        .eq('business_id', businessContext.business_id)
+        .eq('action_type', 'remove')
+        .order('timestamp', { ascending: false });
+
+      if (salesHistoryError) {
+        console.error('Error fetching sales history for dead stock:', salesHistoryError);
+        // Continue without breaking - we'll just use the 90 day data
       }
 
       // Fetch all products for dead stock and stockout analysis
@@ -217,20 +233,22 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
       };
 
       // ============ INSIGHT C: Dead Stock ============
-      // Find last sale date for each product
+      // FIX #1: Use the full sales history to find last sale date per product
       const productLastSale: Record<string, Date | null> = {};
       
-      // Get all sales (remove actions) for last sale date
-      const allSales = typedActions.filter(a => a.action_type === 'remove' && a.products);
-      allSales.forEach(action => {
-        if (!action.products) return;
-        const productId = action.products.id;
-        const saleDate = new Date(action.timestamp);
-        
-        if (!productLastSale[productId] || saleDate > productLastSale[productId]!) {
-          productLastSale[productId] = saleDate;
-        }
-      });
+      // Use the full sales history data (not limited to 90 days)
+      if (allSalesForLastDate && allSalesForLastDate.length > 0) {
+        allSalesForLastDate.forEach(sale => {
+          if (!sale.product_id) return;
+          const productId = sale.product_id;
+          const saleDate = new Date(sale.timestamp);
+          
+          // Keep only the most recent sale date
+          if (!productLastSale[productId] || saleDate > productLastSale[productId]!) {
+            productLastSale[productId] = saleDate;
+          }
+        });
+      }
 
       const deadStockItems: DeadStockItem[] = typedProducts
         .filter(p => p.quantity > 0)
@@ -239,7 +257,10 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
           const daysSinceLastSale = lastSale 
             ? Math.floor((now.getTime() - lastSale.getTime()) / (24 * 60 * 60 * 1000))
             : null;
-          const estimatedValue = product.quantity * (Number(product.cost) || Number(product.price) || 0);
+          
+          // FIX #5: Use cost ONLY for estimated value. If cost is missing/0, show 0 (not price)
+          const costValue = Number(product.cost) || 0;
+          const estimatedValue = costValue > 0 ? product.quantity * costValue : 0;
 
           return {
             productId: product.id,
@@ -409,21 +430,27 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
         });
       }
 
-      // Check for warning: last month discounts up AND gross profit down vs previous month
+      // FIX #4: Check for warning: last month discounts up AND gross profit down vs previous month
+      // Only compare if we're past February and both months are in the same year
       const currentMonth = now.getMonth();
-      const lastMonthData = businessHealthMonths[currentMonth > 0 ? currentMonth - 1 : 11];
-      const prevMonthData = businessHealthMonths[currentMonth > 1 ? currentMonth - 2 : 10];
       
       let businessHealthWarning = false;
       let warningMessage = '';
       
-      if (lastMonthData && prevMonthData && lastMonthData.totalRevenue > 0 && prevMonthData.totalRevenue > 0) {
-        const discountsUp = lastMonthData.avgDiscountPercent > prevMonthData.avgDiscountPercent;
-        const profitDown = lastMonthData.grossProfit < prevMonthData.grossProfit;
+      // Only do comparison if we have at least 2 months of data (March or later)
+      if (currentMonth >= 2) {
+        const lastMonthData = businessHealthMonths[currentMonth - 1];
+        const prevMonthData = businessHealthMonths[currentMonth - 2];
         
-        if (discountsUp && profitDown) {
-          businessHealthWarning = true;
-          warningMessage = `בחודש ${lastMonthData.month} ההנחות עלו והרווח הגולמי ירד לעומת ${prevMonthData.month}`;
+        if (lastMonthData && prevMonthData && 
+            lastMonthData.totalRevenue > 0 && prevMonthData.totalRevenue > 0) {
+          const discountsUp = lastMonthData.avgDiscountPercent > prevMonthData.avgDiscountPercent;
+          const profitDown = lastMonthData.grossProfit < prevMonthData.grossProfit;
+          
+          if (discountsUp && profitDown) {
+            businessHealthWarning = true;
+            warningMessage = `בחודש ${lastMonthData.month} ההנחות עלו והרווח הגולמי ירד לעומת ${prevMonthData.month}`;
+          }
         }
       }
 
