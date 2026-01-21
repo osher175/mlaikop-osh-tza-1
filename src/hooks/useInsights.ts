@@ -93,18 +93,13 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
         throw actionsError;
       }
 
-      // FIX #1: Separate query for ALL sales history (last sale date per product)
-      // This ensures Dead Stock calculation works for products sold more than 90 days ago
-      const { data: allSalesForLastDate, error: salesHistoryError } = await supabase
-        .from('inventory_actions')
-        .select('product_id, timestamp')
-        .eq('business_id', businessContext.business_id)
-        .eq('action_type', 'remove')
-        .order('timestamp', { ascending: false });
+      // Use aggregated RPC to get last sale date per product (prevents PostgREST row-limit truncation)
+      const { data: lastSaleAggregated, error: lastSaleError } = await supabase
+        .rpc('get_last_sale_at_by_product', { p_business_id: businessContext.business_id });
 
-      if (salesHistoryError) {
-        console.error('Error fetching sales history for dead stock:', salesHistoryError);
-        // Continue without breaking - we'll just use the 90 day data
+      if (lastSaleError) {
+        console.error('Error fetching last sale dates for dead stock:', lastSaleError);
+        // Continue without breaking - dead stock will show null daysSinceLastSale
       }
 
       // Fetch all products for dead stock and stockout analysis
@@ -233,20 +228,14 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
       };
 
       // ============ INSIGHT C: Dead Stock ============
-      // FIX #1: Use the full sales history to find last sale date per product
+      // Use the aggregated RPC data (last sale per product from full history)
       const productLastSale: Record<string, Date | null> = {};
       
-      // Use the full sales history data (not limited to 90 days)
-      if (allSalesForLastDate && allSalesForLastDate.length > 0) {
-        allSalesForLastDate.forEach(sale => {
-          if (!sale.product_id) return;
-          const productId = sale.product_id;
-          const saleDate = new Date(sale.timestamp);
-          
-          // Keep only the most recent sale date
-          if (!productLastSale[productId] || saleDate > productLastSale[productId]!) {
-            productLastSale[productId] = saleDate;
-          }
+      // Build map from aggregated RPC result
+      if (lastSaleAggregated && Array.isArray(lastSaleAggregated)) {
+        lastSaleAggregated.forEach((row: { product_id: string; last_sale_at: string }) => {
+          if (!row.product_id) return;
+          productLastSale[row.product_id] = new Date(row.last_sale_at);
         });
       }
 
