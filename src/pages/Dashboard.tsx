@@ -9,6 +9,7 @@ import { TopProductsChart } from '@/components/dashboard/TopProductsChart';
 import { SuppliersChart } from '@/components/dashboard/SuppliersChart';
 import { MonthlyPurchasesChart } from '@/components/dashboard/MonthlyPurchasesChart';
 import { NotificationPanel } from '@/components/dashboard/NotificationPanel';
+import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
 
 export const Dashboard: React.FC = () => {
   return (
@@ -16,13 +17,18 @@ export const Dashboard: React.FC = () => {
       <div className="space-y-6 w-full max-w-full overflow-x-hidden" dir="rtl">
         {/* Dashboard Header */}
         <div className="w-full">
-          <h1 className="text-3xl font-bold text-gray-900 font-rubik break-words">לוח הבקרה</h1>
-          <p className="text-gray-600 font-rubik break-words">סקירה כללית של המלאי והפעילות העסקית</p>
+          <h1 className="text-3xl font-bold text-foreground font-rubik break-words">לוח הבקרה</h1>
+          <p className="text-muted-foreground font-rubik break-words">סקירה כללית של המלאי והפעילות העסקית</p>
         </div>
 
         {/* Summary Cards */}
         <div className="w-full">
           <SummaryGrid />
+        </div>
+
+        {/* Smart Insights Panel */}
+        <div className="w-full">
+          <InsightsPanel />
         </div>
 
         {/* BI Analytics Charts */}

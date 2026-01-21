@@ -83,8 +83,9 @@ export const useBIAnalytics = () => {
       console.log('Inventory actions fetched:', inventoryActions?.length || 0);
 
       // Check if we have any REAL sale/purchase data (with financial info)
-      const hasSaleData = inventoryActions?.some(a => a.action_type === 'sale' && a.sale_total_ils != null);
-      const hasPurchaseData = inventoryActions?.some(a => a.action_type === 'purchase' && a.purchase_total_ils != null);
+      // action_type 'remove' = sale, 'add' = purchase
+      const hasSaleData = inventoryActions?.some(a => a.action_type === 'remove' && a.sale_total_ils != null);
+      const hasPurchaseData = inventoryActions?.some(a => a.action_type === 'add' && a.purchase_total_ils != null);
       const hasRealData = hasSaleData || hasPurchaseData;
 
       const currentYear = new Date().getFullYear();
@@ -100,16 +101,16 @@ export const useBIAnalytics = () => {
         const monthStart = new Date(currentYear, month, 1);
         const monthEnd = new Date(currentYear, month + 1, 0);
         
-        // Filter sales for current month
+        // Filter sales for current month (action_type = 'remove')
         const monthlySales = inventoryActions?.filter(action => {
-          if (action.action_type !== 'sale' || action.sale_total_ils == null) return false;
+          if (action.action_type !== 'remove' || action.sale_total_ils == null) return false;
           const actionDate = new Date(action.timestamp);
           return actionDate >= monthStart && actionDate <= monthEnd;
         }) || [];
 
-        // Filter purchases for current month
+        // Filter purchases for current month (action_type = 'add')
         const monthlyPurchases = inventoryActions?.filter(action => {
-          if (action.action_type !== 'purchase' || action.purchase_total_ils == null) return false;
+          if (action.action_type !== 'add' || action.purchase_total_ils == null) return false;
           const actionDate = new Date(action.timestamp);
           return actionDate >= monthStart && actionDate <= monthEnd;
         }) || [];
@@ -152,9 +153,9 @@ export const useBIAnalytics = () => {
         revenue: number; 
         profit: number;
       }> = {};
-      
+      // Top products by actual sales revenue (action_type = 'remove')
       inventoryActions?.forEach(action => {
-        if (action.action_type === 'sale' && action.sale_total_ils != null) {
+        if (action.action_type === 'remove' && action.sale_total_ils != null) {
           const product = action.products as any;
           if (product) {
             const productId = product.id;
@@ -189,9 +190,9 @@ export const useBIAnalytics = () => {
         volume: number; 
         total: number;
       }> = {};
-      
+      // Supplier purchase data from actual purchases (action_type = 'add')
       inventoryActions?.forEach(action => {
-        if (action.action_type === 'purchase' && action.purchase_total_ils != null) {
+        if (action.action_type === 'add' && action.purchase_total_ils != null) {
           const product = action.products as any;
           const supplier = product?.suppliers || (action.supplier_id ? { id: action.supplier_id, name: 'ספק לא ידוע' } : null);
           
@@ -227,9 +228,9 @@ export const useBIAnalytics = () => {
       for (let month = 0; month < 12; month++) {
         const monthStart = new Date(currentYear, month, 1);
         const monthEnd = new Date(currentYear, month + 1, 0);
-        
+        // Monthly purchases by product (action_type = 'add')
         const monthlyAdditions = inventoryActions?.filter(action => {
-          if (action.action_type !== 'purchase' || action.purchase_total_ils == null) return false;
+          if (action.action_type !== 'add' || action.purchase_total_ils == null) return false;
           const actionDate = new Date(action.timestamp);
           return actionDate >= monthStart && actionDate <= monthEnd;
         }) || [];
@@ -268,9 +269,9 @@ export const useBIAnalytics = () => {
       const grossProfit = salesData.reduce((sum, m) => sum + m.grossProfit, 0);
       const totalDiscounts = salesData.reduce((sum, m) => sum + m.discounts, 0);
       
-      // Calculate average discount percent from actual sales
+      // Calculate average discount percent from actual sales (action_type = 'remove')
       const salesWithDiscount = inventoryActions?.filter(a => 
-        a.action_type === 'sale' && a.discount_percent != null && a.discount_percent > 0
+        a.action_type === 'remove' && a.discount_percent != null && a.discount_percent > 0
       ) || [];
       const avgDiscountPercent = salesWithDiscount.length > 0
         ? salesWithDiscount.reduce((sum, a) => sum + (Number(a.discount_percent) || 0), 0) / salesWithDiscount.length
