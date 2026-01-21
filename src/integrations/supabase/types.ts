@@ -1910,6 +1910,13 @@ export type Database = {
           supplier_name: string
         }[]
       }
+      get_last_sale_at_by_product: {
+        Args: { p_business_id: string }
+        Returns: {
+          last_sale_at: string
+          product_id: string
+        }[]
+      }
       get_product_autocomplete: {
         Args: {
           business_uuid?: string
