@@ -6,34 +6,40 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell } from 'recharts';
 import { useBIAnalytics } from '@/hooks/useBIAnalytics';
+import { AlertCircle } from 'lucide-react';
 
 const COLORS = ['#00BFBF', '#FFA940', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'];
 
 export const SuppliersChart: React.FC = () => {
   const { analytics, isLoading } = useBIAnalytics();
 
+  const formatCurrency = (amount: number) => {
+    return `₪${amount.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold text-gray-900" dir="rtl">
+        <CardTitle className="text-lg font-semibold text-foreground" dir="rtl">
           פילוח רכישות לפי ספקים
         </CardTitle>
-        <div className="text-sm text-gray-600" dir="rtl">
-          לפי כמות יחידות שהתווספו למלאי
+        <div className="text-sm text-muted-foreground" dir="rtl">
+          סכומים בפועל ששולמו לספקים (₪)
         </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="h-64 flex items-center justify-center">
-            <div className="text-gray-500 animate-pulse">טוען נתונים...</div>
+            <div className="text-muted-foreground animate-pulse">טוען נתונים...</div>
           </div>
-        ) : !analytics?.hasData || analytics.supplierData.length === 0 ? (
+        ) : !analytics?.hasPurchaseData || analytics.supplierData.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center text-center p-4">
-            <div className="text-gray-500 mb-2 text-lg">אין נתוני רכישות להצגה כרגע</div>
-            <div className="text-sm text-gray-400">
-              תרשים זה יציג את פילוח פעולות הוספת המלאי לפי ספקים שונים
+            <AlertCircle className="h-12 w-12 text-muted-foreground mb-3" />
+            <div className="text-muted-foreground mb-2 text-lg">אין נתוני רכישות לתקופה</div>
+            <div className="text-sm text-muted-foreground">
+              כאשר תרשום קניות דרך עריכת מוצר, הנתונים יופיעו כאן
             </div>
           </div>
         ) : (
@@ -44,7 +50,7 @@ export const SuppliersChart: React.FC = () => {
                   <Pie
                     data={analytics.supplierData.map((supplier, index) => ({
                       name: supplier.supplierName,
-                      value: supplier.purchaseVolume,
+                      value: supplier.purchaseTotal,
                       percentage: supplier.percentage,
                       fill: COLORS[index % COLORS.length]
                     }))}
@@ -62,7 +68,7 @@ export const SuppliersChart: React.FC = () => {
                   <ChartTooltip 
                     content={<ChartTooltipContent />}
                     formatter={(value, name) => [
-                      `${Number(value).toLocaleString()} יחידות`,
+                      formatCurrency(Number(value)),
                       name
                     ]}
                   />
@@ -72,16 +78,16 @@ export const SuppliersChart: React.FC = () => {
             
             <div className="mt-4 space-y-2" dir="rtl">
               {analytics.supplierData.map((supplier, index) => (
-                <div key={supplier.supplierName} className="flex items-center justify-between text-sm">
+                <div key={supplier.supplierId} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <div 
                       className="w-3 h-3 rounded-full" 
                       style={{ backgroundColor: COLORS[index % COLORS.length] }}
                     />
-                    <span>{supplier.supplierName}</span>
+                    <span className="text-foreground">{supplier.supplierName}</span>
                   </div>
-                  <span className="font-medium">
-                    {supplier.purchaseVolume.toLocaleString()} יחידות ({supplier.percentage}%)
+                  <span className="font-medium text-foreground">
+                    {formatCurrency(supplier.purchaseTotal)} • {supplier.purchaseVolume} יח' ({supplier.percentage}%)
                   </span>
                 </div>
               ))}

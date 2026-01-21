@@ -6,50 +6,55 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Legend } from 'recharts';
 import { useBIAnalytics } from '@/hooks/useBIAnalytics';
+import { AlertCircle } from 'lucide-react';
 
 const chartConfig = {
-  grossRevenue: {
-    label: "הכנסות ברוטו",
+  revenue: {
+    label: "הכנסות",
     color: "#00BFBF",
   },
-  netRevenue: {
-    label: "הכנסות נטו",
-    color: "#FFA940",
+  grossProfit: {
+    label: "רווח גולמי",
+    color: "#27AE60",
   },
 };
 
 export const RevenueChart: React.FC = () => {
   const { analytics, isLoading } = useBIAnalytics();
 
+  // Check if there are any real revenue values
+  const hasRevenueData = analytics?.salesData?.some(data => data.revenue > 0);
+
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold text-gray-900" dir="rtl">
-          הכנסות חודשיות - שנת 2025
+        <CardTitle className="text-lg font-semibold text-foreground" dir="rtl">
+          הכנסות ורווחיות חודשית
         </CardTitle>
-        <div className="text-sm text-gray-600" dir="rtl">
-          ברוטו = כולל מע"מ | נטו = לאחר הפחתת 18% מע"מ
+        <div className="text-sm text-muted-foreground" dir="rtl">
+          נתונים אמיתיים ממכירות שנרשמו במערכת (₪)
         </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="h-64 flex items-center justify-center">
-            <div className="text-gray-500 animate-pulse">טוען נתונים...</div>
+            <div className="text-muted-foreground animate-pulse">טוען נתונים...</div>
           </div>
-        ) : !analytics?.hasData ? (
+        ) : !analytics?.hasSaleData ? (
           <div className="h-64 flex flex-col items-center justify-center text-center p-4">
-            <div className="text-gray-500 mb-2 text-lg">אין עדיין תנועות מלאי להצגה</div>
-            <div className="text-sm text-gray-400">
-              גרף זה יציג הכנסות ברוטו ונטו כאשר יתווספו פעולות מלאי
+            <AlertCircle className="h-12 w-12 text-muted-foreground mb-3" />
+            <div className="text-muted-foreground mb-2 text-lg">אין נתוני מכירות לתקופה</div>
+            <div className="text-sm text-muted-foreground">
+              כאשר תרשום מכירה דרך עריכת מוצר, הנתונים יופיעו כאן
             </div>
           </div>
-        ) : !analytics.salesData.some(data => data.grossRevenue > 0) ? (
+        ) : !hasRevenueData ? (
           <div className="h-64 flex flex-col items-center justify-center text-center p-4">
-            <div className="text-gray-500 mb-2">אין עדיין תנועות מלאי רשומות לשנה זו</div>
-            <div className="text-sm text-gray-400">
-              הגרף יעודכן אוטומטית כאשר יתווספו פעולות הוספת מלאי
+            <div className="text-muted-foreground mb-2">אין הכנסות לשנה הנוכחית</div>
+            <div className="text-sm text-muted-foreground">
+              הגרף יעודכן כאשר יירשמו מכירות חדשות
             </div>
           </div>
         ) : (
@@ -72,23 +77,23 @@ export const RevenueChart: React.FC = () => {
                   content={<ChartTooltipContent />}
                   formatter={(value, name) => [
                     `₪${Number(value).toLocaleString()}`, 
-                    name === 'grossRevenue' ? 'ברוטו (כולל מע"מ)' : 'נטו (ללא מע"מ)'
+                    name === 'revenue' ? 'הכנסות' : 'רווח גולמי'
                   ]}
                 />
                 <Legend />
                 <Line 
-                  dataKey="grossRevenue" 
+                  dataKey="revenue" 
                   stroke="#00BFBF" 
                   strokeWidth={3}
                   dot={{ fill: '#00BFBF', strokeWidth: 2, r: 4 }}
-                  name="הכנסות ברוטו"
+                  name="הכנסות"
                 />
                 <Line 
-                  dataKey="netRevenue" 
-                  stroke="#FFA940" 
+                  dataKey="grossProfit" 
+                  stroke="#27AE60" 
                   strokeWidth={3}
-                  dot={{ fill: '#FFA940', strokeWidth: 2, r: 4 }}
-                  name="הכנסות נטו"
+                  dot={{ fill: '#27AE60', strokeWidth: 2, r: 4 }}
+                  name="רווח גולמי"
                 />
               </LineChart>
             </ChartContainer>

@@ -260,30 +260,60 @@ export type Database = {
         Row: {
           action_type: string
           business_id: string
+          cost_snapshot_ils: number | null
+          currency: string
+          discount_ils: number | null
+          discount_percent: number | null
           id: string
+          list_unit_ils: number | null
           notes: string | null
           product_id: string
+          purchase_total_ils: number | null
+          purchase_unit_ils: number | null
           quantity_changed: number
+          sale_total_ils: number | null
+          sale_unit_ils: number | null
+          supplier_id: string | null
           timestamp: string | null
           user_id: string
         }
         Insert: {
           action_type: string
           business_id: string
+          cost_snapshot_ils?: number | null
+          currency?: string
+          discount_ils?: number | null
+          discount_percent?: number | null
           id?: string
+          list_unit_ils?: number | null
           notes?: string | null
           product_id: string
+          purchase_total_ils?: number | null
+          purchase_unit_ils?: number | null
           quantity_changed: number
+          sale_total_ils?: number | null
+          sale_unit_ils?: number | null
+          supplier_id?: string | null
           timestamp?: string | null
           user_id: string
         }
         Update: {
           action_type?: string
           business_id?: string
+          cost_snapshot_ils?: number | null
+          currency?: string
+          discount_ils?: number | null
+          discount_percent?: number | null
           id?: string
+          list_unit_ils?: number | null
           notes?: string | null
           product_id?: string
+          purchase_total_ils?: number | null
+          purchase_unit_ils?: number | null
           quantity_changed?: number
+          sale_total_ils?: number | null
+          sale_unit_ils?: number | null
+          supplier_id?: string | null
           timestamp?: string | null
           user_id?: string
         }
@@ -307,6 +337,20 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_actions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_actions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
             referencedColumns: ["id"]
           },
         ]
