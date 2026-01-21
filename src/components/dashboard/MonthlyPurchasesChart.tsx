@@ -6,12 +6,13 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis } from 'recharts';
 import { useBIAnalytics } from '@/hooks/useBIAnalytics';
+import { AlertCircle } from 'lucide-react';
 
 const chartConfig = {
-  quantity: {
-    label: "כמות רכישה",
+  totalCost: {
+    label: "סכום רכישה",
     color: "#00BFBF",
   },
 };
@@ -19,33 +20,41 @@ const chartConfig = {
 export const MonthlyPurchasesChart: React.FC = () => {
   const { analytics, isLoading } = useBIAnalytics();
 
+  const formatCurrency = (amount: number) => {
+    return `₪${amount.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  };
+
+  // Check for actual purchase data
+  const hasPurchaseData = analytics?.monthlyPurchases?.some(data => data.totalCost > 0);
+
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold text-gray-900" dir="rtl">
-          רכישות חודשיות לפי מוצר
+        <CardTitle className="text-lg font-semibold text-foreground" dir="rtl">
+          רכישות חודשיות
         </CardTitle>
-        <div className="text-sm text-gray-600" dir="rtl">
-          המוצר עם הכי הרבה הוספות מלאי בכל חודש
+        <div className="text-sm text-muted-foreground" dir="rtl">
+          סכומים ששולמו לספקים בפועל (₪)
         </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="h-64 flex items-center justify-center">
-            <div className="text-gray-500 animate-pulse">טוען נתונים...</div>
+            <div className="text-muted-foreground animate-pulse">טוען נתונים...</div>
           </div>
-        ) : !analytics?.hasData ? (
+        ) : !analytics?.hasPurchaseData ? (
           <div className="h-64 flex flex-col items-center justify-center text-center p-4">
-            <div className="text-gray-500 mb-2 text-lg">אין נתוני רכישות להצגה כרגע</div>
-            <div className="text-sm text-gray-400">
-              גרף זה יציג את המוצר עם הכי הרבה הוספות מלאי בכל חודש
+            <AlertCircle className="h-12 w-12 text-muted-foreground mb-3" />
+            <div className="text-muted-foreground mb-2 text-lg">אין נתוני רכישות לתקופה</div>
+            <div className="text-sm text-muted-foreground">
+              כאשר תרשום קניות דרך עריכת מוצר, הנתונים יופיעו כאן
             </div>
           </div>
-        ) : !analytics.monthlyPurchases.some(data => data.quantity > 0) ? (
+        ) : !hasPurchaseData ? (
           <div className="h-64 flex flex-col items-center justify-center text-center p-4">
-            <div className="text-gray-500 mb-2">אין פעולות הוספת מלאי רשומות עדיין</div>
-            <div className="text-sm text-gray-400">
-              הגרף יעודכן כאשר יתווספו פעולות הוספת מלאי חדשות
+            <div className="text-muted-foreground mb-2">אין רכישות רשומות לשנה הנוכחית</div>
+            <div className="text-sm text-muted-foreground">
+              הגרף יעודכן כאשר יירשמו קניות חדשות
             </div>
           </div>
         ) : (
@@ -62,18 +71,18 @@ export const MonthlyPurchasesChart: React.FC = () => {
                   tick={{ fontSize: 12 }}
                   axisLine={false}
                   tickLine={false}
-                  tickFormatter={(value) => `${value} יח'`}
+                  tickFormatter={(value) => formatCurrency(value)}
                 />
                 <ChartTooltip 
                   content={<ChartTooltipContent />}
                   formatter={(value, name, props) => [
-                    `${Number(value).toLocaleString()} יחידות`,
-                    props.payload.productName
+                    formatCurrency(Number(value)),
+                    props.payload.productName !== 'אין נתונים' ? props.payload.productName : 'רכישות'
                   ]}
                   labelFormatter={(label) => `חודש ${label}`}
                 />
                 <Bar 
-                  dataKey="quantity" 
+                  dataKey="totalCost" 
                   fill="#00BFBF" 
                   radius={[4, 4, 0, 0]}
                 />
