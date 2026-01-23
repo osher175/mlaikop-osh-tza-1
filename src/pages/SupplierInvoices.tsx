@@ -17,6 +17,7 @@ import { AddSupplierInvoiceDialog } from '@/components/supplier-invoices/AddSupp
 import { DeleteSupplierInvoiceDialog } from '@/components/supplier-invoices/DeleteSupplierInvoiceDialog';
 import { Plus, Receipt, Eye, Trash, FileText, Download } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 type SupplierInvoice = Database['public']['Tables']['supplier_invoices']['Row'];
 
@@ -41,12 +42,6 @@ export const SupplierInvoices: React.FC = () => {
     window.open(fileUrl, '_blank');
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('he-IL', {
-      style: 'currency',
-      currency: 'ILS',
-    }).format(amount);
-  };
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('he-IL');

@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TrendingUp, Calculator, DollarSign, Truck } from 'lucide-react';
 import { useSuppliers } from '@/hooks/useSuppliers';
+import { formatCurrencyPrecise } from '@/lib/formatCurrency';
 
 interface PurchaseModalProps {
   open: boolean;
@@ -95,10 +96,6 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
     onOpenChange(false);
   };
 
-  const formatCurrency = (amount: number) => {
-    return `₪${amount.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md" dir="rtl">
@@ -117,7 +114,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
           <div className="bg-gray-50 p-3 rounded-lg space-y-1 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600">עלות נוכחית ליחידה:</span>
-              <span className="font-medium">{formatCurrency(currentCost)}</span>
+              <span className="font-medium">{formatCurrencyPrecise(currentCost)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">כמות נוכחית במלאי:</span>
@@ -203,28 +200,28 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
               {inputMode === 'total' && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">מחיר ליחידה:</span>
-                  <span className="font-medium">{formatCurrency(unitPrice)}</span>
+                  <span className="font-medium">{formatCurrencyPrecise(unitPrice)}</span>
                 </div>
               )}
               
               {inputMode === 'unit' && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">סכום כולל:</span>
-                  <span className="font-medium">{formatCurrency(totalPrice)}</span>
+                  <span className="font-medium">{formatCurrencyPrecise(totalPrice)}</span>
                 </div>
               )}
               
               <div className="flex justify-between">
                 <span className="text-gray-600">שינוי במחיר:</span>
                 <span className={`font-medium ${costDifference >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {costDifference >= 0 ? '+' : ''}{formatCurrency(costDifference)} ({costChangePercent.toFixed(1)}%)
+                  {costDifference >= 0 ? '+' : ''}{formatCurrencyPrecise(costDifference)} ({costChangePercent.toFixed(1)}%)
                 </span>
               </div>
               
               <div className="flex justify-between pt-2 border-t border-blue-200">
                 <span className="text-gray-700">עלות ממוצעת חדשה:</span>
                 <span className="font-bold text-blue-700">
-                  {formatCurrency(newAverageCost)}
+                  {formatCurrencyPrecise(newAverageCost)}
                 </span>
               </div>
             </div>
