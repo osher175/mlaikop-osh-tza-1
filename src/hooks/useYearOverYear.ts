@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBusinessAccess } from './useBusinessAccess';
 import { 
-  getAvailableFinancialYears,
+  getRelevantFinancialYears,
   getEffectiveFinancialStartDate,
   getYearEnd,
   calculateNetFromGross,
@@ -45,11 +45,11 @@ export const useYearOverYear = () => {
     queryFn: async (): Promise<YearOverYearData | null> => {
       if (!businessContext?.business_id) return null;
 
-      const availableYears = getAvailableFinancialYears();
+      // Get last 3 years for comparison (more practical than all years from 2020)
+      const availableYears = getRelevantFinancialYears(3);
       const currentYear = new Date().getFullYear();
 
-      // For multi-year comparison, we need to fetch all data
-      // but we can at least filter by the earliest available year
+      // For multi-year comparison, filter by the earliest relevant year
       const earliestYear = Math.min(...availableYears);
       const earliestStart = getEffectiveFinancialStartDate(earliestYear);
       const latestEnd = getYearEnd(currentYear);
