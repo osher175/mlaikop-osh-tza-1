@@ -1,14 +1,21 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBusiness } from './useBusiness';
 import { useMemo } from 'react';
 import { ReportsData, isReportsData } from '@/types/reports';
+import { getEffectiveFinancialStartDate } from '@/lib/financialConfig';
 
 export type ReportsRange = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
+/**
+ * Get date range for reports, respecting the financial tracking start date
+ * Financial data only starts from the configured financial_tracking_start_at date
+ */
 function getDateRange(range: ReportsRange): { date_from: string; date_to: string } {
   const now = new Date();
+  const currentYear = now.getFullYear();
+  const financialStartDate = getEffectiveFinancialStartDate(currentYear);
+  
   let date_from: Date;
   switch (range) {
     case 'daily':
@@ -26,8 +33,12 @@ function getDateRange(range: ReportsRange): { date_from: string; date_to: string
     default:
       date_from = new Date(now.getFullYear(), now.getMonth(), 1);
   }
+  
+  // Ensure we don't go before the financial tracking start date
+  const effectiveFrom = date_from > financialStartDate ? date_from : financialStartDate;
+  
   return {
-    date_from: date_from.toISOString(),
+    date_from: effectiveFrom.toISOString(),
     date_to: now.toISOString(),
   };
 }

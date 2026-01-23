@@ -13,6 +13,13 @@ import {
   BusinessHealthMonth,
   InsightSeverity,
 } from '@/types/insights';
+import {
+  isWithinFinancialTrackingPeriod,
+  isWithinYearFinancialPeriod,
+  calculateNetFromGross,
+  MONTH_NAMES_HE,
+  getEffectiveFinancialStartDate,
+} from '@/lib/financialConfig';
 
 interface InventoryAction {
   id: string;
@@ -62,8 +69,14 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
       if (!businessContext?.business_id) return null;
 
       const now = new Date();
+      const currentYear = now.getFullYear();
+      
+      // Calculate lookback periods for operational insights (Dead Stock, Stockout - use full history)
       const thirtyDaysAgo = new Date(now.getTime() - config.lookbackSalesDays * 24 * 60 * 60 * 1000);
       const ninetyDaysAgo = new Date(now.getTime() - config.lookbackPurchasesDays * 24 * 60 * 60 * 1000);
+      
+      // Get effective financial start date for the current year
+      const financialStartDate = getEffectiveFinancialStartDate(currentYear);
 
       // Fetch inventory actions for the lookback period (90 days for purchases, 30 for sales)
       const { data: actions, error: actionsError } = await supabase
@@ -116,14 +129,32 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
       const typedActions = (actions || []) as unknown as InventoryAction[];
       const typedProducts = (products || []) as Product[];
 
-      // Filter sales (remove) with financial data - last 30 days
-      const sales30Days = typedActions.filter(a => 
+      // === FINANCIAL INSIGHTS: Filter by financial tracking period ===
+      // Low Margin, High Discount, Cost Spike, Business Health - use only financial period data
+      
+      // Filter sales (remove) with financial data - only within financial tracking period
+      const financialSales = typedActions.filter(a => 
+        a.action_type === 'remove' && 
+        a.sale_total_ils != null &&
+        isWithinFinancialTrackingPeriod(a.timestamp) &&
+        isWithinYearFinancialPeriod(a.timestamp, currentYear)
+      );
+      
+      // For operational insights (Dead Stock, Stockout), use standard lookback
+      const operationalSales30Days = typedActions.filter(a => 
         a.action_type === 'remove' && 
         a.sale_total_ils != null &&
         new Date(a.timestamp) >= thirtyDaysAgo
       );
 
-      // Filter purchases (add) with financial data - last 90 days
+      // Filter purchases (add) with financial data - for cost spike analysis
+      const financialPurchases = typedActions.filter(a => 
+        a.action_type === 'add' && 
+        (a.purchase_unit_ils != null || a.purchase_total_ils != null) &&
+        isWithinFinancialTrackingPeriod(a.timestamp)
+      );
+      
+      // For operational purchase analysis
       const purchases90Days = typedActions.filter(a => 
         a.action_type === 'add' && 
         (a.purchase_unit_ils != null || a.purchase_total_ils != null)
@@ -135,6 +166,7 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
       );
 
       // ============ INSIGHT A: Low Margin / Loss per Product ============
+      // Uses FINANCIAL data only (filtered by financial tracking period)
       const productProfitability: Record<string, {
         productId: string;
         productName: string;
@@ -143,7 +175,7 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
         grossProfit: number;
       }> = {};
 
-      sales30Days.forEach(action => {
+      financialSales.forEach(action => {
         if (!action.products) return;
         const productId = action.products.id;
         const revenue = Number(action.sale_total_ils) || 0;
@@ -181,6 +213,7 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
       };
 
       // ============ INSIGHT B: High Discounts ============
+      // Uses FINANCIAL data only (filtered by financial tracking period)
       const productDiscounts: Record<string, {
         productId: string;
         productName: string;
@@ -189,7 +222,7 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
         salesCount: number;
       }> = {};
 
-      sales30Days.forEach(action => {
+      financialSales.forEach(action => {
         if (!action.products || action.discount_percent == null) return;
         const productId = action.products.id;
         const discountPercent = Number(action.discount_percent) || 0;
@@ -270,10 +303,11 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
         .slice(0, 20);
 
       // ============ INSIGHT D: Stockout Risk ============
+      // Uses OPERATIONAL data (full history) - NOT affected by financial reset
       // Calculate avg daily sales per product from last 30 days
       const productSales30Days: Record<string, number> = {};
       
-      sales30Days.forEach(action => {
+      operationalSales30Days.forEach(action => {
         if (!action.products) return;
         const productId = action.products.id;
         const quantity = Math.abs(action.quantity_changed);
@@ -373,18 +407,13 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
       };
 
       // ============ INSIGHT F: Business Health Monthly ============
-      const currentYear = now.getFullYear();
-      const monthNames = [
-        'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-        'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
-      ];
-
-      // All sales this year
-      const yearStart = new Date(currentYear, 0, 1);
-      const allSalesThisYear = typedActions.filter(a => 
+      // Uses FINANCIAL data only - filtered by financial tracking period
+      
+      // All financial sales this year (filtered by financial tracking period)
+      const allFinancialSalesThisYear = typedActions.filter(a => 
         a.action_type === 'remove' && 
         a.sale_total_ils != null &&
-        new Date(a.timestamp) >= yearStart
+        isWithinYearFinancialPeriod(a.timestamp, currentYear)
       );
 
       const businessHealthMonths: BusinessHealthMonth[] = [];
@@ -393,7 +422,7 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
         const monthStart = new Date(currentYear, month, 1);
         const monthEnd = new Date(currentYear, month + 1, 0, 23, 59, 59);
         
-        const monthlySales = allSalesThisYear.filter(a => {
+        const monthlySales = allFinancialSalesThisYear.filter(a => {
           const d = new Date(a.timestamp);
           return d >= monthStart && d <= monthEnd;
         });
@@ -410,7 +439,7 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
         const avgDiscountPercent = monthlySales.length > 0 ? discountPercentSum / monthlySales.length : 0;
 
         businessHealthMonths.push({
-          month: monthNames[month],
+          month: MONTH_NAMES_HE[month],
           monthIndex: month,
           totalRevenue: Math.round(totalRevenue * 100) / 100,
           totalDiscounts: Math.round(totalDiscounts * 100) / 100,
