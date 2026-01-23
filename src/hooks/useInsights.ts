@@ -472,11 +472,12 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
         if (lastMonthData && prevMonthData && 
             lastMonthData.totalRevenue > 0 && prevMonthData.totalRevenue > 0) {
           const discountsUp = lastMonthData.avgDiscountPercent > prevMonthData.avgDiscountPercent;
-          const profitDown = lastMonthData.grossProfit < prevMonthData.grossProfit;
+          // FIXED: Use netProfit for comparison (both without VAT for accurate comparison)
+          const profitDown = lastMonthData.netProfit < prevMonthData.netProfit;
           
           if (discountsUp && profitDown) {
             businessHealthWarning = true;
-            warningMessage = `בחודש ${lastMonthData.month} ההנחות עלו והרווח הגולמי ירד לעומת ${prevMonthData.month}`;
+            warningMessage = `בחודש ${lastMonthData.month} ההנחות עלו והרווח הנטו ירד לעומת ${prevMonthData.month}`;
           }
         }
       }
