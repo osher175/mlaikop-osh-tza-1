@@ -51,9 +51,9 @@ export const exportInventoryToCSV = (
       supplierName = supplierMap[product.supplier_id];
     }
 
-    // Format date
+    // Format date with time
     const updatedAt = product.updated_at 
-      ? new Date(product.updated_at).toLocaleDateString('he-IL', {
+      ? new Date(product.updated_at).toLocaleString('he-IL', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
@@ -95,8 +95,12 @@ export const exportInventoryToCSV = (
     .slice(0, 16); // YYYY-MM-DD_HH-mm
   const filename = `inventory_snapshot_${timestamp}.tsv`;
 
+  // Add UTF-8 BOM for Hebrew compatibility in Excel
+  const BOM = '\uFEFF';
+  const tsvWithBOM = BOM + tsvContent;
+
   // Create and trigger download
-  const blob = new Blob([tsvContent], { type: 'text/tab-separated-values;charset=utf-8' });
+  const blob = new Blob([tsvWithBOM], { type: 'text/tab-separated-values;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
