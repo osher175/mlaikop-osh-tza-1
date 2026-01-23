@@ -1,7 +1,8 @@
 /**
- * Export inventory to CSV with UTF-8 BOM for Hebrew/Excel compatibility
- * Separator: semicolon (;)
- * Encoding: UTF-8 with BOM
+ * Export inventory to TSV for Excel compatibility
+ * Separator: TAB (\t)
+ * Encoding: UTF-8
+ * Extension: .tsv
  */
 
 interface ProductForExport {
@@ -24,7 +25,7 @@ export const exportInventoryToCSV = (
   products: ProductForExport[],
   supplierMap?: SupplierMap
 ): void => {
-  // CSV Header row (Hebrew)
+  // TSV Header row (Hebrew)
   const headers = [
     'שם מוצר',
     'ברקוד',
@@ -74,23 +75,17 @@ export const exportInventoryToCSV = (
     ];
   });
 
-  // Escape CSV values (handle semicolons, quotes, newlines)
-  const escapeCSVValue = (value: string): string => {
-    if (value.includes(';') || value.includes('"') || value.includes('\n') || value.includes('\r')) {
-      return `"${value.replace(/"/g, '""')}"`;
-    }
-    return value;
+  // Escape TSV values (handle tabs and newlines)
+  const escapeTSVValue = (value: string): string => {
+    // Replace tabs and newlines with spaces to prevent column breaking
+    return value.replace(/[\t\n\r]/g, ' ');
   };
 
-  // Build CSV content with semicolon separator
-  const csvContent = [
-    headers.map(escapeCSVValue).join(';'),
-    ...rows.map(row => row.map(escapeCSVValue).join(';'))
+  // Build TSV content with TAB separator
+  const tsvContent = [
+    headers.map(escapeTSVValue).join('\t'),
+    ...rows.map(row => row.map(escapeTSVValue).join('\t'))
   ].join('\r\n');
-
-  // Add UTF-8 BOM for Hebrew/Excel compatibility
-  const BOM = '\uFEFF';
-  const csvWithBOM = BOM + csvContent;
 
   // Generate filename with timestamp
   const now = new Date();
@@ -98,10 +93,10 @@ export const exportInventoryToCSV = (
     .replace('T', '_')
     .replace(/:/g, '-')
     .slice(0, 16); // YYYY-MM-DD_HH-mm
-  const filename = `inventory_snapshot_${timestamp}.csv`;
+  const filename = `inventory_snapshot_${timestamp}.tsv`;
 
   // Create and trigger download
-  const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8' });
+  const blob = new Blob([tsvContent], { type: 'text/tab-separated-values;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
