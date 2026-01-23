@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Users, Crown, DollarSign, UserPlus } from 'lucide-react';
 import { useAdminStats } from '@/lib/data/getAdminStats';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 export const AdminSummaryGrid: React.FC = () => {
   const { totalUsers, activeSubscriptions, monthlyRevenue, newUsersThisMonth, isLoading } = useAdminStats();
@@ -25,7 +26,7 @@ export const AdminSummaryGrid: React.FC = () => {
     },
     {
       title: 'הכנסות החודש',
-      value: monthlyRevenue ? `₪${monthlyRevenue.toLocaleString()}` : '₪0',
+      value: formatCurrency(monthlyRevenue),
       icon: DollarSign,
       color: 'text-turquoise',
       bgColor: 'bg-turquoise/10',

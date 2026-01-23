@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Crown, Star, Zap, Loader2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 // Loading component for better UX
 const LoadingSpinner = () => (
@@ -76,11 +77,7 @@ export const Subscribe: React.FC = () => {
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('he-IL', {
-      style: 'currency',
-      currency: 'ILS',
-      minimumFractionDigits: 0
-    }).format(price);
+    return formatCurrency(price);
   };
 
   const currentUser = user || { id: userIdFromUrl, email: emailFromUrl };

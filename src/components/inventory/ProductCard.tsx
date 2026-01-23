@@ -5,6 +5,7 @@ import { LazyImage } from '@/components/inventory/LazyImage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2, Package } from 'lucide-react';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 interface Product {
   id: string;
@@ -29,13 +30,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('he-IL', {
-      style: 'currency',
-      currency: 'ILS',
-    }).format(amount || 0);
-  };
-
   const getStockStatus = (quantity: number) => {
     if (quantity === 0) return { label: 'אזל', color: 'destructive' };
     if (quantity < 10) return { label: 'מלאי נמוך', color: 'secondary' };
