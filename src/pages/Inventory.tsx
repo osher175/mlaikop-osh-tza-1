@@ -88,6 +88,7 @@ export const Inventory: React.FC = () => {
           businessName={businessContext.business_name}
           userRole={businessContext.user_role}
           isOwner={businessContext.is_owner}
+          products={products}
         />
 
         {/* התראות תפוגה */}
