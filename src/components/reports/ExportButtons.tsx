@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, FileText, Table } from 'lucide-react';
 import { ReportsData } from '@/types/reports';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 interface ExportButtonsProps {
   reportsData: ReportsData;
@@ -28,11 +29,11 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({ reportsData, selectedRang
       yPosition += 10;
       doc.text('סה"כ יצאו: ' + reportsData.total_removed, 20, yPosition);
       yPosition += 10;
-      doc.text('שווי מלאי: ₪' + reportsData.total_value.toLocaleString(), 20, yPosition);
+      doc.text('שווי מלאי: ' + formatCurrency(reportsData.total_value), 20, yPosition);
       yPosition += 10;
-      doc.text('רווח גולמי: ₪' + reportsData.gross_profit.toLocaleString(), 20, yPosition);
+      doc.text('רווח גולמי: ' + formatCurrency(reportsData.gross_profit), 20, yPosition);
       yPosition += 10;
-      doc.text('רווח נטו: ₪' + reportsData.net_profit.toLocaleString(), 20, yPosition);
+      doc.text('רווח נטו: ' + formatCurrency(reportsData.net_profit), 20, yPosition);
       yPosition += 10;
       
       if (reportsData.top_product) {

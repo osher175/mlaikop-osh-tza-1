@@ -29,6 +29,7 @@ import {
   CostSpikeItem,
   BusinessHealthMonth,
 } from '@/types/insights';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 interface InsightDetailDrawerProps {
   isOpen: boolean;
@@ -36,15 +37,6 @@ interface InsightDetailDrawerProps {
   insightType: InsightType | null;
   insights: InsightsData | null;
 }
-
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('he-IL', {
-    style: 'currency',
-    currency: 'ILS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-};
 
 const getSeverityBadge = (severity: InsightSeverity) => {
   switch (severity) {

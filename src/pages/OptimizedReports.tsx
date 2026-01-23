@@ -9,6 +9,7 @@ import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { Badge } from '@/components/ui/badge';
 import ExportButtons from '@/components/reports/ExportButtons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 const RANGE_OPTIONS: { value: ReportsRange; label: string }[] = [
   { value: 'daily', label: 'יומי' },
@@ -141,7 +142,7 @@ export const OptimizedReports: React.FC = () => {
                     <div>
                       <p className="text-sm font-medium text-gray-500">שווי מלאי</p>
                       <p className="text-2xl font-bold text-blue-600">
-                        ₪{reportsData.total_value.toLocaleString()}
+                        {formatCurrency(reportsData.total_value)}
                       </p>
                     </div>
                   </div>
@@ -157,7 +158,7 @@ export const OptimizedReports: React.FC = () => {
                     <div>
                       <p className="text-sm font-medium text-gray-500">רווח נטו</p>
                       <p className="text-2xl font-bold text-purple-600">
-                        ₪{reportsData.net_profit.toLocaleString()}
+                        {formatCurrency(reportsData.net_profit)}
                       </p>
                     </div>
                   </div>
@@ -176,8 +177,8 @@ export const OptimizedReports: React.FC = () => {
                     <LineChart data={reportsData.timeline_breakdown}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
+                      <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                      <Tooltip formatter={(value) => [formatCurrency(Number(value)), 'מכירות']} />
                       <Line 
                         type="monotone" 
                         dataKey="sales" 
@@ -217,11 +218,11 @@ export const OptimizedReports: React.FC = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">רווח גולמי:</span>
-                      <span className="font-medium">₪{reportsData.gross_profit.toLocaleString()}</span>
+                      <span className="font-medium">{formatCurrency(reportsData.gross_profit)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">רווח נטו:</span>
-                      <span className="font-medium">₪{reportsData.net_profit.toLocaleString()}</span>
+                      <span className="font-medium">{formatCurrency(reportsData.net_profit)}</span>
                     </div>
                   </div>
                 </CardContent>

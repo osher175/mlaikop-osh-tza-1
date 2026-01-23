@@ -11,6 +11,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useNavigate } from 'react-router-dom';
 import ReportsCharts from '@/components/reports/ReportsCharts';
 import { InsightsTabs } from '@/components/reports/InsightsTabs';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 const ErrorFallback = ({ error, retry }: { error: Error; retry: () => void }) => (
   <Card className="border-destructive/50 bg-destructive/10">
@@ -60,12 +61,6 @@ export const Reports: React.FC = () => {
     );
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('he-IL', {
-      style: 'currency',
-      currency: 'ILS',
-    }).format(amount || 0);
-  };
 
   const retryFetch = () => {
     window.location.reload();

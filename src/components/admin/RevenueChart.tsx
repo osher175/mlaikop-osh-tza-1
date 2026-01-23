@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { useRevenueHistory } from '@/lib/data/getRevenueHistory';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 const chartConfig = {
   revenue: {
@@ -56,11 +57,11 @@ export const RevenueChart: React.FC = () => {
                 tick={{ fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(value) => `₪${value.toLocaleString()}`}
+                tickFormatter={(value) => formatCurrency(value)}
               />
               <ChartTooltip 
                 content={<ChartTooltipContent />}
-                formatter={(value) => [`₪${value.toLocaleString()}`, 'הכנסות']}
+                formatter={(value) => [formatCurrency(Number(value)), 'הכנסות']}
               />
               <Bar 
                 dataKey="revenue" 

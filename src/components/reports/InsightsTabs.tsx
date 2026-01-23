@@ -15,15 +15,7 @@ import { Loader2, Info, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useInsights } from '@/hooks/useInsights';
 import { InsightSeverity } from '@/types/insights';
-
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('he-IL', {
-    style: 'currency',
-    currency: 'ILS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-};
+import { formatCurrency } from '@/lib/formatCurrency';
 
 const getSeverityBadge = (severity: InsightSeverity) => {
   switch (severity) {
