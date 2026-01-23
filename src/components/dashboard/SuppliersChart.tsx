@@ -9,15 +9,12 @@ import {
 import { PieChart, Pie, Cell } from 'recharts';
 import { useBIAnalytics } from '@/hooks/useBIAnalytics';
 import { AlertCircle } from 'lucide-react';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 const COLORS = ['#00BFBF', '#FFA940', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'];
 
 export const SuppliersChart: React.FC = () => {
   const { analytics, isLoading } = useBIAnalytics();
-
-  const formatCurrency = (amount: number) => {
-    return `₪${amount.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  };
 
   return (
     <Card className="w-full">

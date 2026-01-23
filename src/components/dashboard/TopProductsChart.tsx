@@ -3,16 +3,13 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Medal, Award, Star, Circle, AlertCircle } from 'lucide-react';
 import { useBIAnalytics } from '@/hooks/useBIAnalytics';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 const rankIcons = [Trophy, Medal, Award, Star, Circle];
 const rankColors = ['text-yellow-500', 'text-muted-foreground', 'text-amber-600', 'text-primary', 'text-green-600'];
 
 export const TopProductsChart: React.FC = () => {
   const { analytics, isLoading } = useBIAnalytics();
-
-  const formatCurrency = (amount: number) => {
-    return `₪${amount.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  };
 
   return (
     <Card className="w-full">

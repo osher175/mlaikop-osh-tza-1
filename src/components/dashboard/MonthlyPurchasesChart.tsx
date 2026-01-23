@@ -9,6 +9,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis } from 'recharts';
 import { useBIAnalytics } from '@/hooks/useBIAnalytics';
 import { AlertCircle } from 'lucide-react';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 const chartConfig = {
   totalCost: {
@@ -19,10 +20,6 @@ const chartConfig = {
 
 export const MonthlyPurchasesChart: React.FC = () => {
   const { analytics, isLoading } = useBIAnalytics();
-
-  const formatCurrency = (amount: number) => {
-    return `₪${amount.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  };
 
   // Check for actual purchase data
   const hasPurchaseData = analytics?.monthlyPurchases?.some(data => data.totalCost > 0);

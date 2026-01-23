@@ -20,6 +20,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 const chartConfig = {
   sales: {
@@ -76,8 +77,11 @@ const ReportsCharts: React.FC<ReportsChartsProps> = ({ timeline, suppliers, isLo
             <RechartsLineChart data={timelineData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
-              <YAxis />
-              <ChartTooltip content={<ChartTooltipContent />} />
+              <YAxis tickFormatter={(value) => formatCurrency(value)} />
+              <ChartTooltip 
+                content={<ChartTooltipContent />}
+                formatter={(value) => [formatCurrency(Number(value)), 'מכירות']}
+              />
               <ChartLegend content={<ChartLegendContent />} />
               <Line type="monotone" dataKey="sales" stroke="var(--color-sales)" strokeWidth={2} />
             </RechartsLineChart>
@@ -110,7 +114,10 @@ const ReportsCharts: React.FC<ReportsChartsProps> = ({ timeline, suppliers, isLo
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartTooltip 
+                content={<ChartTooltipContent />}
+                formatter={(value) => [formatCurrency(Number(value)), 'רכישות']}
+              />
             </RechartsPieChart>
           </ChartContainer>
         </CardContent>

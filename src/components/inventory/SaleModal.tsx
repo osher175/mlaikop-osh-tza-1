@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { TrendingDown, Calculator, DollarSign } from 'lucide-react';
+import { formatCurrencyPrecise } from '@/lib/formatCurrency';
 
 interface SaleModalProps {
   open: boolean;
@@ -63,10 +64,6 @@ export const SaleModal: React.FC<SaleModalProps> = ({
     onOpenChange(false);
   };
 
-  const formatCurrency = (amount: number) => {
-    return `₪${amount.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md" dir="rtl">
@@ -85,11 +82,11 @@ export const SaleModal: React.FC<SaleModalProps> = ({
           <div className="bg-gray-50 p-3 rounded-lg space-y-1 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600">מחיר מחירון ליחידה:</span>
-              <span className="font-medium">{formatCurrency(listPrice)}</span>
+              <span className="font-medium">{formatCurrencyPrecise(listPrice)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">סה"כ לפי מחירון:</span>
-              <span className="font-medium">{formatCurrency(listTotal)}</span>
+              <span className="font-medium">{formatCurrencyPrecise(listTotal)}</span>
             </div>
           </div>
 
@@ -125,7 +122,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
               
               <div className="flex justify-between">
                 <span className="text-gray-600">מחיר ליחידה בפועל:</span>
-                <span className="font-medium">{formatCurrency(saleTotal / quantitySold)}</span>
+                <span className="font-medium">{formatCurrencyPrecise(saleTotal / quantitySold)}</span>
               </div>
               
               {discountIls > 0 && (
@@ -133,7 +130,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                   <div className="flex justify-between text-orange-700">
                     <span>הנחה:</span>
                     <span className="font-medium">
-                      {formatCurrency(discountIls)} ({discountPercent.toFixed(1)}%)
+                      {formatCurrencyPrecise(discountIls)} ({discountPercent.toFixed(1)}%)
                     </span>
                   </div>
                 </>
@@ -142,7 +139,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
               <div className="flex justify-between pt-2 border-t border-blue-200">
                 <span className="text-gray-700">רווח גולמי:</span>
                 <span className={`font-bold ${grossProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(grossProfit)} ({profitMargin.toFixed(1)}%)
+                  {formatCurrencyPrecise(grossProfit)} ({profitMargin.toFixed(1)}%)
                 </span>
               </div>
             </div>

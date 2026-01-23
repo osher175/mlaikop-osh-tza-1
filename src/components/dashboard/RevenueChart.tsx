@@ -9,6 +9,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, Legend } from 'recharts';
 import { useBIAnalytics } from '@/hooks/useBIAnalytics';
 import { AlertCircle } from 'lucide-react';
+import { formatCurrency } from '@/lib/formatCurrency';
 
 const chartConfig = {
   revenue: {
@@ -71,12 +72,12 @@ export const RevenueChart: React.FC = () => {
                   tick={{ fontSize: 12 }}
                   axisLine={false}
                   tickLine={false}
-                  tickFormatter={(value) => `₪${value.toLocaleString()}`}
+                  tickFormatter={(value) => formatCurrency(value)}
                 />
                 <ChartTooltip 
                   content={<ChartTooltipContent />}
                   formatter={(value, name) => [
-                    `₪${Number(value).toLocaleString()}`, 
+                    formatCurrency(Number(value)), 
                     name === 'revenue' ? 'הכנסות' : 'רווח גולמי'
                   ]}
                 />
