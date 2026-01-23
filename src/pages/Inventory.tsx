@@ -33,6 +33,29 @@ export const Inventory: React.FC = () => {
   const { businessContext, isLoading: businessLoading } = useBusinessAccess();
   const { products, isLoading: productsLoading, refetch } = useProducts();
 
+  // Filter products based on search and stock filter
+  const filteredProducts = React.useMemo(() => {
+    return products.filter(product => {
+      // Search filter
+      const matchesSearch = searchTerm === '' || 
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.barcode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.location?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Stock filter
+      let matchesStockFilter = true;
+      if (activeStockFilter === 'inStock') {
+        matchesStockFilter = product.quantity > 5;
+      } else if (activeStockFilter === 'lowStock') {
+        matchesStockFilter = product.quantity > 0 && product.quantity <= 5;
+      } else if (activeStockFilter === 'outOfStock') {
+        matchesStockFilter = product.quantity === 0;
+      }
+      
+      return matchesSearch && matchesStockFilter;
+    });
+  }, [products, searchTerm, activeStockFilter]);
+
   const getStatusCounts = React.useMemo(() => {
     const inStock = products.filter(p => p.quantity > 5).length;
     const lowStock = products.filter(p => p.quantity > 0 && p.quantity <= 5).length;
@@ -88,7 +111,7 @@ export const Inventory: React.FC = () => {
           businessName={businessContext.business_name}
           userRole={businessContext.user_role}
           isOwner={businessContext.is_owner}
-          products={products}
+          products={filteredProducts}
         />
 
         {/* התראות תפוגה */}
