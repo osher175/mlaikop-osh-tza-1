@@ -93,7 +93,7 @@ export const exportInventoryToCSV = (
     .replace('T', '_')
     .replace(/:/g, '-')
     .slice(0, 16); // YYYY-MM-DD_HH-mm
-  const filename = `inventory_snapshot_${timestamp}.tsv`;
+  const filename = `inventory_snapshot_${timestamp}.xls`;
 
   // Add UTF-8 BOM for Hebrew compatibility in Excel
   const BOM = '\uFEFF';
