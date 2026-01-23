@@ -428,12 +428,19 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
         });
 
         const totalRevenue = monthlySales.reduce((sum, a) => sum + (Number(a.sale_total_ils) || 0), 0);
+        const totalRevenueNet = calculateNetFromGross(totalRevenue);
         const totalDiscounts = monthlySales.reduce((sum, a) => sum + (Number(a.discount_ils) || 0), 0);
-        const grossProfit = monthlySales.reduce((sum, a) => {
-          const revenue = Number(a.sale_total_ils) || 0;
-          const cost = (Number(a.cost_snapshot_ils) || 0) * Math.abs(a.quantity_changed);
-          return sum + (revenue - cost);
+        
+        // COGS (already without VAT)
+        const cogs = monthlySales.reduce((sum, a) => {
+          return sum + (Number(a.cost_snapshot_ils) || 0) * Math.abs(a.quantity_changed);
         }, 0);
+        
+        // Gross profit (mixed - revenue with VAT minus COGS without VAT)
+        const grossProfit = totalRevenue - cogs;
+        
+        // CORRECT: Net profit = revenueNet - COGS (both without VAT)
+        const netProfit = totalRevenueNet - cogs;
         
         const discountPercentSum = monthlySales.reduce((sum, a) => sum + (Number(a.discount_percent) || 0), 0);
         const avgDiscountPercent = monthlySales.length > 0 ? discountPercentSum / monthlySales.length : 0;
@@ -442,8 +449,10 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
           month: MONTH_NAMES_HE[month],
           monthIndex: month,
           totalRevenue: Math.round(totalRevenue * 100) / 100,
+          totalRevenueNet: Math.round(totalRevenueNet * 100) / 100,
           totalDiscounts: Math.round(totalDiscounts * 100) / 100,
           grossProfit: Math.round(grossProfit * 100) / 100,
+          netProfit: Math.round(netProfit * 100) / 100,
           avgDiscountPercent: Math.round(avgDiscountPercent * 100) / 100,
         });
       }

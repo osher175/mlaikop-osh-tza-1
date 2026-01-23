@@ -8,7 +8,6 @@ import {
   calculateNetFromGross,
   MONTH_NAMES_HE,
   YearlyFinancialData,
-  VAT_RATE,
 } from '@/lib/financialConfig';
 
 interface MonthlyFinancialData {
@@ -49,7 +48,13 @@ export const useYearOverYear = () => {
       const availableYears = getAvailableFinancialYears();
       const currentYear = new Date().getFullYear();
 
-      // Fetch all inventory actions (we'll filter by year client-side)
+      // For multi-year comparison, we need to fetch all data
+      // but we can at least filter by the earliest available year
+      const earliestYear = Math.min(...availableYears);
+      const earliestStart = getEffectiveFinancialStartDate(earliestYear);
+      const latestEnd = getYearEnd(currentYear);
+
+      // Server-side filtering for better performance
       const { data: inventoryActions, error: actionsError } = await supabase
         .from('inventory_actions')
         .select(`
@@ -64,6 +69,8 @@ export const useYearOverYear = () => {
           purchase_total_ils
         `)
         .eq('business_id', businessContext.business_id)
+        .gte('timestamp', earliestStart.toISOString())
+        .lte('timestamp', latestEnd.toISOString())
         .order('timestamp', { ascending: false });
 
       if (actionsError) {
@@ -100,13 +107,16 @@ export const useYearOverYear = () => {
         const totalPurchases = purchaseActions.reduce((sum, a) => sum + (Number(a.purchase_total_ils) || 0), 0);
         const totalDiscounts = salesActions.reduce((sum, a) => sum + (Number(a.discount_ils) || 0), 0);
         
-        const grossProfit = salesActions.reduce((sum, a) => {
-          const revenue = Number(a.sale_total_ils) || 0;
-          const cost = (Number(a.cost_snapshot_ils) || 0) * Math.abs(a.quantity_changed);
-          return sum + (revenue - cost);
+        // COGS (already without VAT)
+        const totalCogs = salesActions.reduce((sum, a) => {
+          return sum + (Number(a.cost_snapshot_ils) || 0) * Math.abs(a.quantity_changed);
         }, 0);
         
-        const netProfit = calculateNetFromGross(grossProfit);
+        // Gross profit (mixed - revenue with VAT minus COGS without VAT)
+        const grossProfit = totalRevenue - totalCogs;
+        
+        // CORRECT: Net profit = revenueNet - COGS (both without VAT)
+        const netProfit = totalRevenueNet - totalCogs;
 
         years.push({
           year,
@@ -157,13 +167,15 @@ export const useYearOverYear = () => {
           const monthPurchaseTotal = monthPurchases.reduce((sum, a) => sum + (Number(a.purchase_total_ils) || 0), 0);
           const monthDiscounts = monthSales.reduce((sum, a) => sum + (Number(a.discount_ils) || 0), 0);
           
-          const monthGrossProfit = monthSales.reduce((sum, a) => {
-            const revenue = Number(a.sale_total_ils) || 0;
-            const cost = (Number(a.cost_snapshot_ils) || 0) * Math.abs(a.quantity_changed);
-            return sum + (revenue - cost);
+          // COGS for the month (already without VAT)
+          const monthCogs = monthSales.reduce((sum, a) => {
+            return sum + (Number(a.cost_snapshot_ils) || 0) * Math.abs(a.quantity_changed);
           }, 0);
           
-          const monthNetProfit = calculateNetFromGross(monthGrossProfit);
+          const monthGrossProfit = monthRevenue - monthCogs;
+          
+          // CORRECT: Net profit = revenueNet - COGS
+          const monthNetProfit = monthRevenueNet - monthCogs;
 
           monthlyData.push({
             month: MONTH_NAMES_HE[month],

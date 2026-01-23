@@ -57,8 +57,10 @@ export interface BusinessHealthMonth {
   month: string;
   monthIndex: number;
   totalRevenue: number;
+  totalRevenueNet: number;  // Revenue without VAT
   totalDiscounts: number;
   grossProfit: number;
+  netProfit: number;        // Net profit = revenueNet - COGS
   avgDiscountPercent: number;
 }
 

@@ -2,9 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBusinessAccess } from './useBusinessAccess';
 import { 
-  isWithinYearFinancialPeriod,
   calculateNetFromGross,
   MONTH_NAMES_HE,
+  getEffectiveFinancialStartDate,
+  getYearEnd,
 } from '@/lib/financialConfig';
 
 interface SalesData {
@@ -12,8 +13,8 @@ interface SalesData {
   revenue: number;        // הכנסות ברוטו (כולל מע״מ)
   revenueNet: number;     // הכנסות נטו (ללא מע״מ)
   purchases: number;      // הוצאות מ-purchase_total_ils
-  grossProfit: number;    // רווח גולמי
-  netProfit: number;      // רווח נטו (ללא מע״מ)
+  grossProfit: number;    // רווח גולמי (revenue - COGS, מעורב)
+  netProfit: number;      // רווח נטו = revenueNet - COGS
   discounts: number;      // סכום הנחות
 }
 
@@ -61,9 +62,15 @@ export const useBIAnalytics = () => {
       if (!businessContext?.business_id) return null;
 
       const currentYear = new Date().getFullYear();
-      console.log('Fetching REAL BI analytics for business:', businessContext.business_id, 'Year:', currentYear);
+      const effectiveStart = getEffectiveFinancialStartDate(currentYear);
+      const yearEnd = getYearEnd(currentYear);
+      
+      console.log('Fetching REAL BI analytics for business:', businessContext.business_id, 
+        'Year:', currentYear, 
+        'From:', effectiveStart.toISOString(), 
+        'To:', yearEnd.toISOString());
 
-      // Fetch inventory actions with product and supplier details
+      // Server-side filtering for better performance
       const { data: inventoryActions, error: actionsError } = await supabase
         .from('inventory_actions')
         .select(`
@@ -85,6 +92,8 @@ export const useBIAnalytics = () => {
           products(id, name, price, cost, supplier_id, suppliers(id, name))
         `)
         .eq('business_id', businessContext.business_id)
+        .gte('timestamp', effectiveStart.toISOString())
+        .lte('timestamp', yearEnd.toISOString())
         .order('timestamp', { ascending: false });
 
       if (actionsError) {
@@ -92,14 +101,8 @@ export const useBIAnalytics = () => {
         throw actionsError;
       }
 
-      console.log('Inventory actions fetched:', inventoryActions?.length || 0);
-
-      // Filter actions to only include those within financial tracking period for current year
-      const financialActions = inventoryActions?.filter(action => 
-        isWithinYearFinancialPeriod(action.timestamp, currentYear)
-      ) || [];
-
-      console.log('Financial actions (after filtering):', financialActions.length);
+      const financialActions = inventoryActions || [];
+      console.log('Financial actions fetched (server-side filtered):', financialActions.length);
 
       // Check if we have any REAL sale/purchase data (with financial info)
       const hasSaleData = financialActions.some(a => a.action_type === 'remove' && a.sale_total_ils != null);
@@ -113,14 +116,14 @@ export const useBIAnalytics = () => {
         const monthStart = new Date(currentYear, month, 1);
         const monthEnd = new Date(currentYear, month + 1, 0, 23, 59, 59);
         
-        // Filter sales for current month (action_type = 'remove') - only from financial actions
+        // Filter sales for current month (action_type = 'remove')
         const monthlySales = financialActions.filter(action => {
           if (action.action_type !== 'remove' || action.sale_total_ils == null) return false;
           const actionDate = new Date(action.timestamp);
           return actionDate >= monthStart && actionDate <= monthEnd;
         });
 
-        // Filter purchases for current month (action_type = 'add') - only from financial actions
+        // Filter purchases for current month (action_type = 'add')
         const monthlyPurchasesData = financialActions.filter(action => {
           if (action.action_type !== 'add' || action.purchase_total_ils == null) return false;
           const actionDate = new Date(action.timestamp);
@@ -132,7 +135,7 @@ export const useBIAnalytics = () => {
           return sum + (Number(action.sale_total_ils) || 0);
         }, 0);
 
-        // Calculate net revenue (without VAT)
+        // CORRECT: Calculate net revenue (without VAT) = revenue / 1.18
         const revenueNet = calculateNetFromGross(revenue);
 
         // Calculate purchases from actual data
@@ -140,15 +143,16 @@ export const useBIAnalytics = () => {
           return sum + (Number(action.purchase_total_ils) || 0);
         }, 0);
 
-        // Calculate gross profit from sales (sale_total - cost_snapshot * quantity)
-        const grossProfit = monthlySales.reduce((sum, action) => {
-          const saleAmount = Number(action.sale_total_ils) || 0;
-          const costAmount = (Number(action.cost_snapshot_ils) || 0) * Math.abs(action.quantity_changed || 0);
-          return sum + (saleAmount - costAmount);
+        // COGS (Cost of Goods Sold) - already without VAT
+        const cogs = monthlySales.reduce((sum, action) => {
+          return sum + (Number(action.cost_snapshot_ils) || 0) * Math.abs(action.quantity_changed || 0);
         }, 0);
 
-        // Calculate net profit (gross profit without VAT on revenue)
-        const netProfit = calculateNetFromGross(grossProfit);
+        // Gross profit (mixed - revenue with VAT minus COGS without VAT)
+        const grossProfit = revenue - cogs;
+
+        // CORRECT: Net profit = revenueNet - COGS (both without VAT)
+        const netProfit = revenueNet - cogs;
 
         // Calculate total discounts
         const discounts = monthlySales.reduce((sum, action) => {
@@ -166,12 +170,12 @@ export const useBIAnalytics = () => {
         });
       }
 
-      // Top products by actual sales revenue - only from financial period
+      // Top products by actual sales revenue
       const productSales: Record<string, { 
         name: string; 
         quantity: number; 
         revenue: number; 
-        profit: number;
+        cogs: number;
       }> = {};
       
       financialActions.forEach(action => {
@@ -181,32 +185,37 @@ export const useBIAnalytics = () => {
             const productId = product.id;
             const revenue = Number(action.sale_total_ils) || 0;
             const cost = (Number(action.cost_snapshot_ils) || 0) * Math.abs(action.quantity_changed || 0);
-            const profit = revenue - cost;
             
             if (!productSales[productId]) {
-              productSales[productId] = { name: product.name, quantity: 0, revenue: 0, profit: 0 };
+              productSales[productId] = { name: product.name, quantity: 0, revenue: 0, cogs: 0 };
             }
             productSales[productId].quantity += Math.abs(action.quantity_changed || 0);
             productSales[productId].revenue += revenue;
-            productSales[productId].profit += profit;
+            productSales[productId].cogs += cost;
           }
         }
       });
 
       const topProducts: TopProduct[] = Object.entries(productSales)
-        .map(([productId, data]) => ({
-          productId,
-          productName: data.name,
-          quantity: data.quantity,
-          revenue: Math.round(data.revenue * 100) / 100,
-          revenueNet: Math.round(calculateNetFromGross(data.revenue) * 100) / 100,
-          profit: Math.round(data.profit * 100) / 100,
-          profitNet: Math.round(calculateNetFromGross(data.profit) * 100) / 100,
-        }))
+        .map(([productId, data]) => {
+          const revenueNet = calculateNetFromGross(data.revenue);
+          const profit = data.revenue - data.cogs; // gross profit (mixed)
+          const profitNet = revenueNet - data.cogs; // net profit (correct)
+          
+          return {
+            productId,
+            productName: data.name,
+            quantity: data.quantity,
+            revenue: Math.round(data.revenue * 100) / 100,
+            revenueNet: Math.round(revenueNet * 100) / 100,
+            profit: Math.round(profit * 100) / 100,
+            profitNet: Math.round(profitNet * 100) / 100,
+          };
+        })
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 5);
 
-      // Supplier purchase data from actual purchases - only from financial period
+      // Supplier purchase data from actual purchases
       const supplierPurchases: Record<string, { 
         name: string; 
         volume: number; 
@@ -244,7 +253,7 @@ export const useBIAnalytics = () => {
         }))
         .sort((a, b) => b.purchaseTotal - a.purchaseTotal);
 
-      // Monthly purchases by product - only from financial period
+      // Monthly purchases by product
       const monthlyPurchases: MonthlyPurchase[] = [];
       
       for (let month = 0; month < 12; month++) {
@@ -293,7 +302,7 @@ export const useBIAnalytics = () => {
       const netProfit = salesData.reduce((sum, m) => sum + m.netProfit, 0);
       const totalDiscounts = salesData.reduce((sum, m) => sum + m.discounts, 0);
       
-      // Calculate average discount percent from actual sales - only from financial period
+      // Calculate average discount percent from actual sales
       const salesWithDiscount = financialActions.filter(a => 
         a.action_type === 'remove' && a.discount_percent != null && a.discount_percent > 0
       );

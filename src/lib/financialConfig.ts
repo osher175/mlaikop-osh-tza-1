@@ -9,8 +9,8 @@
  */
 
 // Financial tracking start date - all financial calculations begin from this date
-// Set to today's date (2025-01-23) as the reset point
-export const FINANCIAL_TRACKING_START_AT = new Date('2025-01-23T00:00:00.000Z');
+// Set to today's date (2026-01-23) as the reset point
+export const FINANCIAL_TRACKING_START_AT = new Date('2026-01-23T00:00:00.000Z');
 
 // VAT rate in Israel (18%)
 export const VAT_RATE = 0.18;
