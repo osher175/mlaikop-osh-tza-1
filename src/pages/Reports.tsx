@@ -84,7 +84,7 @@ export const Reports: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold text-foreground">דוחות עסקיים</h1>
             <p className="text-muted-foreground">סקירה וניתוח נתונים לפי טווח זמן</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">📊 מדידה פיננסית החל מ־23/01/2026</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">📊 נתונים פיננסיים מתאפסים ב-1 בינואר בכל שנה</p>
           </div>
         </div>
 
