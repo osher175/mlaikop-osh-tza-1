@@ -4,6 +4,12 @@ import { Plus, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { exportInventoryToCSV } from '@/utils/exportInventoryCSV';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface ProductForExport {
   name: string;
@@ -47,7 +53,7 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
       exportInventoryToCSV(products);
       toast({
         title: 'הקובץ יורד',
-        description: `יוצאו ${products.length} מוצרים לקובץ CSV`,
+        description: `יוצאו ${products.length} מוצרים לקובץ Excel`,
       });
     } catch (error) {
       toast({
@@ -68,14 +74,23 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
         </p>
       </div>
       <div className="flex flex-col sm:flex-col md:flex-row gap-2 w-full md:w-auto md:items-center">
-        <Button 
-          variant="outline"
-          className="h-12 min-h-[44px] min-w-[44px] w-full md:w-auto"
-          onClick={handleExportCSV}
-        >
-          <Download className="w-5 h-5 ml-2" />
-          📤 ייצוא רשימת מלאי
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline"
+                className="h-12 min-h-[44px] min-w-[44px] w-full md:w-auto"
+                onClick={handleExportCSV}
+              >
+                <Download className="w-5 h-5 ml-2" />
+                📤 ייצוא לאקסל
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>נפתח באקסל ומוכן להדפסה</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <Button 
           className="bg-primary hover:bg-primary-600 h-12 min-h-[44px] min-w-[44px] w-full md:w-auto"
           onClick={() => navigate('/add-product')}
