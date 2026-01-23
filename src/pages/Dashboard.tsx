@@ -19,6 +19,7 @@ export const Dashboard: React.FC = () => {
         <div className="w-full">
           <h1 className="text-3xl font-bold text-foreground font-rubik break-words">לוח הבקרה</h1>
           <p className="text-muted-foreground font-rubik break-words">סקירה כללית של המלאי והפעילות העסקית</p>
+          <p className="text-xs text-muted-foreground/70 mt-1 font-rubik">📊 מדידה פיננסית החל מ־23/01/2026</p>
         </div>
 
         {/* Summary Cards */}
