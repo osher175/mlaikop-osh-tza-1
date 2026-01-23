@@ -1,9 +1,10 @@
 /**
- * Export inventory to TSV for Excel compatibility
- * Separator: TAB (\t)
- * Encoding: UTF-8
- * Extension: .tsv
+ * Export inventory to native Excel XLSX format
+ * Uses xlsx library for proper Excel compatibility
+ * Full Hebrew RTL support
  */
+
+import * as XLSX from 'xlsx';
 
 interface ProductForExport {
   name: string;
@@ -25,7 +26,7 @@ export const exportInventoryToCSV = (
   products: ProductForExport[],
   supplierMap?: SupplierMap
 ): void => {
-  // TSV Header row (Hebrew)
+  // Hebrew headers
   const headers = [
     'שם מוצר',
     'ברקוד',
@@ -68,24 +69,38 @@ export const exportInventoryToCSV = (
       product.product_categories?.name || '',
       supplierName,
       product.location || '',
-      product.quantity.toString(),
-      unitCost.toFixed(2),
-      totalValue.toFixed(2),
+      product.quantity,
+      unitCost,
+      totalValue,
       updatedAt
     ];
   });
 
-  // Escape TSV values (handle tabs and newlines)
-  const escapeTSVValue = (value: string): string => {
-    // Replace tabs and newlines with spaces to prevent column breaking
-    return value.replace(/[\t\n\r]/g, ' ');
-  };
+  // Combine headers and rows
+  const data = [headers, ...rows];
 
-  // Build TSV content with TAB separator
-  const tsvContent = [
-    headers.map(escapeTSVValue).join('\t'),
-    ...rows.map(row => row.map(escapeTSVValue).join('\t'))
-  ].join('\r\n');
+  // Create worksheet from array of arrays
+  const ws = XLSX.utils.aoa_to_sheet(data);
+
+  // Set column widths for better readability
+  ws['!cols'] = [
+    { wch: 25 }, // שם מוצר
+    { wch: 15 }, // ברקוד
+    { wch: 15 }, // קטגוריה
+    { wch: 18 }, // ספק
+    { wch: 15 }, // מיקום במלאי
+    { wch: 12 }, // כמות במלאי
+    { wch: 18 }, // עלות ליחידה
+    { wch: 18 }, // שווי מלאי כולל
+    { wch: 20 }, // תאריך עדכון
+  ];
+
+  // Set RTL for Hebrew
+  ws['!sheetViews'] = [{ rightToLeft: true }];
+
+  // Create workbook
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'מלאי');
 
   // Generate filename with timestamp
   const now = new Date();
@@ -93,20 +108,8 @@ export const exportInventoryToCSV = (
     .replace('T', '_')
     .replace(/:/g, '-')
     .slice(0, 16); // YYYY-MM-DD_HH-mm
-  const filename = `inventory_snapshot_${timestamp}.xls`;
+  const filename = `inventory_snapshot_${timestamp}.xlsx`;
 
-  // Add UTF-8 BOM for Hebrew compatibility in Excel
-  const BOM = '\uFEFF';
-  const tsvWithBOM = BOM + tsvContent;
-
-  // Create and trigger download
-  const blob = new Blob([tsvWithBOM], { type: 'text/tab-separated-values;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  // Write and download file
+  XLSX.writeFile(wb, filename);
 };
