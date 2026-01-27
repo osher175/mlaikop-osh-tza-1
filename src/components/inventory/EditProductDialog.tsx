@@ -19,7 +19,11 @@ import { useCategories } from '@/hooks/useCategories';
 import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
 
-type Product = Database['public']['Tables']['products']['Row'];
+// Extended product type that matches what InventoryTable passes
+type Product = Database['public']['Tables']['products']['Row'] & {
+  product_categories?: { name: string } | null;
+  product_thresholds?: { low_stock_threshold: number } | null;
+};
 
 interface EditProductDialogProps {
   product: Product | null;
