@@ -105,7 +105,10 @@ export const useBIAnalytics = () => {
       console.log('Financial actions fetched (server-side filtered):', financialActions.length);
 
       // Check if we have any REAL sale/purchase data (with financial info)
-      const hasSaleData = financialActions.some(a => a.action_type === 'remove' && a.sale_total_ils != null);
+      // Support both 'remove' and 'sale' action types for sales
+      const hasSaleData = financialActions.some(a => 
+        (a.action_type === 'remove' || a.action_type === 'sale') && a.sale_total_ils != null
+      );
       const hasPurchaseData = financialActions.some(a => a.action_type === 'add' && a.purchase_total_ils != null);
       const hasRealData = hasSaleData || hasPurchaseData;
 
@@ -116,9 +119,9 @@ export const useBIAnalytics = () => {
         const monthStart = new Date(currentYear, month, 1);
         const monthEnd = new Date(currentYear, month + 1, 0, 23, 59, 59);
         
-        // Filter sales for current month (action_type = 'remove')
+        // Filter sales for current month (action_type = 'remove' or 'sale')
         const monthlySales = financialActions.filter(action => {
-          if (action.action_type !== 'remove' || action.sale_total_ils == null) return false;
+          if ((action.action_type !== 'remove' && action.action_type !== 'sale') || action.sale_total_ils == null) return false;
           const actionDate = new Date(action.timestamp);
           return actionDate >= monthStart && actionDate <= monthEnd;
         });
@@ -179,7 +182,7 @@ export const useBIAnalytics = () => {
       }> = {};
       
       financialActions.forEach(action => {
-        if (action.action_type === 'remove' && action.sale_total_ils != null) {
+        if ((action.action_type === 'remove' || action.action_type === 'sale') && action.sale_total_ils != null) {
           const product = action.products as any;
           if (product) {
             const productId = product.id;
@@ -304,7 +307,7 @@ export const useBIAnalytics = () => {
       
       // Calculate average discount percent from actual sales
       const salesWithDiscount = financialActions.filter(a => 
-        a.action_type === 'remove' && a.discount_percent != null && a.discount_percent > 0
+        (a.action_type === 'remove' || a.action_type === 'sale') && a.discount_percent != null && a.discount_percent > 0
       );
       const avgDiscountPercent = salesWithDiscount.length > 0
         ? salesWithDiscount.reduce((sum, a) => sum + (Number(a.discount_percent) || 0), 0) / salesWithDiscount.length
