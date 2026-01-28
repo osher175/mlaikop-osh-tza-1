@@ -24,12 +24,16 @@ import { formatCurrency } from '@/lib/formatCurrency';
 
 const chartConfig = {
   sales: {
-    label: "מכירות",
+    label: "יחידות",
     color: "#00BFBF",
+  },
+  sales_amount: {
+    label: "סכום (₪)",
+    color: "#FFA940",
   },
   total_purchased: {
     label: "קניות",
-    color: "#FFA940",
+    color: "#27AE60",
   },
 };
 
@@ -77,13 +81,18 @@ const ReportsCharts: React.FC<ReportsChartsProps> = ({ timeline, suppliers, isLo
             <RechartsLineChart data={timelineData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
-              <YAxis tickFormatter={(value) => formatCurrency(value)} />
+              <YAxis yAxisId="left" tickFormatter={(value) => `${value}`} />
+              <YAxis yAxisId="right" orientation="right" tickFormatter={(value) => formatCurrency(value)} />
               <ChartTooltip 
                 content={<ChartTooltipContent />}
-                formatter={(value) => [formatCurrency(Number(value)), 'מכירות']}
+                formatter={(value, name) => [
+                  name === 'sales' ? `${value} יחידות` : formatCurrency(Number(value)),
+                  name === 'sales' ? 'יחידות' : 'סכום'
+                ]}
               />
               <ChartLegend content={<ChartLegendContent />} />
-              <Line type="monotone" dataKey="sales" stroke="var(--color-sales)" strokeWidth={2} />
+              <Line yAxisId="left" type="monotone" dataKey="sales" stroke="var(--color-sales)" strokeWidth={2} name="יחידות" />
+              <Line yAxisId="right" type="monotone" dataKey="sales_amount" stroke="var(--color-sales_amount)" strokeWidth={2} name="סכום (₪)" />
             </RechartsLineChart>
           </ChartContainer>
         </CardContent>
@@ -108,7 +117,8 @@ const ReportsCharts: React.FC<ReportsChartsProps> = ({ timeline, suppliers, isLo
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="total_purchased"
-                label={({ total_purchased, percent }) => `${(percent * 100).toFixed(0)}%`}
+                nameKey="supplier_name"
+                label={({ supplier_name, percent }) => `${(percent * 100).toFixed(0)}%`}
               >
                 {suppliersData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -116,7 +126,7 @@ const ReportsCharts: React.FC<ReportsChartsProps> = ({ timeline, suppliers, isLo
               </Pie>
               <ChartTooltip 
                 content={<ChartTooltipContent />}
-                formatter={(value) => [formatCurrency(Number(value)), 'רכישות']}
+                formatter={(value, name, props) => [`${value} יחידות`, props.payload?.supplier_name || 'ספק']}
               />
             </RechartsPieChart>
           </ChartContainer>
