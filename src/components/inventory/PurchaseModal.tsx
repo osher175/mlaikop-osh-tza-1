@@ -234,12 +234,12 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                 <Truck className="h-4 w-4" />
                 ספק (אופציונלי)
               </Label>
-              <Select value={supplierId} onValueChange={setSupplierId}>
+              <Select value={supplierId || "__none__"} onValueChange={(val) => setSupplierId(val === "__none__" ? "" : val)}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="בחר ספק" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">ללא ספק</SelectItem>
+                  <SelectItem value="__none__">ללא ספק</SelectItem>
                   {suppliers.map((supplier) => (
                     <SelectItem key={supplier.id} value={supplier.id}>
                       {supplier.name}
