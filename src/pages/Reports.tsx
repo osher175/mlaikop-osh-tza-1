@@ -5,12 +5,13 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart3, TrendingUp, DollarSign, Package, AlertCircle, Loader2, Award, Shield, Lightbulb } from 'lucide-react';
+import { BarChart3, TrendingUp, DollarSign, Package, AlertCircle, Loader2, Shield, Lightbulb } from 'lucide-react';
 import { useReports, ReportsRange } from '@/hooks/useReports';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useNavigate } from 'react-router-dom';
 import ReportsCharts from '@/components/reports/ReportsCharts';
 import { InsightsTabs } from '@/components/reports/InsightsTabs';
+import { TopProductsRanking } from '@/components/reports/TopProductsRanking';
 import { formatCurrency } from '@/lib/formatCurrency';
 
 const ErrorFallback = ({ error, retry }: { error: Error; retry: () => void }) => (
@@ -173,19 +174,8 @@ export const Reports: React.FC = () => {
                   </Card>
                 </div>
 
-                {/* Net Profit & Top Product */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <Card>
-                    <CardContent className="p-6 flex items-center gap-4">
-                      <Award className="h-8 w-8 text-yellow-500" />
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">המוצר הפופולרי ביותר</p>
-                        <p className="text-lg font-bold text-foreground">
-                          {reportsData.top_product || '—'}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {/* Net Profit Card */}
+                <div className="mb-6">
                   <Card>
                     <CardContent className="p-6 flex items-center gap-4">
                       <DollarSign className="h-8 w-8 text-emerald-600" />
@@ -195,6 +185,16 @@ export const Reports: React.FC = () => {
                       </div>
                     </CardContent>
                   </Card>
+                </div>
+
+                {/* Top 20 Products Ranking */}
+                <div className="mb-6">
+                  <TopProductsRanking
+                    products={reportsData.top_products_list || []}
+                    isLoading={isLoading}
+                    selectedRange={selectedRange === 'daily' ? 'weekly' : selectedRange}
+                    onRangeChange={(range) => setSelectedRange(range)}
+                  />
                 </div>
 
                 {/* Charts */}
