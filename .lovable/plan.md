@@ -1,46 +1,48 @@
 
 
-## תיקון שגיאת עדכון מוצר - סוג פעולה לא תקין
+## שינוי תצוגת הרווח לרווח נטו (ללא מע"מ)
 
-### הבעיה שזוהתה
-
-כאשר מעלים כמות במוצר (רכישה), הקוד מנסה לשמור ל-`inventory_actions` עם `action_type: 'purchase'`. 
-אבל ה-check constraint במסד הנתונים מאפשר רק:
-- `add`, `remove`, `adjust`, `sale`, `return`
-
-לכן `'purchase'` נדחה והמערכת מציגה שגיאה.
-
-### פתרון מומלץ
-
-נעדכן את המסד נתונים להוסיף `'purchase'` לרשימת סוגי הפעולות המותרים. זה יאפשר לתעד רכישות עם מידע פיננסי מלא.
-
-### פרטים טכניים
-
-**שינוי ב-Database:**
-```sql
-ALTER TABLE inventory_actions 
-DROP CONSTRAINT inventory_actions_action_type_check;
-
-ALTER TABLE inventory_actions 
-ADD CONSTRAINT inventory_actions_action_type_check 
-CHECK (action_type = ANY (ARRAY[
-  'add'::text, 
-  'remove'::text, 
-  'adjust'::text, 
-  'sale'::text, 
-  'return'::text,
-  'purchase'::text  -- הוספה
-]));
+### מה קיים כרגע
+ב-`TopProductsChart` מוצג **רווח גולמי** שמחושב כך:
+```
+רווח גולמי = הכנסות (כולל מע"מ) - עלות מכר
 ```
 
-**שינויים בקוד:** אין צורך - הקוד כבר משתמש ב-`'purchase'` נכון.
+### מה יוצג אחרי השינוי
+**רווח נטו** - המחושב כך:
+```
+רווח נטו = הכנסות נטו (ללא מע"מ) - עלות מכר
+         = (הכנסות / 1.18) - עלות מכר
+```
+
+### דוגמה מספרית
+| פריט | ערך |
+|------|-----|
+| הכנסות (כולל מע"מ) | ₪3,000 |
+| הכנסות נטו (ללא מע"מ) | ₪2,542 |
+| עלות מכר | ₪1,760 |
+| **רווח גולמי (כיום)** | ₪1,240 |
+| **רווח נטו (אחרי שינוי)** | ₪782 |
+
+### שינוי טכני
+
+**קובץ:** `src/components/dashboard/TopProductsChart.tsx`
+
+שורה 59 - שינוי מ:
+```tsx
+רווח: {formatCurrency(product.profit)}
+```
+
+ל:
+```tsx
+רווח נטו: {formatCurrency(product.profitNet)}
+```
 
 ### סיכום
-
-| פריט | פירוט |
-|------|-------|
-| קובץ | Database constraint |
-| סוג שינוי | הוספת ערך לרשימת סוגי פעולות |
-| סיבת השגיאה | `'purchase'` לא נמצא ב-check constraint |
-| תיקון | הוספת `'purchase'` לרשימה המותרת |
+| פרט | תיאור |
+|-----|-------|
+| קובץ לעדכון | `TopProductsChart.tsx` |
+| שורה | 59 |
+| שינוי | `profit` → `profitNet` |
+| תווית | "רווח" → "רווח נטו" |
 
