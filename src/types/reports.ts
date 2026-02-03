@@ -1,4 +1,17 @@
 
+export interface TopProductItem {
+  product_id: string;
+  product_name: string;
+  quantity_sold: number;
+  revenue: number;
+}
+
+export interface PurchaseBreakdownItem {
+  month: string;
+  quantity: number;
+  amount: number;
+}
+
 export interface ReportsData {
   total_added: number;
   total_removed: number;
@@ -8,12 +21,16 @@ export interface ReportsData {
   top_product: string | null;
   suppliers_breakdown: Array<{
     supplier_id: string | null;
+    supplier_name: string;
     total_purchased: number;
   }>;
   timeline_breakdown: Array<{
     date: string;
     sales: number;
+    sales_amount?: number;
   }>;
+  top_products_list: TopProductItem[];
+  purchases_breakdown: PurchaseBreakdownItem[];
 }
 
 export interface TopProduct {
@@ -45,35 +62,19 @@ export function isReportsData(data: any): data is ReportsData {
     return false;
   }
 
-  // Validate each supplier item
-  for (const supplier of data.suppliers_breakdown) {
-    if (!supplier || typeof supplier !== 'object') {
-      return false;
-    }
-    if (!('supplier_id' in supplier) || (supplier.supplier_id !== null && typeof supplier.supplier_id !== 'string')) {
-      return false;
-    }
-    if (!('total_purchased' in supplier) || typeof supplier.total_purchased !== 'number') {
-      return false;
-    }
-  }
-
   // Check timeline_breakdown array
   if (!('timeline_breakdown' in data) || !Array.isArray(data.timeline_breakdown)) {
     return false;
   }
 
-  // Validate each timeline item
-  for (const timeline of data.timeline_breakdown) {
-    if (!timeline || typeof timeline !== 'object') {
-      return false;
-    }
-    if (!('date' in timeline) || typeof timeline.date !== 'string') {
-      return false;
-    }
-    if (!('sales' in timeline) || typeof timeline.sales !== 'number') {
-      return false;
-    }
+  // Check top_products_list array
+  if (!('top_products_list' in data) || !Array.isArray(data.top_products_list)) {
+    return false;
+  }
+
+  // Check purchases_breakdown array
+  if (!('purchases_breakdown' in data) || !Array.isArray(data.purchases_breakdown)) {
+    return false;
   }
 
   return true;
