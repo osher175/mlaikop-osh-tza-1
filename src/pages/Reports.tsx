@@ -189,12 +189,7 @@ export const Reports: React.FC = () => {
 
                 {/* Top 20 Products Ranking */}
                 <div className="mb-6">
-                  <TopProductsRanking
-                    products={reportsData.top_products_list || []}
-                    isLoading={isLoading}
-                    selectedRange={selectedRange === 'daily' ? 'weekly' : selectedRange}
-                    onRangeChange={(range) => setSelectedRange(range)}
-                  />
+                  <TopProductsRanking />
                 </div>
 
                 {/* Charts */}
