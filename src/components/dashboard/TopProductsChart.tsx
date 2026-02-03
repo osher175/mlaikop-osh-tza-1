@@ -55,8 +55,8 @@ export const TopProductsChart: React.FC = () => {
                     <div className="text-lg font-bold text-primary">
                       {formatCurrency(product.revenue)}
                     </div>
-                    <div className={`text-sm ${product.profit >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-                      רווח: {formatCurrency(product.profit)}
+                    <div className={`text-sm ${product.profitNet >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                      רווח נטו: {formatCurrency(product.profitNet)}
                     </div>
                   </div>
                 </div>
