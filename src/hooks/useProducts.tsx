@@ -90,11 +90,21 @@ export const useProducts = () => {
 
       // Log inventory action for initial stock
       if (productData.quantity && productData.quantity > 0) {
+        const financialData: { purchase_unit_ils?: number; purchase_total_ils?: number; supplier_id?: string } = {};
+        if (productData.cost) {
+          financialData.purchase_unit_ils = productData.cost;
+          financialData.purchase_total_ils = productData.cost * productData.quantity;
+        }
+        if (productData.supplier_id) {
+          financialData.supplier_id = productData.supplier_id;
+        }
+        
         await logInventoryAction(
           data.id, 
           'add', 
           productData.quantity,
-          `הוספת מוצר חדש עם ${productData.quantity} יחידות ראשוניות`
+          `הוספת מוצר חדש עם ${productData.quantity} יחידות ראשוניות`,
+          Object.keys(financialData).length > 0 ? financialData : undefined
         );
       }
       
