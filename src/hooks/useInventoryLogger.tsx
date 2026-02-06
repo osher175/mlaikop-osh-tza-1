@@ -13,7 +13,12 @@ export const useInventoryLogger = () => {
     productId: string,
     actionType: 'add' | 'remove',
     quantityChanged: number,
-    notes?: string
+    notes?: string,
+    financialData?: {
+      purchase_unit_ils?: number;
+      purchase_total_ils?: number;
+      supplier_id?: string;
+    }
   ) => {
     if (!user?.id || !businessContext?.business_id) {
       console.error('User or business context not found');
@@ -32,6 +37,9 @@ export const useInventoryLogger = () => {
           quantity_changed: actionType === 'remove' ? -quantityChanged : quantityChanged,
           notes: notes || null,
           timestamp: new Date().toISOString(),
+          ...(financialData?.purchase_unit_ils !== undefined && { purchase_unit_ils: financialData.purchase_unit_ils }),
+          ...(financialData?.purchase_total_ils !== undefined && { purchase_total_ils: financialData.purchase_total_ils }),
+          ...(financialData?.supplier_id && { supplier_id: financialData.supplier_id }),
         });
 
       if (logError) {
