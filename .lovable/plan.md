@@ -1,49 +1,51 @@
 
 
-## תיקון כפילויות בפעילות אחרונה
+## תיקון: פילוח רכישות לפי ספקים - נתונים לא מוצגים
 
 ### שורש הבעיה
 
-נמצאו **שני טריגרים** על טבלת `products` שמפעילים את אותה פונקציה `log_product_activity()`:
+כשיוצרים מוצר חדש דרך טופס "הוסף מוצר", הפונקציה `logInventoryAction` רושמת פעולת `add` בטבלת `inventory_actions` **בלי נתונים פיננסיים** (ללא `purchase_unit_ils`, `purchase_total_ils`, `supplier_id`).
 
-| טריגר | סוג | פונקציה |
-|--------|------|---------|
-| `log_product_activity_trigger` | BEFORE (INSERT/UPDATE/DELETE) | `log_product_activity()` |
-| `trigger_log_product_activity` | AFTER (INSERT/UPDATE/DELETE) | `log_product_activity()` |
-
-כל שינוי במוצר מפעיל את שני הטריגרים, ולכן כל פעולה נרשמת **פעמיים** בטבלת `recent_activity`.
+הגרף של "פילוח רכישות לפי ספקים" מסנן רק רשומות עם `purchase_total_ils != null`, ולכן מוצרים חדשים לא מופיעים.
 
 ### הפתרון
 
-מחיקת הטריגר הכפול `trigger_log_product_activity` (ה-AFTER trigger), והשארת רק `log_product_activity_trigger` (ה-BEFORE trigger).
+שני שינויים:
 
-בנוסף - ניקוי הרשומות הכפולות שכבר נמצאות בבסיס הנתונים.
+**1. עדכון `useInventoryLogger.tsx`** - הרחבת הפונקציה `logInventoryAction` כדי לקבל נתונים פיננסיים אופציונליים:
+- `purchase_unit_ils` - עלות ליחידה
+- `purchase_total_ils` - עלות כוללת
+- `supplier_id` - מזהה ספק
+
+**2. עדכון `useProducts.tsx`** - בעת יצירת מוצר חדש עם כמות התחלתית, להעביר את נתוני העלות והספק ל-`logInventoryAction`:
+- אם יש `cost` למוצר, להשתמש בו כ-`purchase_unit_ils`
+- לחשב `purchase_total_ils = cost * quantity`
+- להעביר את `supplier_id` אם קיים
 
 ### פירוט טכני
 
-**מיגרציה חדשה** עם שני שלבים:
-
-1. מחיקת הטריגר הכפול:
-```sql
-DROP TRIGGER IF EXISTS trigger_log_product_activity ON public.products;
+```text
+logInventoryAction(productId, 'add', quantity, notes)
+                        |
+                        v  (לפני התיקון - בלי נתונים פיננסיים)
+inventory_actions: { action_type: 'add', quantity_changed: 5, purchase_total_ils: NULL }
+                        |
+                        v  (אחרי התיקון - עם נתונים פיננסיים)
+inventory_actions: { action_type: 'add', quantity_changed: 5, purchase_unit_ils: 10, purchase_total_ils: 50, supplier_id: '...' }
 ```
 
-2. ניקוי כפילויות קיימות:
-```sql
-DELETE FROM public.recent_activity
-WHERE id NOT IN (
-  SELECT MIN(id)
-  FROM public.recent_activity
-  GROUP BY business_id, action_type, title, timestamp, product_id, quantity_changed
-);
-```
+### קבצים שישתנו
 
-### סיכום
-
-| פריט | פירוט |
+| קובץ | שינוי |
 |------|-------|
-| קובץ חדש | מיגרציית SQL |
-| שינוי | מחיקת טריגר כפול + ניקוי כפילויות |
-| השפעה | כל פעולה תופיע פעם אחת בלבד |
-| ללא שינוי בקוד | אין שינוי בקבצי TypeScript/React |
+| `src/hooks/useInventoryLogger.tsx` | הוספת פרמטרים פיננסיים אופציונליים לפונקציה |
+| `src/hooks/useProducts.tsx` | העברת cost ו-supplier_id בעת יצירת מוצר חדש |
+
+### מה לא ישתנה
+- אין שינוי בעיצוב או בממשק המשתמש
+- אין שינוי בבסיס הנתונים
+- אין שינוי בקומפוננטת `SuppliersChart`
+
+### הערה חשובה
+רשומות ישנות שנוצרו בלי נתונים פיננסיים עדיין לא יופיעו בגרף. התיקון ישפיע רק על מוצרים חדשים שנוצרים מעכשיו.
 
