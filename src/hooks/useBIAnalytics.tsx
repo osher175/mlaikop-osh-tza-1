@@ -109,7 +109,7 @@ export const useBIAnalytics = () => {
       const hasSaleData = financialActions.some(a => 
         (a.action_type === 'remove' || a.action_type === 'sale') && a.sale_total_ils != null
       );
-      const hasPurchaseData = financialActions.some(a => a.action_type === 'add' && a.purchase_total_ils != null);
+      const hasPurchaseData = financialActions.some(a => (a.action_type === 'add' || a.action_type === 'purchase') && a.purchase_total_ils != null);
       const hasRealData = hasSaleData || hasPurchaseData;
 
       // Calculate monthly data from REAL transactions only
@@ -128,7 +128,7 @@ export const useBIAnalytics = () => {
 
         // Filter purchases for current month (action_type = 'add')
         const monthlyPurchasesData = financialActions.filter(action => {
-          if (action.action_type !== 'add' || action.purchase_total_ils == null) return false;
+          if ((action.action_type !== 'add' && action.action_type !== 'purchase') || action.purchase_total_ils == null) return false;
           const actionDate = new Date(action.timestamp);
           return actionDate >= monthStart && actionDate <= monthEnd;
         });
@@ -226,7 +226,7 @@ export const useBIAnalytics = () => {
       }> = {};
       
       financialActions.forEach(action => {
-        if (action.action_type === 'add' && action.purchase_total_ils != null) {
+        if ((action.action_type === 'add' || action.action_type === 'purchase') && action.purchase_total_ils != null) {
           const product = action.products as any;
           const supplier = product?.suppliers || (action.supplier_id ? { id: action.supplier_id, name: 'ספק לא ידוע' } : null);
           
@@ -264,7 +264,7 @@ export const useBIAnalytics = () => {
         const monthEnd = new Date(currentYear, month + 1, 0, 23, 59, 59);
         
         const monthlyAdditions = financialActions.filter(action => {
-          if (action.action_type !== 'add' || action.purchase_total_ils == null) return false;
+          if ((action.action_type !== 'add' && action.action_type !== 'purchase') || action.purchase_total_ils == null) return false;
           const actionDate = new Date(action.timestamp);
           return actionDate >= monthStart && actionDate <= monthEnd;
         });
