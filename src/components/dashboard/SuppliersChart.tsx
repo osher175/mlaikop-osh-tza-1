@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,17 +15,27 @@ interface SupplierRanking {
 
 export const SuppliersChart: React.FC = () => {
   const { businessContext } = useBusinessAccess();
+  const currentMonthName = useMemo(() => {
+    const months = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+    return months[new Date().getMonth()];
+  }, []);
 
   const { data: rankings = [], isLoading } = useQuery({
-    queryKey: ['supplier-rankings', businessContext?.business_id],
+    queryKey: ['supplier-rankings', businessContext?.business_id, new Date().getMonth(), new Date().getFullYear()],
     queryFn: async () => {
       if (!businessContext?.business_id) return [];
 
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
       const { data, error } = await supabase
-        .from('products')
-        .select('quantity, cost, supplier_id, suppliers(id, name)')
+        .from('inventory_actions')
+        .select('quantity_changed, purchase_total_ils, purchase_unit_ils, supplier_id, products(id, name, cost, supplier_id, suppliers(id, name))')
         .eq('business_id', businessContext.business_id)
-        .not('supplier_id', 'is', null);
+        .in('action_type', ['add', 'purchase'])
+        .gte('timestamp', monthStart)
+        .lte('timestamp', monthEnd);
 
       if (error) {
         console.error('Error fetching supplier rankings:', error);
@@ -34,19 +44,19 @@ export const SuppliersChart: React.FC = () => {
 
       const supplierMap: Record<string, SupplierRanking> = {};
 
-      (data || []).forEach((product: any) => {
-        const supplier = product.suppliers;
-        if (!supplier?.id) return;
+      (data || []).forEach((action: any) => {
+        const product = action.products as any;
+        const supplier = product?.suppliers;
+        const supplierId = action.supplier_id || product?.supplier_id;
+        if (!supplierId) return;
 
-        if (!supplierMap[supplier.id]) {
-          supplierMap[supplier.id] = {
-            supplierName: supplier.name || 'ספק לא ידוע',
-            productCount: 0,
-            totalCost: 0,
-          };
+        const supplierName = supplier?.name || 'ספק לא ידוע';
+
+        if (!supplierMap[supplierId]) {
+          supplierMap[supplierId] = { supplierName, productCount: 0, totalCost: 0 };
         }
-        supplierMap[supplier.id].productCount += 1;
-        supplierMap[supplier.id].totalCost += (product.cost || 0) * (product.quantity || 0);
+        supplierMap[supplierId].productCount += Math.abs(action.quantity_changed || 0);
+        supplierMap[supplierId].totalCost += Number(action.purchase_total_ils) || (Math.abs(action.quantity_changed || 0) * (Number(action.purchase_unit_ils) || Number(product?.cost) || 0));
       });
 
       return Object.values(supplierMap).sort((a, b) => b.productCount - a.productCount);
@@ -69,7 +79,7 @@ export const SuppliersChart: React.FC = () => {
           פילוח רכישות לפי ספקים
         </CardTitle>
         <div className="text-sm text-muted-foreground" dir="rtl">
-          דירוג ספקים לפי כמות מוצרים
+          דירוג ספקים לפי כמות מוצרים שנרכשו • {currentMonthName} {new Date().getFullYear()}
         </div>
       </CardHeader>
       <CardContent>
