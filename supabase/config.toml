@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.procurement-quote-webhook]
 verify_jwt = false
+
+[functions.procurement-request-webhook]
+verify_jwt = false
+
+[functions.procurement-order-confirmed-webhook]
+verify_jwt = false
