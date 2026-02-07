@@ -3,7 +3,10 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Package, Edit, Trash2, AlertTriangle, Send } from 'lucide-react';
+import { Package, Edit, Trash2, AlertTriangle, Send, ShoppingCart } from 'lucide-react';
+import { RequestQuotesButton } from '@/components/procurement/RequestQuotesButton';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { LazyImage } from '@/components/inventory/LazyImage';
@@ -42,6 +45,25 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
   // Only show approval button for business owners
   const canApproveStock = businessContext?.is_owner;
 
+  // Fetch active procurement requests for all products
+  const { data: activeProcurementRequests = [] } = useQuery({
+    queryKey: ['active-procurement-requests', businessContext?.business_id],
+    queryFn: async () => {
+      if (!businessContext?.business_id) return [];
+      const { data } = await supabase
+        .from('procurement_requests')
+        .select('id, product_id')
+        .eq('business_id', businessContext.business_id)
+        .not('status', 'in', '("ordered","cancelled")');
+      return data || [];
+    },
+    enabled: !!businessContext?.business_id,
+  });
+
+  const getActiveRequestId = (productId: string) => {
+    const req = activeProcurementRequests.find((r: any) => r.product_id === productId);
+    return req?.id;
+  };
   const getStatusBadge = (product: Product) => {
     const quantity = product.quantity;
     const threshold = product.product_thresholds?.low_stock_threshold || 5;
@@ -216,6 +238,17 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                           </Button>
                         </StockApprovalDialog>
                       )}
+
+                      {/* Procurement request button */}
+                      <RequestQuotesButton
+                        productId={product.id}
+                        productName={product.name}
+                        currentQuantity={product.quantity}
+                        threshold={product.product_thresholds?.low_stock_threshold || 5}
+                        existingRequestId={getActiveRequestId(product.id)}
+                        size="sm"
+                        className="h-10 min-h-[44px] px-2"
+                      />
                       
                       <Button 
                         size="sm" 
@@ -334,6 +367,17 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                             </Button>
                           </StockApprovalDialog>
                         )}
+
+                        {/* Procurement request button */}
+                        <RequestQuotesButton
+                          productId={product.id}
+                          productName={product.name}
+                          currentQuantity={product.quantity}
+                          threshold={product.product_thresholds?.low_stock_threshold || 5}
+                          existingRequestId={getActiveRequestId(product.id)}
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                        />
                         
                         <Button 
                           size="sm" 
