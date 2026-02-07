@@ -241,11 +241,23 @@ serve(async (req) => {
 
           const explanation = `המלצה: מחיר ₪${best.price}, משלוח ${best.delivery ?? '?'} ימים (ציון ${best.score}/100)`;
 
+          // Fetch current notes to append (not overwrite)
+          const { data: currentReq } = await supabase
+            .from('procurement_requests')
+            .select('notes')
+            .eq('id', procurement_request_id)
+            .single();
+          const existingNotes = currentReq?.notes || '';
+          const ts = new Date().toISOString();
+          const appendedNotes = existingNotes
+            ? `${existingNotes}\n[${ts}] ${explanation}`
+            : `[${ts}] ${explanation}`;
+
           await supabase.from('procurement_requests').update({
             recommended_quote_id: best.id,
             status: 'waiting_for_approval',
-            notes: explanation,
-            updated_at: new Date().toISOString(),
+            notes: appendedNotes,
+            updated_at: ts,
           }).eq('id', procurement_request_id);
 
           finalStatus = 'waiting_for_approval';
