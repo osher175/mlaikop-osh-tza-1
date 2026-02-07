@@ -12,7 +12,8 @@ import {
   Crown,
   User,
   Truck,
-  HardDrive
+  HardDrive,
+  ShoppingCart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -108,6 +109,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
       icon: <Truck className="w-5 h-5" />,
       label: 'ספקים',
       show: !permissions.isPlatformAdmin && permissions.canViewProducts
+    },
+    {
+      to: '/procurement',
+      icon: <ShoppingCart className="w-5 h-5" />,
+      label: 'רכש חכם',
+      show: !permissions.isPlatformAdmin && permissions.canEditProducts
     },
     {
       to: '/add-product',

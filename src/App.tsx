@@ -23,6 +23,8 @@ import { AdminPanel } from "@/pages/AdminPanel";
 import { AdminDashboard } from "@/pages/AdminDashboard";
 import { AdminSettings } from "@/pages/AdminSettings";
 import StorageManagement from "@/pages/admin/StorageManagement";
+import { Procurement } from "@/pages/Procurement";
+import { ProcurementDetail } from "@/pages/ProcurementDetail";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -106,6 +108,24 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
                     <BusinessSettings />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Procurement routes */}
+              <Route
+                path="/procurement"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                    <Procurement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/procurement/:id"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                    <ProcurementDetail />
                   </ProtectedRoute>
                 }
               />

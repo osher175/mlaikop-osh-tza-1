@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.compress-storage-images]
 verify_jwt = false
+
+[functions.procurement-webhook]
+verify_jwt = false

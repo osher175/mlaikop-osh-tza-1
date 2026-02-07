@@ -562,6 +562,125 @@ export type Database = {
         }
         Relationships: []
       }
+      procurement_requests: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          product_id: string
+          recommended_quote_id: string | null
+          requested_quantity: number
+          status: string
+          trigger_type: string
+          updated_at: string
+          urgency: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          product_id: string
+          recommended_quote_id?: string | null
+          requested_quantity?: number
+          status?: string
+          trigger_type?: string
+          updated_at?: string
+          urgency?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          product_id?: string
+          recommended_quote_id?: string | null
+          requested_quantity?: number
+          status?: string
+          trigger_type?: string
+          updated_at?: string
+          urgency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procurement_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_requests_recommended_quote_fkey"
+            columns: ["recommended_quote_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      procurement_settings: {
+        Row: {
+          approval_required: boolean
+          business_id: string
+          created_at: string
+          default_urgency: string
+          max_auto_order_amount: number | null
+          scoring_weights: Json
+          updated_at: string
+        }
+        Insert: {
+          approval_required?: boolean
+          business_id: string
+          created_at?: string
+          default_urgency?: string
+          max_auto_order_amount?: number | null
+          scoring_weights?: Json
+          updated_at?: string
+        }
+        Update: {
+          approval_required?: boolean
+          business_id?: string
+          created_at?: string
+          default_urgency?: string
+          max_auto_order_amount?: number | null
+          scoring_weights?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procurement_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_categories: {
         Row: {
           business_category_id: string
@@ -1196,6 +1315,129 @@ export type Database = {
           },
           {
             foreignKeyName: "supplier_invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_preferences: {
+        Row: {
+          allow_auto_order: boolean
+          business_id: string
+          created_at: string
+          id: string
+          priority_score: number
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          allow_auto_order?: boolean
+          business_id: string
+          created_at?: string
+          id?: string
+          priority_score?: number
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          allow_auto_order?: boolean
+          business_id?: string
+          created_at?: string
+          id?: string
+          priority_score?: number
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_preferences_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_preferences_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_preferences_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_preferences_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_quotes: {
+        Row: {
+          available: boolean
+          created_at: string
+          currency: string
+          delivery_time_days: number | null
+          id: string
+          price_per_unit: number
+          procurement_request_id: string
+          quote_source: string
+          raw_message: string | null
+          score: number | null
+          supplier_id: string
+        }
+        Insert: {
+          available?: boolean
+          created_at?: string
+          currency?: string
+          delivery_time_days?: number | null
+          id?: string
+          price_per_unit: number
+          procurement_request_id: string
+          quote_source?: string
+          raw_message?: string | null
+          score?: number | null
+          supplier_id: string
+        }
+        Update: {
+          available?: boolean
+          created_at?: string
+          currency?: string
+          delivery_time_days?: number | null
+          id?: string
+          price_per_unit?: number
+          procurement_request_id?: string
+          quote_source?: string
+          raw_message?: string | null
+          score?: number | null
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_quotes_procurement_request_id_fkey"
+            columns: ["procurement_request_id"]
+            isOneToOne: false
+            referencedRelation: "procurement_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_quotes_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_quotes_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers_safe"
@@ -2145,6 +2387,10 @@ export type Database = {
       reports_aggregate: {
         Args: { business_id: string; date_from: string; date_to: string }
         Returns: Json
+      }
+      score_procurement_quotes: {
+        Args: { p_request_id: string }
+        Returns: undefined
       }
       search_products: {
         Args: {
