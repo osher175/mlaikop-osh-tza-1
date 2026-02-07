@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.procurement-webhook]
 verify_jwt = false
+
+[functions.procurement-quote-webhook]
+verify_jwt = false
