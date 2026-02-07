@@ -15,7 +15,45 @@ function errorResponse(status: number, message: string) {
   });
 }
 
-console.log("procurement-request-webhook started");
+/** Resolve all admin/owner user IDs for a business, fallback to owner_id */
+async function resolveBusinessRecipients(
+  supabase: ReturnType<typeof createClient>,
+  businessId: string,
+): Promise<string[]> {
+  const recipients = new Set<string>();
+
+  const { data: biz } = await supabase
+    .from('businesses')
+    .select('owner_id')
+    .eq('id', businessId)
+    .single();
+  if (biz?.owner_id) recipients.add(biz.owner_id);
+
+  const { data: roleUsers } = await supabase
+    .from('user_roles')
+    .select('user_id, role')
+    .eq('business_id', businessId);
+
+  if (roleUsers) {
+    for (const ru of roleUsers) {
+      if (['admin', 'OWNER', 'elite_pilot_user', 'smart_master_user'].includes(ru.role)) {
+        recipients.add(ru.user_id);
+      }
+    }
+  }
+
+  if (recipients.size === 0) {
+    const { data: buUsers } = await supabase
+      .from('user_businesses')
+      .select('user_id')
+      .eq('business_id', businessId);
+    if (buUsers) buUsers.forEach(u => recipients.add(u.user_id));
+  }
+
+  return Array.from(recipients);
+}
+
+console.log("procurement-request-webhook v1 started");
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -44,25 +82,23 @@ serve(async (req) => {
     // Verify request exists and belongs to business
     const { data: request } = await supabase
       .from('procurement_requests')
-      .select('id, business_id')
+      .select('id, business_id, status')
       .eq('id', procurement_request_id)
       .single();
 
     if (!request) return errorResponse(404, 'Procurement request not found');
     if (request.business_id !== business_id) return errorResponse(403, 'business_id mismatch');
+    if (request.status === 'cancelled') return errorResponse(409, 'Procurement request is cancelled');
 
-    // Log activity (non-fatal)
+    // Activity & notifications (non-fatal, uses same recipients logic as other functions)
     try {
-      const { data: biz } = await supabase
-        .from('businesses')
-        .select('owner_id')
-        .eq('id', business_id)
-        .single();
+      const recipients = await resolveBusinessRecipients(supabase, business_id as string);
 
-      if (biz?.owner_id) {
+      if (recipients.length > 0) {
+        // Activity log
         await supabase.from('recent_activity').insert({
           business_id: business_id as string,
-          user_id: biz.owner_id,
+          user_id: recipients[0],
           action_type: 'procurement_request_sent',
           title: 'בקשת רכש נשלחה לספקים',
           description: (typeof message === 'string' ? message : null),
@@ -71,9 +107,19 @@ serve(async (req) => {
           priority_level: 'medium',
           metadata: { procurement_request_id },
         });
+
+        // Notifications to ALL recipients
+        const notifRows = recipients.map(uid => ({
+          business_id: business_id as string,
+          user_id: uid,
+          type: 'procurement_quote' as const,
+          title: 'בקשת רכש נשלחה',
+          message: 'בקשת רכש חדשה נשלחה לספקים לקבלת הצעות מחיר',
+        }));
+        await supabase.from('notifications').insert(notifRows);
       }
     } catch (logErr) {
-      console.error("Activity log error (non-fatal):", logErr);
+      console.error("Activity/notification error (non-fatal):", logErr);
     }
 
     return new Response(JSON.stringify({
