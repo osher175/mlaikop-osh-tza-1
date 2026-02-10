@@ -19,4 +19,4 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.procurement-backfill-low-stock]
-verify_jwt = false
+verify_jwt = true

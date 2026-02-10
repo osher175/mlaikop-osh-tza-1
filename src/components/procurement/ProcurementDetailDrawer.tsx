@@ -62,7 +62,7 @@ export const ProcurementDetailDrawer: React.FC<ProcurementDetailDrawerProps> = (
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-  const isTerminal = ['resolved_external', 'cancelled', 'ordered'].includes(request.status);
+  const isTerminal = ['resolved_external', 'cancelled', 'ordered', 'ordered_external'].includes(request.status);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
