@@ -48,7 +48,7 @@ export const useOptimizedProducts = (searchTerm = '', limit = 50) => {
           price,
           cost,
           product_categories!inner(name),
-          suppliers(name)
+          suppliers!supplier_id(name)
         `)
         .eq('business_id', business.id);
 

@@ -95,7 +95,7 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
           purchase_unit_ils,
           purchase_total_ils,
           supplier_id,
-          products(id, name, quantity, price, cost, supplier_id, suppliers(id, name))
+          products(id, name, quantity, price, cost, supplier_id, suppliers!supplier_id(id, name))
         `)
         .eq('business_id', businessContext.business_id)
         .gte('timestamp', ninetyDaysAgo.toISOString())

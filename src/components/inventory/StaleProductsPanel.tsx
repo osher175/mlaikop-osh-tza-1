@@ -29,7 +29,7 @@ export const StaleProductsPanel: React.FC = () => {
           expiration_date,
           created_at,
           updated_at,
-          suppliers(name)
+          suppliers!supplier_id(name)
         `)
         .eq('business_id', businessContext.business_id)
         .lt('quantity', 10) // Show products with low quantity as "stale"

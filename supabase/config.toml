@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.procurement-backfill-low-stock]
 verify_jwt = true
+
+[functions.procurement-select-suppliers]
+verify_jwt = false
+
+[functions.procurement-start-outreach]
+verify_jwt = false
