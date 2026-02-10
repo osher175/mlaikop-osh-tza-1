@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowRight, CheckCircle, XCircle, Star, Send, AlertTriangle } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useProcurementRequests } from '@/hooks/useProcurementRequests';
+import { useProcurementActions } from '@/hooks/useProcurementActions';
 import { useSupplierQuotes } from '@/hooks/useSupplierQuotes';
 import { ProcurementStatusBadge, UrgencyBadge } from '@/components/procurement/ProcurementStatusBadge';
 import { ManualQuoteDialog } from '@/components/procurement/ManualQuoteDialog';
@@ -26,7 +27,8 @@ export const ProcurementDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { requests, approveOrder, cancelRequest, updateRecommendedQuote, sendQuoteRequests } = useProcurementRequests();
+  const { requests, cancelRequest } = useProcurementRequests();
+  const { updateStatus, updateRecommendedQuote } = useProcurementActions();
   const { quotes, isLoading: quotesLoading } = useSupplierQuotes(id);
 
   const request = requests.find(r => r.id === id);
@@ -46,7 +48,8 @@ export const ProcurementDetail: React.FC = () => {
   const canAddQuotes = !['ordered', 'cancelled'].includes(request.status);
 
   const handleApprove = (quoteId: string) => {
-    approveOrder.mutate({ requestId: request.id, quoteId });
+    updateStatus.mutate({ requestId: request.id, status: 'approved' });
+    updateRecommendedQuote.mutate({ requestId: request.id, quoteId });
   };
 
   const handleCancel = () => {
@@ -90,11 +93,11 @@ export const ProcurementDetail: React.FC = () => {
                 {canSendQuotes && (
                   <Button
                     variant="outline"
-                    onClick={() => sendQuoteRequests.mutate(request.id)}
-                    disabled={sendQuoteRequests.isPending}
+                    onClick={() => updateStatus.mutate({ requestId: request.id, status: 'in_progress' })}
+                    disabled={updateStatus.isPending}
                   >
                     <Send className="w-4 h-4 ml-1" />
-                    שלח בקשות לספקים
+                    התחל טיפול
                   </Button>
                 )}
                 {canAddQuotes && <ManualQuoteDialog requestId={request.id} />}

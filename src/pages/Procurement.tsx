@@ -1,135 +1,317 @@
 import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShoppingCart, Package, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ShoppingCart, Package, Search, ScanLine, MoreVertical, AlertTriangle, Truck, CheckCircle, XCircle, Play } from 'lucide-react';
 import { useProcurementRequests } from '@/hooks/useProcurementRequests';
-import { ProcurementStatusBadge, UrgencyBadge, TriggerBadge } from '@/components/procurement/ProcurementStatusBadge';
+import { useLowStockProducts } from '@/hooks/useLowStockProducts';
+import { useProcurementActions } from '@/hooks/useProcurementActions';
+import { ProcurementStatusBadge } from '@/components/procurement/ProcurementStatusBadge';
+import { ProcurementDetailDrawer } from '@/components/procurement/ProcurementDetailDrawer';
+import { useBusinessAccess } from '@/hooks/useBusinessAccess';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const Procurement: React.FC = () => {
-  const [statusFilter, setStatusFilter] = useState('all');
-  const { requests, isLoading } = useProcurementRequests(statusFilter);
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState('shortages');
+  const [statusFilter, setStatusFilter] = useState('active');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  const { businessContext } = useBusinessAccess();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
+
+  const businessId = businessContext?.business_id;
+  const { requests, isLoading: requestsLoading } = useProcurementRequests(statusFilter, searchTerm);
+  const { products: lowStockProducts, isLoading: lowStockLoading } = useLowStockProducts();
+  const { updateStatus } = useProcurementActions();
+
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
+  const handleScanLowStock = async () => {
+    if (!businessId || !user?.id) return;
+    setScanning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('procurement-backfill-low-stock', {
+        body: { business_id: businessId, created_by: user.id, default_requested_quantity: 1 },
+      });
+      if (error) throw error;
+      toast({
+        title: 'סריקה הושלמה',
+        description: `נוצרו ${data.created} בקשות חדשות, ${data.skipped} דולגו (כבר קיימות)`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['procurement-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock-products'] });
+    } catch (err: any) {
+      toast({ title: 'שגיאה בסריקה', description: err.message, variant: 'destructive' });
+    } finally {
+      setScanning(false);
+    }
   };
+
+  const openDrawer = (req: any) => {
+    setSelectedRequest(req);
+    setDrawerOpen(true);
+  };
+
+  if (!businessId) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center py-20" dir="rtl">
+          <Package className="h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-muted-foreground text-lg">יש לבחור עסק כדי לצפות ברכש</p>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
       <div className="space-y-6" dir="rtl">
+        {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <ShoppingCart className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">רכש חכם</h1>
-              <p className="text-gray-600 text-sm">ניהול בקשות רכש והצעות מחיר</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">רכש חכם</h1>
+              <p className="text-muted-foreground text-sm">ניהול בקשות רכש והצעות מחיר</p>
             </div>
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="סנן לפי סטטוס" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">הכל</SelectItem>
-              <SelectItem value="waiting_for_quotes">ממתין להצעות</SelectItem>
-              <SelectItem value="quotes_received">הצעות התקבלו</SelectItem>
-              <SelectItem value="waiting_for_approval">ממתין לאישור</SelectItem>
-              <SelectItem value="approved">מאושר</SelectItem>
-              <SelectItem value="ordered">הוזמן</SelectItem>
-              <SelectItem value="cancelled">בוטל</SelectItem>
-            </SelectContent>
-          </Select>
+          <Button onClick={handleScanLowStock} disabled={scanning}>
+            <ScanLine className="h-4 w-4 ml-2" />
+            {scanning ? 'סורק...' : 'סרוק חוסרים ופתח בקשות'}
+          </Button>
         </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : requests.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Package className="h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-gray-500 text-lg">אין בקשות רכש פעילות</p>
-              <p className="text-gray-400 text-sm mt-1">בקשות רכש נוצרות אוטומטית כשמוצר אוזל או שהמלאי יורד מתחת לסף</p>
-            </CardContent>
-          </Card>
-        ) : isMobile ? (
-          // Mobile card view
-          <div className="space-y-3">
-            {requests.map(req => (
-              <Card key={req.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/procurement/${req.id}`)}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-base truncate flex-1">{req.products?.name || 'מוצר'}</h3>
-                    <ProcurementStatusBadge status={req.status} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-2">
-                    <span>כמות: {req.requested_quantity}</span>
-                    <span>הצעות: {req.supplier_quotes?.length || 0}</span>
-                    <span>{formatDate(req.created_at)}</span>
-                    <TriggerBadge trigger={req.trigger_type} />
-                  </div>
-                  {req.recommended_quote && (
-                    <div className="text-sm text-green-700 bg-green-50 rounded px-2 py-1">
-                      מומלץ: {req.recommended_quote.suppliers?.name} - ₪{req.recommended_quote.price_per_unit}
-                    </div>
-                  )}
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="shortages">
+              <AlertTriangle className="h-4 w-4 ml-1" />
+              חוסרים
+              {lowStockProducts.length > 0 && (
+                <span className="mr-1 bg-destructive text-destructive-foreground rounded-full px-1.5 py-0.5 text-xs font-bold">
+                  {lowStockProducts.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="requests">
+              <Package className="h-4 w-4 ml-1" />
+              בקשות רכש
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Tab: Shortages */}
+          <TabsContent value="shortages" className="mt-4">
+            {lowStockLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              </div>
+            ) : lowStockProducts.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
+                  <p className="text-muted-foreground text-lg">אין חוסרים כרגע</p>
+                  <p className="text-muted-foreground text-sm mt-1">כל המוצרים מעל סף המינימום</p>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        ) : (
-          // Desktop table view
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[800px]">
-                  <thead className="bg-gray-50">
-                    <tr className="border-b">
-                      <th className="text-right p-3 font-medium text-sm">תאריך</th>
-                      <th className="text-right p-3 font-medium text-sm">מוצר</th>
-                      <th className="text-right p-3 font-medium text-sm">כמות</th>
-                      <th className="text-right p-3 font-medium text-sm">סוג</th>
-                      <th className="text-right p-3 font-medium text-sm">סטטוס</th>
-                      <th className="text-right p-3 font-medium text-sm">הצעות</th>
-                      <th className="text-right p-3 font-medium text-sm">ספק מומלץ</th>
-                      <th className="text-right p-3 font-medium text-sm">פעולות</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {requests.map(req => (
-                      <tr key={req.id} className="border-b hover:bg-gray-50 transition-colors">
-                        <td className="p-3 text-sm">{formatDate(req.created_at)}</td>
-                        <td className="p-3 text-sm font-medium">{req.products?.name || '-'}</td>
-                        <td className="p-3 text-sm">{req.requested_quantity}</td>
-                        <td className="p-3"><TriggerBadge trigger={req.trigger_type} /></td>
-                        <td className="p-3"><ProcurementStatusBadge status={req.status} /></td>
-                        <td className="p-3 text-sm">{req.supplier_quotes?.length || 0}</td>
-                        <td className="p-3 text-sm">
-                          {req.recommended_quote ? (
-                            <span className="text-green-700">{req.recommended_quote.suppliers?.name} - ₪{req.recommended_quote.price_per_unit}</span>
-                          ) : '-'}
-                        </td>
-                        <td className="p-3">
-                          <Button size="sm" variant="outline" onClick={() => navigate(`/procurement/${req.id}`)}>
-                            <ArrowLeft className="w-3 h-3 ml-1" />
-                            פרטים
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            ) : (
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-muted/50">
+                        <tr className="border-b">
+                          <th className="text-right p-3 font-medium text-sm">מוצר</th>
+                          <th className="text-right p-3 font-medium text-sm">כמות</th>
+                          <th className="text-right p-3 font-medium text-sm">סף</th>
+                          <th className="text-right p-3 font-medium text-sm">בקשה פתוחה</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lowStockProducts.map(p => (
+                          <tr key={p.product_id} className="border-b hover:bg-muted/30 transition-colors">
+                            <td className="p-3 text-sm font-medium">{p.product_name}</td>
+                            <td className="p-3 text-sm">
+                              <span className={p.quantity === 0 ? 'text-destructive font-bold' : 'text-orange-600 font-medium'}>
+                                {p.quantity}
+                              </span>
+                            </td>
+                            <td className="p-3 text-sm">{p.low_stock_threshold}</td>
+                            <td className="p-3 text-sm">
+                              {p.open_request_id ? (
+                                <ProcurementStatusBadge status={p.open_request_status!} />
+                              ) : (
+                                <span className="text-muted-foreground text-xs">אין בקשה — לחץ על סריקה</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Tab: Requests */}
+          <TabsContent value="requests" className="mt-4 space-y-4">
+            {/* Filters */}
+            <div className="flex flex-wrap gap-3">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="סנן לפי סטטוס" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">הכל</SelectItem>
+                  <SelectItem value="active">פעילים (טיוטה + בטיפול)</SelectItem>
+                  <SelectItem value="draft">טיוטה</SelectItem>
+                  <SelectItem value="in_progress">בטיפול</SelectItem>
+                  <SelectItem value="ordered_external">הוזמן חיצונית</SelectItem>
+                  <SelectItem value="resolved_external">טופל</SelectItem>
+                  <SelectItem value="cancelled">בוטל</SelectItem>
+                  <SelectItem value="waiting_for_quotes">ממתין להצעות</SelectItem>
+                  <SelectItem value="recommended">מומלץ</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="חיפוש לפי שם מוצר..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="pr-10"
+                />
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+
+            {/* Table */}
+            {requestsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              </div>
+            ) : requests.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Package className="h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground text-lg">אין בקשות רכש עדיין</p>
+                  <Button variant="outline" className="mt-3" onClick={handleScanLowStock} disabled={scanning}>
+                    <ScanLine className="h-4 w-4 ml-2" />
+                    סרוק חוסרים ופתח בקשות
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : isMobile ? (
+              <div className="space-y-3">
+                {requests.map(req => (
+                  <Card key={req.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => openDrawer(req)}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-semibold text-base truncate flex-1">{req.products?.name || 'מוצר'}</h3>
+                        <ProcurementStatusBadge status={req.status} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                        <span>כמות: {req.requested_quantity}</span>
+                        <span>{formatDate(req.updated_at)}</span>
+                      </div>
+                      {req.notes && (
+                        <p className="text-xs text-muted-foreground mt-2 truncate">{req.notes}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-muted/50">
+                        <tr className="border-b">
+                          <th className="text-right p-3 font-medium text-sm">מוצר</th>
+                          <th className="text-right p-3 font-medium text-sm">כמות</th>
+                          <th className="text-right p-3 font-medium text-sm">סטטוס</th>
+                          <th className="text-right p-3 font-medium text-sm">עודכן</th>
+                          <th className="text-right p-3 font-medium text-sm">הערות</th>
+                          <th className="text-right p-3 font-medium text-sm">פעולות</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {requests.map(req => (
+                          <tr
+                            key={req.id}
+                            className="border-b hover:bg-muted/30 transition-colors cursor-pointer"
+                            onClick={() => openDrawer(req)}
+                          >
+                            <td className="p-3 text-sm font-medium">{req.products?.name || '-'}</td>
+                            <td className="p-3 text-sm">{req.requested_quantity}</td>
+                            <td className="p-3"><ProcurementStatusBadge status={req.status} /></td>
+                            <td className="p-3 text-sm">{formatDate(req.updated_at)}</td>
+                            <td className="p-3 text-sm text-muted-foreground max-w-[200px] truncate">{req.notes || '-'}</td>
+                            <td className="p-3" onClick={e => e.stopPropagation()}>
+                              {!['resolved_external', 'cancelled', 'ordered'].includes(req.status) && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {req.status === 'draft' && (
+                                      <DropdownMenuItem onClick={() => updateStatus.mutate({ requestId: req.id, status: 'in_progress' })}>
+                                        <Play className="h-4 w-4 ml-2" />
+                                        התחל טיפול
+                                      </DropdownMenuItem>
+                                    )}
+                                    {['draft', 'in_progress'].includes(req.status) && (
+                                      <DropdownMenuItem onClick={() => updateStatus.mutate({ requestId: req.id, status: 'ordered_external' })}>
+                                        <Truck className="h-4 w-4 ml-2" />
+                                        הוזמן חיצונית
+                                      </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuItem onClick={() => updateStatus.mutate({ requestId: req.id, status: 'resolved_external' })}>
+                                      <CheckCircle className="h-4 w-4 ml-2" />
+                                      טופל
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => updateStatus.mutate({ requestId: req.id, status: 'cancelled' })} className="text-destructive">
+                                      <XCircle className="h-4 w-4 ml-2" />
+                                      ביטול
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        {/* Detail Drawer */}
+        <ProcurementDetailDrawer
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          request={selectedRequest}
+        />
       </div>
     </MainLayout>
   );

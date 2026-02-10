@@ -20,9 +20,10 @@ export interface ProcurementRequest {
   products?: { name: string; barcode: string | null; quantity: number } | null;
   supplier_quotes?: { id: string }[];
   recommended_quote?: { supplier_id: string; price_per_unit: number; suppliers?: { name: string } | null } | null;
+  product_threshold?: number | null;
 }
 
-export const useProcurementRequests = (statusFilter?: string) => {
+export const useProcurementRequests = (statusFilter?: string, searchTerm?: string) => {
   const { businessContext } = useBusinessAccess();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -44,30 +45,55 @@ export const useProcurementRequests = (statusFilter?: string) => {
         .eq('business_id', businessId)
         .order('created_at', { ascending: false });
 
-      if (statusFilter && statusFilter !== 'all') {
+      if (statusFilter === 'active') {
+        query = query.in('status', ['draft', 'in_progress']);
+      } else if (statusFilter && statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
       }
 
       const { data, error } = await query;
       if (error) throw error;
 
+      // Fetch thresholds for all products
+      const productIds = (data || []).map((r: any) => r.product_id).filter(Boolean);
+      const { data: thresholds } = productIds.length > 0
+        ? await supabase
+            .from('product_thresholds')
+            .select('product_id, low_stock_threshold')
+            .in('product_id', productIds)
+        : { data: [] };
+
+      const thresholdMap = new Map<string, number>();
+      (thresholds || []).forEach((t: any) => thresholdMap.set(t.product_id, t.low_stock_threshold));
+
       // For each request with a recommended_quote_id, fetch the quote details
       const enriched = await Promise.all((data || []).map(async (req: any) => {
+        let recommended_quote = null;
         if (req.recommended_quote_id) {
           const { data: quote } = await supabase
             .from('supplier_quotes')
             .select('supplier_id, price_per_unit, suppliers(name)')
             .eq('id', req.recommended_quote_id)
             .single();
-          return { ...req, supplier_quotes: req.supplier_quotes ? [req.supplier_quotes].flat() : [], recommended_quote: quote };
+          recommended_quote = quote;
         }
-        return { ...req, supplier_quotes: req.supplier_quotes ? [req.supplier_quotes].flat() : [], recommended_quote: null };
+        return {
+          ...req,
+          supplier_quotes: req.supplier_quotes ? [req.supplier_quotes].flat() : [],
+          recommended_quote,
+          product_threshold: thresholdMap.get(req.product_id) ?? null,
+        };
       }));
 
       return enriched as unknown as ProcurementRequest[];
     },
     enabled: !!businessId,
   });
+
+  // Client-side search filtering
+  const filteredRequests = searchTerm
+    ? requests.filter(r => r.products?.name?.includes(searchTerm))
+    : requests;
 
   const createManualRequest = useMutation({
     mutationFn: async ({ productId, quantity, notes }: { productId: string; quantity: number; notes?: string }) => {
@@ -81,7 +107,7 @@ export const useProcurementRequests = (statusFilter?: string) => {
           requested_quantity: quantity,
           trigger_type: 'manual' as const,
           urgency: 'normal' as const,
-          status: 'waiting_for_quotes',
+          status: 'draft',
           created_by: user.id,
           notes: notes || null,
         })
@@ -91,79 +117,13 @@ export const useProcurementRequests = (statusFilter?: string) => {
       if (error) throw error;
       return data;
     },
-    onSuccess: async (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['procurement-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock-products'] });
       toast({ title: 'בקשת רכש נוצרה בהצלחה' });
-
-      // Send quote requests to suppliers via edge function
-      try {
-        await supabase.functions.invoke('procurement-webhook', {
-          body: { procurement_request_id: data.id },
-          headers: { 'action': 'send_quote_requests' },
-        });
-      } catch (err) {
-        console.error('Failed to send quote requests:', err);
-      }
     },
     onError: (error: Error) => {
       toast({ title: 'שגיאה ביצירת בקשת רכש', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const sendQuoteRequests = useMutation({
-    mutationFn: async (requestId: string) => {
-      const { data, error } = await supabase.functions.invoke('procurement-webhook', {
-        body: { procurement_request_id: requestId },
-        headers: { },
-      });
-      // Use query param approach instead
-      const response = await fetch(
-        `https://gtakgctmtayalcbpnryg.supabase.co/functions/v1/procurement-webhook?action=send_quote_requests`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0YWtnY3RtdGF5YWxjYnBucnlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxMDQzMjUsImV4cCI6MjA2NTY4MDMyNX0.CEosZQphWf4FG4mtJZ7Hlmz_c4EYoivyQru1VvGuPdU',
-          },
-          body: JSON.stringify({ procurement_request_id: requestId }),
-        }
-      );
-      if (!response.ok) throw new Error('Failed to send quote requests');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['procurement-requests'] });
-      toast({ title: 'בקשות הצעת מחיר נשלחו לספקים' });
-    },
-    onError: (error: Error) => {
-      toast({ title: 'שגיאה בשליחת בקשות', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const approveOrder = useMutation({
-    mutationFn: async ({ requestId, quoteId }: { requestId: string; quoteId: string }) => {
-      const response = await fetch(
-        `https://gtakgctmtayalcbpnryg.supabase.co/functions/v1/procurement-webhook?action=approve_order`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0YWtnY3RtdGF5YWxjYnBucnlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxMDQzMjUsImV4cCI6MjA2NTY4MDMyNX0.CEosZQphWf4FG4mtJZ7Hlmz_c4EYoivyQru1VvGuPdU',
-          },
-          body: JSON.stringify({ procurement_request_id: requestId, quote_id: quoteId }),
-        }
-      );
-      if (!response.ok) throw new Error('Failed to approve order');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['procurement-requests'] });
-      toast({ title: 'ההזמנה אושרה בהצלחה' });
-    },
-    onError: (error: Error) => {
-      toast({ title: 'שגיאה באישור ההזמנה', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -184,27 +144,10 @@ export const useProcurementRequests = (statusFilter?: string) => {
     },
   });
 
-  const updateRecommendedQuote = useMutation({
-    mutationFn: async ({ requestId, quoteId }: { requestId: string; quoteId: string }) => {
-      const { error } = await supabase
-        .from('procurement_requests')
-        .update({ recommended_quote_id: quoteId, updated_at: new Date().toISOString() })
-        .eq('id', requestId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['procurement-requests'] });
-      toast({ title: 'הצעת המחיר עודכנה' });
-    },
-  });
-
   return {
-    requests,
+    requests: filteredRequests,
     isLoading,
     createManualRequest,
-    sendQuoteRequests,
-    approveOrder,
     cancelRequest,
-    updateRecommendedQuote,
   };
 };
