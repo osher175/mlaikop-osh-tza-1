@@ -1,161 +1,121 @@
 
+# תוכנית: שדרוג דף "רכש חכם" לדשבורד משימות רכש
 
-# Smart Procurement Engine - MVP Implementation Plan
-
-## Overview
-Build a complete procurement workflow: when products go out of stock or drop below threshold, the system creates procurement requests, contacts suppliers via webhook, collects quotes, ranks them with deterministic scoring, and requires manual approval before ordering.
-
----
-
-## Phase 1: Database Migration
-
-### New Tables
-
-**procurement_requests**
-- id, business_id (FK), product_id (FK), requested_quantity, trigger_type ('out_of_stock' | 'below_threshold' | 'manual'), urgency ('low' | 'normal' | 'high'), status (full enum as specified), created_by, recommended_quote_id, notes, created_at, updated_at
-- RLS: business owner or user_roles with matching business_id
-
-**supplier_quotes**
-- id, procurement_request_id (FK), supplier_id (FK), price_per_unit, available, delivery_time_days, currency (default 'ILS'), raw_message, quote_source ('whatsapp' | 'email' | 'manual' | 'api'), created_at
-- RLS: through procurement_request -> business_id
-
-**procurement_settings**
-- business_id (PK/FK), approval_required (default true), max_auto_order_amount (nullable), scoring_weights (jsonb with default weights), default_urgency (default 'normal'), created_at, updated_at
-- RLS: business owner
-
-**supplier_preferences**
-- id, business_id (FK), supplier_id (FK), priority_score (int, default 0), allow_auto_order (default false), created_at, updated_at
-- UNIQUE(business_id, supplier_id)
-- RLS: business owner
-
-### RLS Policies
-All tables will use restrictive policies checking business ownership via `businesses.owner_id = auth.uid()` or membership via `user_roles` / `business_users`, consistent with existing patterns.
-
-### Database Function
-- `score_procurement_quotes(request_id uuid)`: deterministic scoring function that normalizes price, delivery time, and supplier priority using weights from `procurement_settings`, then sets `recommended_quote_id` and updates status to `waiting_for_approval`.
-- `create_procurement_request_on_stock_change()`: trigger function on `products` table that fires on UPDATE when quantity drops to 0 or below threshold, creating a `procurement_requests` row with computed `requested_quantity`.
+## סקירה כללית
+שדרוג הדף הקיים `/procurement` מתצוגת טבלה בסיסית לדשבורד רכש מלא עם טאבים, סריקת חוסרים אוטומטית, פעולות מהירות, ומגירת פרטים -- הכל ללא תלות ב-WhatsApp או n8n. התקשורת עם ספקים קורית מחוץ לאפליקציה.
 
 ---
 
-## Phase 2: Edge Function - Quote Webhook Receiver
+## שלב 1: Edge Function חדשה -- `procurement-backfill-low-stock`
 
-### `procurement-webhook` Edge Function
-- Path: `supabase/functions/procurement-webhook/index.ts`
-- `verify_jwt = false` (incoming webhooks from n8n/Make)
-- Validates `x-automation-key` header for security
-- Accepts POST with: `procurement_request_id`, `supplier_id`, `price_per_unit`, `available`, `delivery_time_days`, `raw_message`, `quote_source`
-- Inserts into `supplier_quotes`
-- If at least 1 quote exists for the request, updates status to `quotes_received`
-- Runs scoring function when quotes arrive
-- Logs activity to `notifications` table
-- Returns success/error JSON
+יצירת Edge Function שמקבלת `business_id`, `created_by`, ו-`default_requested_quantity`, סורקת את כל המוצרים של העסק, בודקת אם `quantity <= low_stock_threshold` (מטבלת `product_thresholds`), ויוצרת `procurement_requests` בסטטוס `draft` עבור מוצרים שאין להם בקשה פתוחה (draft/in_progress).
 
-### Outbound Webhook Logic
-- Reuse/extend the existing `clever-service` edge function pattern
-- When a procurement_request is created with status `waiting_for_quotes`, the client-side hook calls an edge function that sends webhook POSTs to n8n/Make for each relevant supplier
-- Payload: procurement_request_id, business_id, supplier_id, product info (name, barcode, requested_quantity)
+מחזירה JSON: `{ ok: true, created: 3, skipped: 7 }`
+
+**קובץ**: `supabase/functions/procurement-backfill-low-stock/index.ts`
 
 ---
 
-## Phase 3: React Hooks
+## שלב 2: עדכון סטטוסים ב-ProcurementStatusBadge
 
-### `useProcurementRequests`
-- CRUD operations for procurement_requests scoped to business
-- Create manual requests from product page
-- Approve/cancel actions
-- Query with joined product name and quote count
+הוספת הסטטוסים החדשים למפת הצבעים:
+- `in_progress` -- כחול, "בטיפול"
+- `ordered_external` -- ירוק-כהה, "הוזמן חיצונית"
+- `resolved_external` -- ירוק, "טופל"
+- `recommended` -- כבר קיים
 
-### `useProcurementSettings`
-- Fetch/upsert procurement_settings for the business
-- Auto-create default row on first access if missing
-
-### `useSupplierPreferences`
-- Fetch/update supplier_preferences for the business
-- Used in the procurement detail page for priority adjustments
-
-### `useSupplierQuotes`
-- Fetch quotes for a specific procurement_request_id
-- Manual quote insertion (for quotes entered by hand)
+**קובץ**: `src/components/procurement/ProcurementStatusBadge.tsx`
 
 ---
 
-## Phase 4: UI Pages and Components
+## שלב 3: Hook חדש -- `useLowStockProducts`
 
-### 4a. Procurement Requests List Page (`/procurement`)
-- New page: `src/pages/Procurement.tsx`
-- Table with columns: date, product name, requested quantity, trigger type (badge), status (color-coded badge), number of quotes, recommended supplier, actions
-- Filter dropdown by status
-- Hebrew RTL layout using existing MainLayout
-- Mobile card view (same pattern as InventoryTable)
-- Add route to App.tsx with role protection (OWNER + higher roles)
-- Add sidebar menu item with ShoppingCart icon
+Hook שמביא מוצרים עם join ל-`product_thresholds` ומסנן רק מוצרים שבהם `quantity <= low_stock_threshold`. גם בודק אם יש בקשה פתוחה (draft/in_progress) לכל מוצר.
 
-### 4b. Procurement Request Detail Page (`/procurement/:id`)
-- Header: product name, requested quantity, status badge, urgency badge
-- Quotes table: supplier name, price per unit, available (checkmark), delivery days, computed score, recommended badge (star icon)
-- Action buttons:
-  - "Approve Order" (primary) - updates status, sends outbound webhook
-  - "Select Different Quote" - dropdown/click to pick another quote
-  - "Cancel Request" (destructive)
-- Explanation text for recommendation
-- Mobile responsive
+שאילתה יעילה: שתי שאילתות מקבילות (מוצרים + בקשות פתוחות) ואז merge בצד הקליינט.
 
-### 4c. Product Page Enhancement
-- In `InventoryTable.tsx`: add a "Request Quotes" button (ShoppingCart icon) for products that are out of stock or below threshold
-- If an open procurement_request exists for the product, show a link/badge to the request instead
-- Minimal change - just an additional button in the actions column
-
-### 4d. Procurement Settings Section
-- Add a tab/section in `BusinessSettings.tsx` for procurement settings
-- Scoring weights sliders (price, delivery, supplier priority, reliability)
-- Default urgency selector
-- Toggle for approval_required
+**קובץ**: `src/hooks/useLowStockProducts.tsx`
 
 ---
 
-## Phase 5: Notifications Integration
+## שלב 4: עדכון Hook `useProcurementRequests`
 
-Use the existing `notifications` table to create entries:
-- When procurement_request created: "בקשת רכש חדשה נוצרה עבור {product_name}"
-- When quote received: "הצעת מחיר חדשה התקבלה מ{supplier_name}"
-- When recommendation ready: "המלצה מוכנה עבור {product_name}"
+- הוספת mutation `updateStatus` -- עדכון סטטוס בודד (in_progress, ordered_external, resolved_external, cancelled)
+- הוספת mutation `updateNotes` -- עדכון הערות
+- שינוי ברירת מחדל של הסינון ל-`draft` + `in_progress` (במקום `all`)
+- הוספת חיפוש לפי שם מוצר (בצד הקליינט)
 
----
-
-## Phase 6: Future Hook (Placeholder)
-
-- Add a placeholder function `analyze_quotes_with_ai` in the scoring hook that currently returns null
-- Comment: "// Future: call AI endpoint to improve ranking explanation"
+**קובץ**: `src/hooks/useProcurementRequests.tsx`
 
 ---
 
-## Technical Details
+## שלב 5: שדרוג דף `Procurement.tsx`
 
-### Files to Create
-1. `supabase/migrations/XXXXXX-procurement-tables.sql` - All 4 tables, RLS policies, triggers, scoring function
-2. `supabase/functions/procurement-webhook/index.ts` - Quote receiver endpoint
-3. `src/hooks/useProcurementRequests.tsx`
-4. `src/hooks/useProcurementSettings.tsx`
-5. `src/hooks/useSupplierPreferences.tsx`
-6. `src/hooks/useSupplierQuotes.tsx`
-7. `src/pages/Procurement.tsx` - List page
-8. `src/pages/ProcurementDetail.tsx` - Detail page
-9. `src/components/procurement/ProcurementRequestsTable.tsx`
-10. `src/components/procurement/QuotesTable.tsx`
-11. `src/components/procurement/ProcurementStatusBadge.tsx`
-12. `src/components/procurement/ManualQuoteDialog.tsx`
-13. `src/components/procurement/RequestQuotesButton.tsx` - For inventory table
+שכתוב הדף עם המבנה הבא:
 
-### Files to Modify
-1. `src/App.tsx` - Add 2 new routes
-2. `src/components/layout/Sidebar.tsx` - Add procurement menu item
-3. `src/components/inventory/InventoryTable.tsx` - Add "Request Quotes" button
-4. `supabase/config.toml` - Add procurement-webhook function config
-5. `src/pages/BusinessSettings.tsx` - Add procurement settings tab
+```text
++-----------------------------------------------+
+| ShoppingCart icon  "רכש חכם"                   |
+| "ניהול בקשות רכש והצעות מחיר"                  |
+|                    [סרוק חוסרים ופתח בקשות]     |
++-----------------------------------------------+
+| [חוסרים] | [בקשות רכש]                         |
++-----------------------------------------------+
+|                                                 |
+|  (תוכן הטאב הנוכחי)                            |
+|                                                 |
++-----------------------------------------------+
+```
 
-### Security Considerations
-- All RLS policies use restrictive mode matching existing patterns
-- Webhook endpoint validates `x-automation-key` header (uses existing secret pattern)
-- No raw SQL in edge functions
-- Business isolation enforced at every level
+### טאב "חוסרים":
+- טבלה: שם מוצר, כמות נוכחית, סף, סטטוס בקשה
+- עמודת "בקשה פתוחה": badge אם יש / "אין בקשה" אם אין
+- מצב ריק: "אין חוסרים כרגע"
 
+### טאב "בקשות רכש":
+- סינון סטטוס (dropdown), חיפוש חופשי
+- טבלה: מוצר, כמות, סטטוס (badge), עדכון אחרון, הערות (תצוגה מקדימה)
+- פעולות מהירות בכל שורה (dropdown): התחל טיפול, הוזמן חיצונית, טופל, ביטול
+- לחיצה על שורה פותחת מגירת פרטים
+- מצב ריק: "אין בקשות רכש עדיין" עם CTA לסריקה
+
+**קובץ**: `src/pages/Procurement.tsx`
+
+---
+
+## שלב 6: רכיב חדש -- `ProcurementDetailDrawer`
+
+מגירה (Sheet) שנפתחת בתוך דף הרכש (לא ניווט לדף אחר):
+- פרטי מוצר: שם, כמות, סף
+- הערות (עריכה inline)
+- רשימת הצעות מחיר (מ-`supplier_quotes`) עם כפתור "הוסף הצעה ידנית" (שימוש ב-`ManualQuoteDialog` הקיים)
+- כפתור "סמן כהמלצה" ליד כל הצעה
+- כפתורי פעולה: "הוזמן חיצונית", "טופל", "בטל"
+
+**קובץ**: `src/components/procurement/ProcurementDetailDrawer.tsx`
+
+---
+
+## שלב 7: עדכון `supabase/config.toml`
+
+הוספת הגדרה ל-Edge Function החדשה `procurement-backfill-low-stock` עם `verify_jwt = true` (פונקציה זו נקראת מהקליינט עם auth token, לא מ-webhook).
+
+---
+
+## סיכום קבצים שמשתנים
+
+| קובץ | פעולה |
+|---|---|
+| `supabase/functions/procurement-backfill-low-stock/index.ts` | חדש |
+| `src/hooks/useLowStockProducts.tsx` | חדש |
+| `src/components/procurement/ProcurementDetailDrawer.tsx` | חדש |
+| `src/pages/Procurement.tsx` | שכתוב |
+| `src/hooks/useProcurementRequests.tsx` | עדכון |
+| `src/components/procurement/ProcurementStatusBadge.tsx` | עדכון |
+| `supabase/config.toml` | עדכון |
+
+## מה לא משתנה
+- לא נוצר דף חדש -- הכל בתוך `/procurement` הקיים
+- לא משנים עיצוב/צבעים/פונטים
+- לא משנים מבנה DB (הטבלאות קיימות)
+- לא מוחקים את `/procurement/:id` -- הוא נשאר כמו שהוא
