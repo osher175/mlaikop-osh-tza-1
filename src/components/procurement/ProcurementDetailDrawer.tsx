@@ -9,6 +9,7 @@ import { ProcurementStatusBadge } from './ProcurementStatusBadge';
 import { ManualQuoteDialog } from './ManualQuoteDialog';
 import { useSupplierQuotes } from '@/hooks/useSupplierQuotes';
 import { useProcurementActions } from '@/hooks/useProcurementActions';
+import { TERMINAL_STATUSES } from '@/constants/procurement';
 
 interface ProcurementDetailDrawerProps {
   open: boolean;
@@ -62,7 +63,7 @@ export const ProcurementDetailDrawer: React.FC<ProcurementDetailDrawerProps> = (
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-  const isTerminal = ['resolved_external', 'cancelled', 'ordered', 'ordered_external'].includes(request.status);
+  const isTerminal = (TERMINAL_STATUSES as readonly string[]).includes(request.status);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
