@@ -71,6 +71,27 @@ export type Database = {
           },
         ]
       }
+      brands: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          tier: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          tier: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          tier?: string
+        }
+        Relationships: []
+      }
       business_categories: {
         Row: {
           created_at: string | null
@@ -231,6 +252,69 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      category_supplier_preferences: {
+        Row: {
+          business_id: string
+          category_id: string
+          created_at: string
+          id: string
+          priority: number
+          supplier_id: string
+        }
+        Insert: {
+          business_id: string
+          category_id: string
+          created_at?: string
+          id?: string
+          priority?: number
+          supplier_id: string
+        }
+        Update: {
+          business_id?: string
+          category_id?: string
+          created_at?: string
+          id?: string
+          priority?: number
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_supplier_preferences_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_supplier_preferences_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_supplier_preferences_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_supplier_preferences_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_supplier_preferences_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -562,6 +646,126 @@ export type Database = {
         }
         Relationships: []
       }
+      procurement_conversations: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          last_incoming_at: string | null
+          last_outgoing_at: string | null
+          mode: string
+          procurement_request_id: string
+          product_id: string
+          status: string
+          supplier_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          last_incoming_at?: string | null
+          last_outgoing_at?: string | null
+          mode?: string
+          procurement_request_id: string
+          product_id: string
+          status?: string
+          supplier_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          last_incoming_at?: string | null
+          last_outgoing_at?: string | null
+          mode?: string
+          procurement_request_id?: string
+          product_id?: string
+          status?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procurement_conversations_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_conversations_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_conversations_procurement_request_id_fkey"
+            columns: ["procurement_request_id"]
+            isOneToOne: false
+            referencedRelation: "procurement_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_conversations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_conversations_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_conversations_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      procurement_messages: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          direction: string
+          id: string
+          message_text: string
+          provider_message_id: string | null
+          status: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          direction: string
+          id?: string
+          message_text: string
+          provider_message_id?: string | null
+          status?: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          message_text?: string
+          provider_message_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procurement_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "procurement_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       procurement_requests: {
         Row: {
           business_id: string
@@ -766,6 +970,7 @@ export type Database = {
         Row: {
           alert_dismissed: boolean
           barcode: string | null
+          brand_id: string | null
           business_id: string
           cost: number | null
           created_at: string | null
@@ -776,6 +981,7 @@ export type Database = {
           image: string | null
           location: string | null
           name: string
+          preferred_supplier_id: string | null
           price: number | null
           product_category_id: string | null
           quantity: number
@@ -785,6 +991,7 @@ export type Database = {
         Insert: {
           alert_dismissed?: boolean
           barcode?: string | null
+          brand_id?: string | null
           business_id: string
           cost?: number | null
           created_at?: string | null
@@ -795,6 +1002,7 @@ export type Database = {
           image?: string | null
           location?: string | null
           name: string
+          preferred_supplier_id?: string | null
           price?: number | null
           product_category_id?: string | null
           quantity?: number
@@ -804,6 +1012,7 @@ export type Database = {
         Update: {
           alert_dismissed?: boolean
           barcode?: string | null
+          brand_id?: string | null
           business_id?: string
           cost?: number | null
           created_at?: string | null
@@ -814,6 +1023,7 @@ export type Database = {
           image?: string | null
           location?: string | null
           name?: string
+          preferred_supplier_id?: string | null
           price?: number | null
           product_category_id?: string | null
           quantity?: number
@@ -821,6 +1031,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "products_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_business_id_fkey"
             columns: ["business_id"]
@@ -833,6 +1050,20 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_preferred_supplier_id_fkey"
+            columns: ["preferred_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_preferred_supplier_id_fkey"
+            columns: ["preferred_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
             referencedColumns: ["id"]
           },
           {
@@ -1259,6 +1490,72 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      supplier_brands: {
+        Row: {
+          brand_id: string
+          business_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          priority: number
+          supplier_id: string
+        }
+        Insert: {
+          brand_id: string
+          business_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          supplier_id: string
+        }
+        Update: {
+          brand_id?: string
+          business_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_brands_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_brands_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_brands_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_brands_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_brands_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       supplier_invoices: {
         Row: {

@@ -74,7 +74,7 @@ export const useInventoryLogger = () => {
         .from('products')
         .select(`
           *,
-          suppliers (
+          suppliers!supplier_id (
             id,
             name,
             sales_agent_name,

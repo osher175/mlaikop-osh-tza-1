@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Package, Star, Truck, CheckCircle, XCircle, Edit3, Save } from 'lucide-react';
+import { ConversationsList } from './ConversationsList';
 import { ProcurementStatusBadge } from './ProcurementStatusBadge';
 import { ManualQuoteDialog } from './ManualQuoteDialog';
 import { useSupplierQuotes } from '@/hooks/useSupplierQuotes';
@@ -182,6 +183,15 @@ export const ProcurementDetailDrawer: React.FC<ProcurementDetailDrawerProps> = (
               </div>
             )}
           </div>
+
+          <Separator />
+
+          {/* Supplier Conversations */}
+          <ConversationsList
+            requestId={request.id}
+            productId={request.product_id}
+            isTerminal={isTerminal}
+          />
 
           {/* Actions */}
           {!isTerminal && (

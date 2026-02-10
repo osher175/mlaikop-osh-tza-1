@@ -31,7 +31,7 @@ export const SuppliersChart: React.FC = () => {
 
       const { data, error } = await supabase
         .from('inventory_actions')
-        .select('quantity_changed, purchase_total_ils, purchase_unit_ils, supplier_id, products(id, name, cost, supplier_id, suppliers(id, name))')
+        .select('quantity_changed, purchase_total_ils, purchase_unit_ils, supplier_id, products(id, name, cost, supplier_id, suppliers!supplier_id(id, name))')
         .eq('business_id', businessContext.business_id)
         .in('action_type', ['add', 'purchase'])
         .gte('timestamp', monthStart)
