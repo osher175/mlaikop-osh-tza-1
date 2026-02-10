@@ -8,6 +8,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useProcurementRequests } from '@/hooks/useProcurementRequests';
 import { useProcurementActions } from '@/hooks/useProcurementActions';
 import { useSupplierQuotes } from '@/hooks/useSupplierQuotes';
+import { TERMINAL_STATUSES } from '@/constants/procurement';
 import { ProcurementStatusBadge, UrgencyBadge } from '@/components/procurement/ProcurementStatusBadge';
 import { ManualQuoteDialog } from '@/components/procurement/ManualQuoteDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -23,7 +24,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
-const TERMINAL_STATUSES = ['resolved_external', 'cancelled', 'ordered', 'ordered_external'];
+// TERMINAL_STATUSES imported from @/constants/procurement
 
 export const ProcurementDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -45,7 +46,7 @@ export const ProcurementDetail: React.FC = () => {
     );
   }
 
-  const isTerminal = TERMINAL_STATUSES.includes(request.status);
+  const isTerminal = (TERMINAL_STATUSES as readonly string[]).includes(request.status);
   const canAddQuotes = !isTerminal;
 
   const handleApprove = (quoteId: string) => {

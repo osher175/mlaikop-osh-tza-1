@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
-
-const OPEN_STATUSES = ['draft', 'in_progress', 'waiting_for_quotes', 'quotes_received', 'waiting_for_approval', 'recommended'];
+import { OPEN_STATUSES } from '@/constants/procurement';
 
 export interface LowStockProduct {
   product_id: string;
