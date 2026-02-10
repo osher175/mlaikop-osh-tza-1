@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.procurement-order-confirmed-webhook]
 verify_jwt = false
+
+[functions.procurement-backfill-low-stock]
+verify_jwt = false
