@@ -59,18 +59,23 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Get existing open requests for these products
+    // Get existing open requests for these products (batch to avoid URL length limits)
     const productIds = belowThreshold.map((pt: any) => pt.product_id)
-    const { data: existingRequests, error: reqError } = await supabase
-      .from('procurement_requests')
-      .select('product_id')
-      .eq('business_id', business_id)
-      .in('status', OPEN_STATUSES)
-      .in('product_id', productIds)
+    const BATCH_SIZE = 40
+    const existingProductIds = new Set<string>()
 
-    if (reqError) throw reqError
+    for (let i = 0; i < productIds.length; i += BATCH_SIZE) {
+      const batch = productIds.slice(i, i + BATCH_SIZE)
+      const { data: batchRequests, error: reqError } = await supabase
+        .from('procurement_requests')
+        .select('product_id')
+        .eq('business_id', business_id)
+        .in('status', OPEN_STATUSES)
+        .in('product_id', batch)
 
-    const existingProductIds = new Set((existingRequests || []).map((r: any) => r.product_id))
+      if (reqError) throw reqError
+      ;(batchRequests || []).forEach((r: any) => existingProductIds.add(r.product_id))
+    }
 
     const toCreate = belowThreshold.filter((pt: any) => !existingProductIds.has(pt.product_id))
     const skipped = belowThreshold.length - toCreate.length
