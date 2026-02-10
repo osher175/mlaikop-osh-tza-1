@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 
+const OPEN_STATUSES = ['draft', 'in_progress', 'waiting_for_quotes', 'quotes_received', 'waiting_for_approval', 'recommended'];
+
 export interface LowStockProduct {
   product_id: string;
   product_name: string;
@@ -20,10 +22,9 @@ export const useLowStockProducts = () => {
     queryFn: async () => {
       if (!businessId) return [];
 
-      // Get thresholds with product info
       const { data: thresholds, error: thError } = await supabase
         .from('product_thresholds')
-        .select('product_id, low_stock_threshold, products(id, name, quantity)')
+        .select('product_id, low_stock_threshold, products:products!product_thresholds_product_id_fkey(id, name, quantity)')
         .eq('business_id', businessId);
 
       if (thError) throw thError;
@@ -35,13 +36,12 @@ export const useLowStockProducts = () => {
 
       if (belowThreshold.length === 0) return [];
 
-      // Get open requests
       const productIds = belowThreshold.map((pt: any) => pt.product_id);
       const { data: openReqs } = await supabase
         .from('procurement_requests')
         .select('id, product_id, status')
         .eq('business_id', businessId)
-        .in('status', ['draft', 'in_progress', 'waiting_for_quotes', 'quotes_received', 'waiting_for_approval'])
+        .in('status', OPEN_STATUSES)
         .in('product_id', productIds);
 
       const reqMap = new Map<string, { id: string; status: string }>();

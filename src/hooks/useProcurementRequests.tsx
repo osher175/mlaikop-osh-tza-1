@@ -54,8 +54,10 @@ export const useProcurementRequests = (statusFilter?: string, searchTerm?: strin
       const { data, error } = await query;
       if (error) throw error;
 
-      // Fetch thresholds for all products
-      const productIds = (data || []).map((r: any) => r.product_id).filter(Boolean);
+      const rawData = data || [];
+
+      // Fetch thresholds in batch
+      const productIds = rawData.map((r: any) => r.product_id).filter(Boolean);
       const { data: thresholds } = productIds.length > 0
         ? await supabase
             .from('product_thresholds')
@@ -66,33 +68,34 @@ export const useProcurementRequests = (statusFilter?: string, searchTerm?: strin
       const thresholdMap = new Map<string, number>();
       (thresholds || []).forEach((t: any) => thresholdMap.set(t.product_id, t.low_stock_threshold));
 
-      // For each request with a recommended_quote_id, fetch the quote details
-      const enriched = await Promise.all((data || []).map(async (req: any) => {
-        let recommended_quote = null;
-        if (req.recommended_quote_id) {
-          const { data: quote } = await supabase
-            .from('supplier_quotes')
-            .select('supplier_id, price_per_unit, suppliers(name)')
-            .eq('id', req.recommended_quote_id)
-            .single();
-          recommended_quote = quote;
-        }
-        return {
-          ...req,
-          supplier_quotes: req.supplier_quotes ? [req.supplier_quotes].flat() : [],
-          recommended_quote,
-          product_threshold: thresholdMap.get(req.product_id) ?? null,
-        };
-      }));
+      // Fetch recommended quotes in batch (no N+1)
+      const quoteIds = rawData
+        .map((r: any) => r.recommended_quote_id)
+        .filter(Boolean) as string[];
 
-      return enriched as unknown as ProcurementRequest[];
+      let quoteMap = new Map<string, any>();
+      if (quoteIds.length > 0) {
+        const { data: quotesData } = await supabase
+          .from('supplier_quotes')
+          .select('id, supplier_id, price_per_unit, suppliers(name)')
+          .in('id', quoteIds);
+
+        (quotesData || []).forEach((q: any) => quoteMap.set(q.id, q));
+      }
+
+      return rawData.map((req: any) => ({
+        ...req,
+        supplier_quotes: Array.isArray(req.supplier_quotes) ? req.supplier_quotes.flat() : [],
+        recommended_quote: req.recommended_quote_id ? (quoteMap.get(req.recommended_quote_id) || null) : null,
+        product_threshold: thresholdMap.get(req.product_id) ?? null,
+      })) as unknown as ProcurementRequest[];
     },
     enabled: !!businessId,
   });
 
-  // Client-side search filtering
+  // Client-side search filtering (case-insensitive, null-safe)
   const filteredRequests = searchTerm
-    ? requests.filter(r => r.products?.name?.includes(searchTerm))
+    ? requests.filter(r => (r.products?.name ?? '').toLowerCase().includes(searchTerm.toLowerCase()))
     : requests;
 
   const createManualRequest = useMutation({

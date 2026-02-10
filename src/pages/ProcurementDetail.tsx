@@ -3,7 +3,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, CheckCircle, XCircle, Star, Send, AlertTriangle } from 'lucide-react';
+import { ArrowRight, CheckCircle, XCircle, Star, AlertTriangle, Truck } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useProcurementRequests } from '@/hooks/useProcurementRequests';
 import { useProcurementActions } from '@/hooks/useProcurementActions';
@@ -22,6 +22,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+
+const TERMINAL_STATUSES = ['resolved_external', 'cancelled', 'ordered', 'ordered_external'];
 
 export const ProcurementDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -43,12 +45,11 @@ export const ProcurementDetail: React.FC = () => {
     );
   }
 
-  const isActionable = ['waiting_for_approval', 'quotes_received', 'recommended'].includes(request.status);
-  const canSendQuotes = request.status === 'waiting_for_quotes';
-  const canAddQuotes = !['ordered', 'cancelled'].includes(request.status);
+  const isTerminal = TERMINAL_STATUSES.includes(request.status);
+  const canAddQuotes = !isTerminal;
 
   const handleApprove = (quoteId: string) => {
-    updateStatus.mutate({ requestId: request.id, status: 'approved' });
+    updateStatus.mutate({ requestId: request.id, status: 'ordered_external' });
     updateRecommendedQuote.mutate({ requestId: request.id, quoteId });
   };
 
@@ -74,30 +75,50 @@ export const ProcurementDetail: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
+                <h1 className="text-xl md:text-2xl font-bold text-foreground mb-2">
                   {request.products?.name || 'מוצר'}
                 </h1>
                 <div className="flex flex-wrap gap-2 items-center">
                   <ProcurementStatusBadge status={request.status} />
                   <UrgencyBadge urgency={request.urgency} />
-                  <span className="text-sm text-gray-600">כמות מבוקשת: {request.requested_quantity}</span>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-muted-foreground">כמות מבוקשת: {request.requested_quantity}</span>
+                  <span className="text-sm text-muted-foreground">
                     מלאי נוכחי: {request.products?.quantity ?? '-'}
                   </span>
                 </div>
                 {request.notes && (
-                  <p className="text-sm text-gray-500 mt-2">הערות: {request.notes}</p>
+                  <p className="text-sm text-muted-foreground mt-2">הערות: {request.notes}</p>
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                {canSendQuotes && (
+                {request.status === 'draft' && (
                   <Button
                     variant="outline"
                     onClick={() => updateStatus.mutate({ requestId: request.id, status: 'in_progress' })}
                     disabled={updateStatus.isPending}
                   >
-                    <Send className="w-4 h-4 ml-1" />
                     התחל טיפול
+                  </Button>
+                )}
+                {['draft', 'in_progress'].includes(request.status) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => updateStatus.mutate({ requestId: request.id, status: 'ordered_external' })}
+                    disabled={updateStatus.isPending}
+                  >
+                    <Truck className="w-4 h-4 ml-1" />
+                    הוזמן חיצונית
+                  </Button>
+                )}
+                {!isTerminal && (
+                  <Button
+                    variant="outline"
+                    onClick={() => updateStatus.mutate({ requestId: request.id, status: 'resolved_external' })}
+                    disabled={updateStatus.isPending}
+                    className="text-green-700"
+                  >
+                    <CheckCircle className="w-4 h-4 ml-1" />
+                    טופל
                   </Button>
                 )}
                 {canAddQuotes && <ManualQuoteDialog requestId={request.id} />}
@@ -112,7 +133,7 @@ export const ProcurementDetail: React.FC = () => {
             <CardContent className="p-4 flex items-start gap-3">
               <Star className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-green-800">המלצת המערכת</p>
+                <p className="font-medium text-green-800">הצעה מומלצת</p>
                 <p className="text-sm text-green-700">
                   ההצעה המומלצת נבחרה על בסיס הציון הכולל הגבוה ביותר, בשקלול מחיר, זמני אספקה, ועדיפות ספק.
                 </p>
@@ -132,12 +153,11 @@ export const ProcurementDetail: React.FC = () => {
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
               </div>
             ) : quotes.length === 0 ? (
-              <div className="text-center text-gray-500">
-                <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+              <div className="text-center text-muted-foreground">
+                <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-muted-foreground/60" />
                 <p>עדיין לא התקבלו הצעות מחיר</p>
               </div>
             ) : isMobile ? (
-              // Mobile card view for quotes
               <div className="space-y-3 p-4">
                 {quotes.map(quote => {
                   const isRecommended = quote.id === request.recommended_quote_id;
@@ -158,7 +178,7 @@ export const ProcurementDetail: React.FC = () => {
                           <span>אספקה: {quote.delivery_time_days ? `${quote.delivery_time_days} ימים` : '-'}</span>
                           <span>ציון: {quote.score?.toFixed(2) || '-'}</span>
                         </div>
-                        {isActionable && quote.available && (
+                        {!isTerminal && quote.available && (
                           <div className="flex gap-2">
                             {!isRecommended && (
                               <Button size="sm" variant="outline" onClick={() => handleSelectQuote(quote.id)} className="flex-1">
@@ -196,10 +216,9 @@ export const ProcurementDetail: React.FC = () => {
                 })}
               </div>
             ) : (
-              // Desktop table
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-muted/50">
                     <tr className="border-b">
                       <th className="text-right p-3 font-medium text-sm">ספק</th>
                       <th className="text-right p-3 font-medium text-sm">מחיר ליחידה</th>
@@ -214,7 +233,7 @@ export const ProcurementDetail: React.FC = () => {
                     {quotes.map(quote => {
                       const isRecommended = quote.id === request.recommended_quote_id;
                       return (
-                        <tr key={quote.id} className={`border-b hover:bg-gray-50 ${isRecommended ? 'bg-green-50' : ''}`}>
+                        <tr key={quote.id} className={`border-b hover:bg-muted/30 ${isRecommended ? 'bg-green-50' : ''}`}>
                           <td className="p-3 text-sm font-medium flex items-center gap-2">
                             {isRecommended && <Star className="w-4 h-4 text-green-600" />}
                             {quote.suppliers?.name || '-'}
@@ -229,9 +248,9 @@ export const ProcurementDetail: React.FC = () => {
                           </td>
                           <td className="p-3 text-sm">{quote.delivery_time_days ?? '-'}</td>
                           <td className="p-3 text-sm font-mono">{quote.score?.toFixed(2) || '-'}</td>
-                          <td className="p-3 text-sm text-gray-500">{quote.quote_source}</td>
+                          <td className="p-3 text-sm text-muted-foreground">{quote.quote_source}</td>
                           <td className="p-3">
-                            {isActionable && quote.available && (
+                            {!isTerminal && quote.available && (
                               <div className="flex gap-1">
                                 {!isRecommended && (
                                   <Button size="sm" variant="outline" onClick={() => handleSelectQuote(quote.id)} className="text-xs h-7">
@@ -274,8 +293,8 @@ export const ProcurementDetail: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Actions */}
-        {request.status !== 'ordered' && request.status !== 'cancelled' && (
+        {/* Cancel action */}
+        {!isTerminal && (
           <Card>
             <CardContent className="p-4 flex justify-end">
               <AlertDialog>

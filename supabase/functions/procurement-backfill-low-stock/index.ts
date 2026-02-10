@@ -5,6 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
+const OPEN_STATUSES = ['draft', 'in_progress', 'waiting_for_quotes', 'quotes_received', 'waiting_for_approval', 'recommended']
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -19,11 +21,12 @@ Deno.serve(async (req) => {
       })
     }
 
-    const supabase = createClient(
-      'https://gtakgctmtayalcbpnryg.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0YWtnY3RtdGF5YWxjYnBucnlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxMDQzMjUsImV4cCI6MjA2NTY4MDMyNX0.CEosZQphWf4FG4mtJZ7Hlmz_c4EYoivyQru1VvGuPdU',
-      { global: { headers: { Authorization: authHeader } } }
-    )
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    })
 
     const { business_id, created_by, default_requested_quantity = 1 } = await req.json()
 
@@ -34,10 +37,12 @@ Deno.serve(async (req) => {
       })
     }
 
+    const qty = Math.max(1, default_requested_quantity)
+
     // Get products with thresholds where quantity <= threshold
     const { data: lowStockProducts, error: productsError } = await supabase
       .from('product_thresholds')
-      .select('product_id, low_stock_threshold, products(id, name, quantity)')
+      .select('product_id, low_stock_threshold, products:products!product_thresholds_product_id_fkey(id, name, quantity)')
       .eq('business_id', business_id)
 
     if (productsError) throw productsError
@@ -48,6 +53,7 @@ Deno.serve(async (req) => {
     })
 
     if (belowThreshold.length === 0) {
+      console.log('No products below threshold')
       return new Response(JSON.stringify({ ok: true, created: 0, skipped: 0 }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -59,7 +65,7 @@ Deno.serve(async (req) => {
       .from('procurement_requests')
       .select('product_id')
       .eq('business_id', business_id)
-      .in('status', ['draft', 'in_progress', 'waiting_for_quotes', 'quotes_received', 'waiting_for_approval'])
+      .in('status', OPEN_STATUSES)
       .in('product_id', productIds)
 
     if (reqError) throw reqError
@@ -73,7 +79,7 @@ Deno.serve(async (req) => {
       const rows = toCreate.map((pt: any) => ({
         business_id,
         product_id: pt.product_id,
-        requested_quantity: default_requested_quantity,
+        requested_quantity: qty,
         trigger_type: pt.products.quantity === 0 ? 'out_of_stock' : 'below_threshold',
         urgency: pt.products.quantity === 0 ? 'high' : 'normal',
         status: 'draft',
@@ -87,10 +93,13 @@ Deno.serve(async (req) => {
       if (insertError) throw insertError
     }
 
+    console.log(`Backfill complete: created=${toCreate.length}, skipped=${skipped}`)
+
     return new Response(JSON.stringify({ ok: true, created: toCreate.length, skipped }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
+    console.error('Backfill error:', error.message)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
