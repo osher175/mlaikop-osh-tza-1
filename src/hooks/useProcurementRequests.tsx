@@ -95,7 +95,12 @@ export const useProcurementRequests = (statusFilter?: string, searchTerm?: strin
 
   // Client-side search filtering (case-insensitive, null-safe)
   const filteredRequests = searchTerm
-    ? requests.filter(r => (r.products?.name ?? '').toLowerCase().includes(searchTerm.toLowerCase()))
+    ? requests.filter(r => {
+        const term = searchTerm.toLowerCase();
+        const name = (r.products?.name ?? '').toLowerCase();
+        const barcode = (r.products?.barcode ?? '').toLowerCase();
+        return name.includes(term) || barcode.includes(term);
+      })
     : requests;
 
   const createManualRequest = useMutation({

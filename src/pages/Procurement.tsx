@@ -191,7 +191,7 @@ export const Procurement: React.FC = () => {
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="חיפוש לפי שם מוצר..."
+                  placeholder="חיפוש לפי שם מוצר או ברקוד..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   className="pr-10"
