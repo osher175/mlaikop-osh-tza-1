@@ -26,3 +26,9 @@ verify_jwt = false
 
 [functions.procurement-start-outreach]
 verify_jwt = false
+
+[functions.n8n-outbox-pull]
+verify_jwt = false
+
+[functions.n8n-outbox-ack]
+verify_jwt = false
