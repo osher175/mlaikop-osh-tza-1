@@ -29,15 +29,28 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Load procurement request with product info
+    // Load procurement request with product & business info
     const { data: procReq, error: prErr } = await supabase
       .from('procurement_requests')
-      .select('id, product_id, requested_quantity, products(name)')
+      .select('id, product_id, requested_quantity, products(name), businesses(name)')
       .eq('id', procurement_request_id)
       .single()
 
     if (prErr || !procReq) {
       return new Response(JSON.stringify({ error: 'Procurement request not found' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Load business details
+    const { data: business, error: busErr } = await supabase
+      .from('businesses')
+      .select('id, name')
+      .eq('id', business_id)
+      .single()
+
+    if (busErr || !business) {
+      return new Response(JSON.stringify({ error: 'Business not found' }), {
         status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -66,6 +79,19 @@ Deno.serve(async (req) => {
 
     const productName = (procReq as any).products?.name || 'מוצר'
     const quantity = procReq.requested_quantity
+    const businessName = business.name
+
+    // Load supplier details for message personalization
+    const { data: suppliers, error: suppErr } = await supabase
+      .from('suppliers')
+      .select('id, name, agent_name')
+      .in('id', supplierIds)
+
+    if (suppErr) {
+      console.error('Error fetching suppliers:', suppErr)
+    }
+
+    const supplierMap = new Map((suppliers || []).map(s => [s.id, s]))
 
     for (const supplierId of supplierIds) {
       // Try to insert conversation (unique constraint will prevent duplicates)
@@ -96,7 +122,21 @@ Deno.serve(async (req) => {
 
       // If mode is bot, create queued message
       if (conv.mode === 'bot') {
-        const messageText = `שלום, אני מעוניין לברר לגבי המוצר ${productName}.\nהאם ניתן לקבל הצעת מחיר עבור ${quantity} יחידות?\nתודה.`
+        const supplier = supplierMap.get(supplierId)
+        const supplierName = supplier?.agent_name || supplier?.name || 'בן שיח ספק'
+
+        const messageText = `שלום ${supplierName},
+מדבר ${businessName}.
+אשמח לקבל הצעת מחיר ל:
+${productName}
+כמות: ${quantity}
+
+נא לציין:
+• מחיר ליחידה
+• זמינות במלאי
+• זמן אספקה
+
+תודה 🙏`
 
         const { error: msgErr } = await supabase
           .from('procurement_messages')
