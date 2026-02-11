@@ -1,5 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// UUID v4 validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -32,6 +35,18 @@ Deno.serve(async (req) => {
 
     if (!business_id || !created_by) {
       return new Response(JSON.stringify({ error: 'business_id and created_by are required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Validate business_id is a proper UUID
+    if (!UUID_REGEX.test(business_id)) {
+      console.error('[procurement-backfill-low-stock] Invalid business_id UUID format:', {
+        received: business_id,
+        timestamp: new Date().toISOString(),
+      })
+      return new Response(JSON.stringify({ error: 'Invalid business_id format - must be a valid UUID' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })

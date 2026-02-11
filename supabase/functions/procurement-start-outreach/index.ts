@@ -1,5 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// UUID v4 validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -25,6 +28,20 @@ Deno.serve(async (req) => {
     const { business_id, procurement_request_id } = await req.json()
     if (!business_id || !procurement_request_id) {
       return new Response(JSON.stringify({ error: 'Missing business_id or procurement_request_id' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Validate business_id and procurement_request_id are proper UUIDs
+    if (!UUID_REGEX.test(business_id) || !UUID_REGEX.test(procurement_request_id)) {
+      console.error('[procurement-start-outreach] Invalid UUID format:', {
+        business_id_valid: UUID_REGEX.test(business_id),
+        procurement_request_id_valid: UUID_REGEX.test(procurement_request_id),
+        received_business_id: business_id,
+        received_procurement_request_id: procurement_request_id,
+        timestamp: new Date().toISOString(),
+      })
+      return new Response(JSON.stringify({ error: 'Invalid business_id or procurement_request_id format - must be valid UUIDs' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
