@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { isValidUUID } from '@/lib/utils/businessId';
 
 export const useBusinessAccess = () => {
   const { user } = useAuth();
@@ -30,7 +31,18 @@ export const useBusinessAccess = () => {
         return null;
       }
       
-      return data?.[0] || null;
+      const row = data?.[0] || null;
+      
+      // Validate that business_id is a real UUID
+      if (row && row.business_id && !isValidUUID(row.business_id)) {
+        console.error('[useBusinessAccess] Invalid business_id from DB:', row.business_id, {
+          user_id: user.id,
+          user_email: user.email,
+        });
+        return null;
+      }
+      
+      return row;
     },
     enabled: !!user?.id && hasAccess,
   });
