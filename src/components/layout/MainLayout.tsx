@@ -6,6 +6,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { BusinessDiagnosticPanel } from '@/components/dev/BusinessDiagnosticPanel';
 
 // Custom hook to detect if sidebar should be a drawer (screen < 1024px)
 function useIsSidebarDrawer() {
@@ -104,6 +105,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </main>
         </div>
       </div>
+      <BusinessDiagnosticPanel />
     </div>
   );
 };
