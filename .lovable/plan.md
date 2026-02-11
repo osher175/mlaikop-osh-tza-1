@@ -1,202 +1,106 @@
 
-# תוכנית: סוכן רכש חכם -- מותגים, ספקים ושיחות
 
-## סקירה כללית
+# Low-Stock Automation Trigger -- Implementation Plan
 
-הפיצ'ר מוסיף שכבת "סוכן רכש" שיודע לבחור אוטומטית ספק ראשי + ספק השוואה לכל בקשת רכש, ולנהל שיחות מובנות (בוט/ידני) מול הספקים. הזמנה בפועל -- תמיד ידנית.
-
-## חלק A -- מסד נתונים (6 מיגרציות)
-
-### מיגרציה 1: טבלת `brands`
-
-```text
-brands
-  id          uuid PK default gen_random_uuid()
-  name        text UNIQUE NOT NULL
-  tier        text NOT NULL CHECK (tier IN ('A','B','C'))
-  created_at  timestamptz default now()
-```
-
-RLS: enable, policy SELECT/INSERT/UPDATE/DELETE for authenticated users.
-
-### מיגרציה 2: טבלת `supplier_brands`
-
-```text
-supplier_brands
-  id           uuid PK default gen_random_uuid()
-  business_id  uuid NOT NULL REFERENCES businesses(id)
-  supplier_id  uuid NOT NULL REFERENCES suppliers(id)
-  brand_id     uuid NOT NULL REFERENCES brands(id)
-  priority     int default 1
-  is_active    boolean default true
-  created_at   timestamptz default now()
-  UNIQUE(business_id, supplier_id, brand_id)
-```
-
-RLS: enable, policies scoped to business_id via `user_has_business_access`.
-
-### מיגרציה 3: טבלת `category_supplier_preferences`
-
-```text
-category_supplier_preferences
-  id           uuid PK default gen_random_uuid()
-  business_id  uuid NOT NULL REFERENCES businesses(id)
-  category_id  uuid NOT NULL REFERENCES product_categories(id)
-  supplier_id  uuid NOT NULL REFERENCES suppliers(id)
-  priority     int default 1
-  created_at   timestamptz default now()
-  UNIQUE(business_id, category_id, supplier_id)
-```
-
-RLS: enable, policies scoped to business_id.
-
-### מיגרציה 4: הוספת עמודות ל-`products`
-
-```sql
-ALTER TABLE products
-  ADD COLUMN brand_id uuid REFERENCES brands(id) ON DELETE SET NULL,
-  ADD COLUMN preferred_supplier_id uuid REFERENCES suppliers(id) ON DELETE SET NULL;
-```
-
-Nullable -- לא שובר קוד קיים.
-
-### מיגרציה 5: טבלת `procurement_conversations`
-
-```text
-procurement_conversations
-  id                      uuid PK default gen_random_uuid()
-  business_id             uuid NOT NULL REFERENCES businesses(id)
-  procurement_request_id  uuid NOT NULL REFERENCES procurement_requests(id)
-  product_id              uuid NOT NULL REFERENCES products(id)
-  supplier_id             uuid NOT NULL REFERENCES suppliers(id)
-  status                  text NOT NULL default 'active' CHECK (status IN ('active','closed'))
-  mode                    text NOT NULL default 'bot' CHECK (mode IN ('bot','manual'))
-  last_outgoing_at        timestamptz NULL
-  last_incoming_at        timestamptz NULL
-  created_at              timestamptz default now()
-  UNIQUE(business_id, product_id, supplier_id, status)
-```
-
-ה-UNIQUE constraint מונע שיחה כפולה פעילה לאותו מוצר+ספק.
-RLS: enable, policies scoped to business_id.
-
-### מיגרציה 6: טבלת `procurement_messages`
-
-```text
-procurement_messages
-  id                   uuid PK default gen_random_uuid()
-  conversation_id      uuid NOT NULL REFERENCES procurement_conversations(id) ON DELETE CASCADE
-  direction            text NOT NULL CHECK (direction IN ('outgoing','incoming'))
-  message_text         text NOT NULL
-  provider_message_id  text NULL
-  status               text NOT NULL default 'queued' CHECK (status IN ('queued','sent','delivered','failed'))
-  created_at           timestamptz default now()
-```
-
-RLS: enable, policies via join to conversations -> business_id.
+## Overview
+Implement a production-grade, crossing-only low-stock automation system using an outbox pattern. This ensures that only genuine threshold crossings (after the feature is enabled) generate events -- preventing false alerts for products already below threshold.
 
 ---
 
-## חלק B -- Edge Functions (2 פונקציות חדשות)
+## Part A: Add "Official Enable Time" Column
 
-### Edge Function 1: `procurement-select-suppliers`
+**What**: Add `low_stock_enabled_at timestamptz` to `notification_settings`.
 
-- **Input**: `{ business_id, product_id }`
-- **Output**: `{ primary_supplier_id, compare_supplier_id, rationale }`
+**How**: A single SQL migration will:
+1. Add the column (nullable, no default).
+2. Create a trigger `trg_set_low_stock_enabled_at` on `notification_settings` that fires BEFORE UPDATE. When `low_stock_enabled` changes from `false` to `true` and `low_stock_enabled_at IS NULL`, it sets `low_stock_enabled_at = now()`. When disabled, the timestamp is preserved (not reset).
 
-לוגיקה לבחירת ספק ראשי:
-1. אם למוצר יש `preferred_supplier_id` -- זה הראשי
-2. אחרת: חפש ב-`category_supplier_preferences` לפי `product_category_id` של המוצר (priority הכי נמוך = עדיפות הכי גבוהה)
-3. אחרת: חפש ב-`supplier_brands` ספק שמוכר את ה-`brand_id` של המוצר (priority הכי נמוך)
-4. אם אין -- primary = null
-
-לוגיקה לבחירת ספק השוואה:
-- חפש ספק שונה מה-primary שמוכר מותג באותה קטגוריה, לפי tier (A קודם, אז B, אז C)
-- אם אין -- compare = null
-
-אבטחה: Authorization header, JWT verification, שימוש ב-env vars בלבד.
-
-### Edge Function 2: `procurement-start-outreach`
-
-- **Input**: `{ business_id, procurement_request_id }`
-- **Output**: `{ conversations_created, messages_queued, already_active }`
-
-לוגיקה:
-1. טען את ה-procurement_request (כולל product_id)
-2. קרא ל-`procurement-select-suppliers` (internal call או לוגיקה inline) לקבלת primary + compare
-3. לכל supplier (primary, compare אם קיים):
-   - נסה INSERT ל-`procurement_conversations` עם status='active'
-   - אם unique constraint נכשל -- שיחה כבר קיימת, דלג (ספירת `already_active`)
-   - בדוק mode: אם manual -- לא יוצרים הודעה
-   - אם bot -- צור הודעה בעברית ב-`procurement_messages` עם status='queued'
-4. עדכן `procurement_request.status` ל-`waiting_for_quotes`
-5. **לא שולחים בפועל לוואטסאפ** -- רק יוצרים הודעות queued
-
-Template הודעה (עברית):
-```
-שלום, אני מעוניין לברר לגבי המוצר [שם מוצר].
-האם ניתן לקבל הצעת מחיר עבור [כמות] יחידות?
-תודה.
-```
-
-אבטחה: Authorization header, JWT verification, env vars בלבד.
-
-Config ב-`supabase/config.toml`:
-```toml
-[functions.procurement-select-suppliers]
-verify_jwt = true
-
-[functions.procurement-start-outreach]
-verify_jwt = true
-```
+**Why trigger instead of app code**: The trigger guarantees correctness regardless of which UI component or API path updates the setting. Both `NotificationSettings.tsx` and `NotificationManagement.tsx` update this table through different flows -- a DB trigger covers all paths with zero app-code changes.
 
 ---
 
-## חלק C -- Frontend UI
+## Part B: Outbox Table
 
-### שינוי 1: Hook חדש `useProcurementConversations`
+**What**: Create `automation_outbox` table for n8n or any external consumer to poll.
 
-קובץ: `src/hooks/useProcurementConversations.tsx`
+**Schema**:
+- `id` uuid PK
+- `event_type` text NOT NULL
+- `business_id` uuid NOT NULL (FK to businesses)
+- `product_id` uuid NOT NULL (FK to products)
+- `payload` jsonb NOT NULL
+- `created_at` timestamptz DEFAULT now()
+- `processed_at` timestamptz (NULL = unprocessed)
 
-- Query: שליפת conversations לפי `procurement_request_id` כולל `suppliers(name, phone)`
-- Mutation: `toggleMode` -- עדכון mode (bot/manual) ב-conversation
-- Query: שליפת messages לפי `conversation_id`
+**Index**: On `(processed_at, created_at)` for efficient polling of unprocessed events.
 
-### שינוי 2: רכיב חדש `ConversationsList`
-
-קובץ: `src/components/procurement/ConversationsList.tsx`
-
-- מקבל `requestId` ו-`productId`
-- מציג רשימת שיחות ספקים: שם ספק, mode (bot/manual toggle), last_outgoing_at
-- אם שיחה פעילה קיימת -- מציג "כבר נשלח" ולא מאפשר שליחה נוספת
-- לכל שיחה: אפשרות לצפות בהיסטוריית הודעות (accordion/collapsible)
-- כפתור: "התחל סקר שוק (סוכן רכש)" -- קורא ל-`procurement-start-outreach`
-
-### שינוי 3: עדכון `ProcurementDetailDrawer`
-
-- הוספת סקשן "שיחות ספקים" אחרי הצעות מחיר, לפני פעולות
-- שימוש ב-`ConversationsList` component
-- הכפתור "התחל סקר שוק" מופיע רק כשאין conversations פעילות (או כפתור "רענן סקר")
-
-### שינוי 4: עדכון Supabase types
-
-הטייפים יתעדכנו אוטומטית אחרי יצירת המיגרציות -- צריך לוודא ש-`procurement_conversations` ו-`procurement_messages` קיימים בטייפים.
+**RLS Policies**:
+- SELECT: Business owners and approved business users can read their own business outbox events
+- INSERT: Restricted to `true` (trigger-based inserts run as SECURITY DEFINER context)
+- UPDATE: Business owners can mark events as processed
+- No DELETE policy (events are kept for audit)
 
 ---
 
-## פרטים טכניים
+## Part C: Crossing-Only Trigger on Products
 
-### סדר ביצוע
-1. מיגרציות DB (1-6) -- יוצרות את הטבלאות והעמודות
-2. Edge Functions (select-suppliers, start-outreach) -- לוגיקה עסקית
-3. עדכון config.toml -- JWT verification
-4. Hook חדש + Component חדש
-5. עדכון ProcurementDetailDrawer
+**What**: A trigger function `enqueue_low_stock_crossing()` on `products` table, firing AFTER UPDATE OF `quantity`.
 
-### מה לא משתנה
-- עיצוב קיים -- ללא שינוי צבעים, פונטים, layout
-- דפים קיימים -- לא נמחקים
-- כפתורים קיימים -- לא מוסרים
-- מבנה DB קיים -- רק הוספת עמודות nullable
-- תהליך הזמנה -- תמיד ידני, אין הזמנה אוטומטית
-- שליחת WhatsApp בפועל -- לא בשלב זה (רק queued messages)
+**Logic** (in order):
+1. If `NEW.quantity = OLD.quantity` -- return immediately (no change).
+2. Look up `notification_settings` for `NEW.business_id`. If no row exists -- return (automation not configured).
+3. Check `low_stock_enabled = true` and `low_stock_enabled_at IS NOT NULL`.
+4. Check cutover: `now() >= low_stock_enabled_at`.
+5. Resolve threshold: `COALESCE(product_thresholds.low_stock_threshold, notification_settings.low_stock_threshold, 5)`.
+6. Check crossing-down: `OLD.quantity > threshold AND NEW.quantity <= threshold`.
+7. If all pass -- INSERT into `automation_outbox` with the specified payload structure.
+
+**Trigger**: `trg_enqueue_low_stock_crossing` AFTER UPDATE OF `quantity` ON `products` FOR EACH ROW.
+
+The trigger function uses `SECURITY DEFINER` + `SET search_path = public` (following existing project patterns) so it can read `notification_settings` and `product_thresholds` and write to `automation_outbox` regardless of the calling user's RLS context.
+
+---
+
+## Part D: Frontend Update
+
+**Minimal change**: Update the `useNotificationSettings` query to also select `low_stock_enabled_at` so the UI can display when automation was activated (optional diagnostic info). No other UI changes required -- the trigger handles everything at the DB level.
+
+---
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| New migration SQL | All schema changes (A, B, C) in one migration |
+| `src/hooks/useNotificationSettings.tsx` | Add `low_stock_enabled_at` to select query |
+
+---
+
+## Created Database Objects
+
+| Object | Type |
+|--------|------|
+| `notification_settings.low_stock_enabled_at` | Column |
+| `set_low_stock_enabled_at()` | Function |
+| `trg_set_low_stock_enabled_at` | Trigger on `notification_settings` |
+| `automation_outbox` | Table |
+| `automation_outbox_unprocessed_idx` | Index |
+| `enqueue_low_stock_crossing()` | Function |
+| `trg_enqueue_low_stock_crossing` | Trigger on `products` |
+
+---
+
+## Verification Checklist
+
+**Test Case 1 -- Product already below threshold before enable**:
+1. Product X has quantity=2, threshold=5.
+2. Business enables `low_stock_enabled` (trigger sets `low_stock_enabled_at = now()`).
+3. No quantity change occurs on Product X.
+4. Result: No row in `automation_outbox`. The trigger only fires on quantity UPDATE, and even if quantity is updated to the same value, `OLD.quantity > threshold` is false (2 is not > 5), so the crossing check fails.
+
+**Test Case 2 -- Product drops below threshold after enable**:
+1. Business has `low_stock_enabled = true`, `low_stock_enabled_at = '2026-02-10'`.
+2. Product Y has quantity=10, threshold=5.
+3. Quantity is updated from 10 to 3.
+4. Result: Exactly 1 row in `automation_outbox` with `event_type = 'low_stock_crossed'`, containing old_quantity=10, new_quantity=3, threshold=5.
+
