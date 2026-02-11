@@ -2,6 +2,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 
+// UUID v4 validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -74,6 +77,24 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!product_id || !product_name || !alert_type || !business_id || quantity_at_trigger === undefined) {
       throw new Error('Missing required fields');
+    }
+
+    // Validate business_id is a proper UUID
+    if (!UUID_REGEX.test(business_id)) {
+      console.error('[log-stock-alert] Invalid business_id UUID format:', {
+        received: business_id,
+        timestamp: new Date().toISOString(),
+      });
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invalid business_id format - must be a valid UUID'
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...securityHeaders },
+        }
+      );
     }
 
     console.log('Creating stock alert:', { product_name, alert_type, quantity_at_trigger });
