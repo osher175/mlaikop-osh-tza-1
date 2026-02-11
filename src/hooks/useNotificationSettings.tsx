@@ -27,7 +27,7 @@ export const useNotificationSettings = () => {
       
       const { data, error } = await supabase
         .from('notification_settings')
-        .select('id, business_id, low_stock_threshold, low_stock_enabled, expiration_enabled, expiration_days_warning, plan_limit_enabled, created_at, updated_at')
+        .select('id, business_id, low_stock_threshold, low_stock_enabled, low_stock_enabled_at, expiration_enabled, expiration_days_warning, plan_limit_enabled, created_at, updated_at')
         .eq('business_id', business.id)
         .maybeSingle();
       

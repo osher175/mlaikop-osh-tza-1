@@ -71,6 +71,58 @@ export type Database = {
           },
         ]
       }
+      automation_outbox: {
+        Row: {
+          business_id: string
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          product_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          product_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_outbox_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_outbox_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_outbox_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brands: {
         Row: {
           created_at: string
@@ -475,6 +527,7 @@ export type Database = {
           id: string
           is_active: boolean
           low_stock_enabled: boolean
+          low_stock_enabled_at: string | null
           low_stock_threshold: number
           notification_type: string
           plan_limit_enabled: boolean
@@ -489,6 +542,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           low_stock_enabled?: boolean
+          low_stock_enabled_at?: string | null
           low_stock_threshold?: number
           notification_type?: string
           plan_limit_enabled?: boolean
@@ -503,6 +557,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           low_stock_enabled?: boolean
+          low_stock_enabled_at?: string | null
           low_stock_threshold?: number
           notification_type?: string
           plan_limit_enabled?: boolean
