@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.n8n-outbox-ack]
 verify_jwt = false
+
+[functions.n8n-select-suppliers]
+verify_jwt = false
