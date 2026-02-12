@@ -1,69 +1,60 @@
 
 
-# Low-Stock Automation Trigger -- Implementation Plan
+# Edge Function: `n8n-select-suppliers` -- Implementation Plan
 
 ## Overview
-Implement a production-grade, crossing-only low-stock automation system using an outbox pattern. This ensures that only genuine threshold crossings (after the feature is enabled) generate events -- preventing false alerts for products already below threshold.
+Create a new Edge Function that serves as a secure n8n gateway for supplier selection. It follows the exact same security pattern as `n8n-outbox-pull` and `n8n-outbox-ack` (shared secret via `x-n8n-secret`), but implements the multi-source supplier selection logic currently in `procurement-select-suppliers` -- adapted for n8n consumption with richer output (name, phone, source label).
 
 ---
 
-## Part A: Add "Official Enable Time" Column
-
-**What**: Add `low_stock_enabled_at timestamptz` to `notification_settings`.
-
-**How**: A single SQL migration will:
-1. Add the column (nullable, no default).
-2. Create a trigger `trg_set_low_stock_enabled_at` on `notification_settings` that fires BEFORE UPDATE. When `low_stock_enabled` changes from `false` to `true` and `low_stock_enabled_at IS NULL`, it sets `low_stock_enabled_at = now()`. When disabled, the timestamp is preserved (not reset).
-
-**Why trigger instead of app code**: The trigger guarantees correctness regardless of which UI component or API path updates the setting. Both `NotificationSettings.tsx` and `NotificationManagement.tsx` update this table through different flows -- a DB trigger covers all paths with zero app-code changes.
+## Security & Pattern
+- Authentication via `x-n8n-secret` header (same as existing n8n functions)
+- `service_role` used internally (server-side only)
+- UUID validation on `business_id` and `product_id`
+- CORS headers identical to `n8n-outbox-pull`
+- `verify_jwt = false` in `config.toml`
 
 ---
 
-## Part B: Outbox Table
+## Input (POST JSON)
 
-**What**: Create `automation_outbox` table for n8n or any external consumer to poll.
+```text
+{
+  "business_id": "<uuid>",
+  "product_id": "<uuid>",
+  "limit": 3            // optional, default 3, max 5
+}
+```
 
-**Schema**:
-- `id` uuid PK
-- `event_type` text NOT NULL
-- `business_id` uuid NOT NULL (FK to businesses)
-- `product_id` uuid NOT NULL (FK to products)
-- `payload` jsonb NOT NULL
-- `created_at` timestamptz DEFAULT now()
-- `processed_at` timestamptz (NULL = unprocessed)
+## Output (JSON)
 
-**Index**: On `(processed_at, created_at)` for efficient polling of unprocessed events.
+```text
+{
+  "suppliers": [
+    {
+      "supplier_id": "<uuid>",
+      "supplier_name": "...",
+      "phone": "...",
+      "source": "preferred" | "category" | "brand",
+      "priority": 1
+    }
+  ]
+}
+```
 
-**RLS Policies**:
-- SELECT: Business owners and approved business users can read their own business outbox events
-- INSERT: Restricted to `true` (trigger-based inserts run as SECURITY DEFINER context)
-- UPDATE: Business owners can mark events as processed
-- No DELETE policy (events are kept for audit)
-
----
-
-## Part C: Crossing-Only Trigger on Products
-
-**What**: A trigger function `enqueue_low_stock_crossing()` on `products` table, firing AFTER UPDATE OF `quantity`.
-
-**Logic** (in order):
-1. If `NEW.quantity = OLD.quantity` -- return immediately (no change).
-2. Look up `notification_settings` for `NEW.business_id`. If no row exists -- return (automation not configured).
-3. Check `low_stock_enabled = true` and `low_stock_enabled_at IS NOT NULL`.
-4. Check cutover: `now() >= low_stock_enabled_at`.
-5. Resolve threshold: `COALESCE(product_thresholds.low_stock_threshold, notification_settings.low_stock_threshold, 5)`.
-6. Check crossing-down: `OLD.quantity > threshold AND NEW.quantity <= threshold`.
-7. If all pass -- INSERT into `automation_outbox` with the specified payload structure.
-
-**Trigger**: `trg_enqueue_low_stock_crossing` AFTER UPDATE OF `quantity` ON `products` FOR EACH ROW.
-
-The trigger function uses `SECURITY DEFINER` + `SET search_path = public` (following existing project patterns) so it can read `notification_settings` and `product_thresholds` and write to `automation_outbox` regardless of the calling user's RLS context.
+Phone comes from `suppliers.phone` column (confirmed it exists in the schema).
 
 ---
 
-## Part D: Frontend Update
+## Supplier Selection Logic (priority order)
 
-**Minimal change**: Update the `useNotificationSettings` query to also select `low_stock_enabled_at` so the UI can display when automation was activated (optional diagnostic info). No other UI changes required -- the trigger handles everything at the DB level.
+The function collects suppliers from 3 sources in order, skipping duplicates, until `limit` is reached:
+
+1. **Preferred**: `products.preferred_supplier_id` -- if set, this is always priority 1 with source `"preferred"`.
+2. **Category**: `category_supplier_preferences` rows matching `business_id` + `product_category_id`, ordered by `priority ASC`. Source: `"category"`.
+3. **Brand**: `supplier_brands` rows matching `business_id` + `brand_id` + `is_active=true`, joined with `brands` for tier ordering (A, B, C), then by `priority ASC`. Source: `"brand"`.
+
+Each supplier is enriched with `name` and `phone` from the `suppliers` table before returning. Duplicates across sources are eliminated (a supplier found in "preferred" won't appear again from "category").
 
 ---
 
@@ -71,36 +62,24 @@ The trigger function uses `SECURITY DEFINER` + `SET search_path = public` (follo
 
 | File | Change |
 |------|--------|
-| New migration SQL | All schema changes (A, B, C) in one migration |
-| `src/hooks/useNotificationSettings.tsx` | Add `low_stock_enabled_at` to select query |
+| `supabase/functions/n8n-select-suppliers/index.ts` | New Edge Function |
+| `supabase/config.toml` | Add `[functions.n8n-select-suppliers]` with `verify_jwt = false` |
 
 ---
 
-## Created Database Objects
+## Technical Details
 
-| Object | Type |
-|--------|------|
-| `notification_settings.low_stock_enabled_at` | Column |
-| `set_low_stock_enabled_at()` | Function |
-| `trg_set_low_stock_enabled_at` | Trigger on `notification_settings` |
-| `automation_outbox` | Table |
-| `automation_outbox_unprocessed_idx` | Index |
-| `enqueue_low_stock_crossing()` | Function |
-| `trg_enqueue_low_stock_crossing` | Trigger on `products` |
+The function structure:
 
----
+1. CORS preflight check
+2. Validate `x-n8n-secret` header (401 if invalid)
+3. Parse JSON body, extract `business_id`, `product_id`, `limit`
+4. UUID validation on both IDs (400 if invalid)
+5. Clamp limit: default 3, max 5
+6. Load product from DB (404 if not found)
+7. Collect supplier IDs from 3 sources (preferred, category, brand) into an ordered array with source labels, skipping duplicates, stopping at limit
+8. Batch-fetch supplier details (name, phone) from `suppliers` table for all collected IDs
+9. Return formatted response
 
-## Verification Checklist
-
-**Test Case 1 -- Product already below threshold before enable**:
-1. Product X has quantity=2, threshold=5.
-2. Business enables `low_stock_enabled` (trigger sets `low_stock_enabled_at = now()`).
-3. No quantity change occurs on Product X.
-4. Result: No row in `automation_outbox`. The trigger only fires on quantity UPDATE, and even if quantity is updated to the same value, `OLD.quantity > threshold` is false (2 is not > 5), so the crossing check fails.
-
-**Test Case 2 -- Product drops below threshold after enable**:
-1. Business has `low_stock_enabled = true`, `low_stock_enabled_at = '2026-02-10'`.
-2. Product Y has quantity=10, threshold=5.
-3. Quantity is updated from 10 to 3.
-4. Result: Exactly 1 row in `automation_outbox` with `event_type = 'low_stock_crossed'`, containing old_quantity=10, new_quantity=3, threshold=5.
+No secrets need to be added -- `N8N_SHARED_SECRET` is already configured.
 
