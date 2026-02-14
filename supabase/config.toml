@@ -35,3 +35,12 @@ verify_jwt = false
 
 [functions.n8n-select-suppliers]
 verify_jwt = false
+
+[functions.meta-embedded-signup-complete]
+verify_jwt = true
+
+[functions.meta-send-message]
+verify_jwt = true
+
+[functions.meta-whatsapp-webhook]
+verify_jwt = false

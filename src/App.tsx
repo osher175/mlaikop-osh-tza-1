@@ -25,6 +25,7 @@ import { AdminSettings } from "@/pages/AdminSettings";
 import StorageManagement from "@/pages/admin/StorageManagement";
 import { Procurement } from "@/pages/Procurement";
 import { ProcurementDetail } from "@/pages/ProcurementDetail";
+import { WhatsAppSettings } from "@/pages/WhatsAppSettings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -126,6 +127,16 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
                     <ProcurementDetail />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* WhatsApp Settings */}
+              <Route
+                path="/settings/whatsapp"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                    <WhatsAppSettings />
                   </ProtectedRoute>
                 }
               />
