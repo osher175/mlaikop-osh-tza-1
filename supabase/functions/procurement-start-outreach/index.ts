@@ -46,6 +46,15 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Premium gate check
+    const { error: premiumError } = await supabase.rpc('require_premium', { p_business_id: business_id })
+    if (premiumError) {
+      console.error('[procurement-start-outreach] Premium check failed:', premiumError.message)
+      return new Response(JSON.stringify({ error: 'Premium subscription required' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     // Load procurement request with product & business info
     const { data: procReq, error: prErr } = await supabase
       .from('procurement_requests')

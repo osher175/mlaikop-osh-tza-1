@@ -165,6 +165,66 @@ export type Database = {
         }
         Relationships: []
       }
+      business_channels: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          last_error: string | null
+          last_health_check_at: string | null
+          phone_number: string | null
+          phone_number_id: string
+          provider: string
+          status: string
+          updated_at: string
+          waba_id: string
+          webhook_verify_token: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_health_check_at?: string | null
+          phone_number?: string | null
+          phone_number_id: string
+          provider?: string
+          status?: string
+          updated_at?: string
+          waba_id: string
+          webhook_verify_token?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_health_check_at?: string | null
+          phone_number?: string | null
+          phone_number_id?: string
+          provider?: string
+          status?: string
+          updated_at?: string
+          waba_id?: string
+          webhook_verify_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_channels_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_channels_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_users: {
         Row: {
           business_id: string
@@ -2464,6 +2524,10 @@ export type Database = {
         Returns: boolean
       }
       cleanup_old_audit_logs: { Args: never; Returns: undefined }
+      create_business_for_new_user: {
+        Args: { p_business_name: string; p_phone?: string }
+        Returns: string
+      }
       delete_user_by_admin: {
         Args: { target_user_id: string }
         Returns: boolean
@@ -2740,6 +2804,7 @@ export type Database = {
         Args: { business_id: string; date_from: string; date_to: string }
         Returns: Json
       }
+      require_premium: { Args: { p_business_id: string }; Returns: boolean }
       score_procurement_quotes: {
         Args: { p_request_id: string }
         Returns: undefined

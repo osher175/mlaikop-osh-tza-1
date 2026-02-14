@@ -52,6 +52,16 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Premium gate check
+    const { error: premiumError } = await supabase.rpc('require_premium', { p_business_id: business_id })
+    if (premiumError) {
+      console.error('[procurement-backfill-low-stock] Premium check failed:', premiumError.message)
+      return new Response(JSON.stringify({ error: 'Premium subscription required' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const qty = Math.max(1, default_requested_quantity)
 
     // Get products with thresholds where quantity <= threshold
