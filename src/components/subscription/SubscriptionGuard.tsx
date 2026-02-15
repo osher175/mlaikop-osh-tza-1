@@ -1,10 +1,10 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Crown } from 'lucide-react';
+import { AlertTriangle, Crown, Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 interface SubscriptionGuardProps {
@@ -17,10 +17,11 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
   requiresSubscription = true 
 }) => {
   const { user } = useAuth();
-  const { subscription, isSubscriptionActive, isTrialValid, daysLeftInTrial, createTrialSubscription } = useSubscription();
+  const { subscription, isSubscriptionActive, isTrialValid, isLoading, daysLeftInTrial, createTrialSubscription } = useSubscription();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isCreatingTrial, setIsCreatingTrial] = useState(false);
+  const trialCreationAttempted = useRef(false);
 
   // Log subscription access for monitoring
   useEffect(() => {
@@ -29,39 +30,47 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
         userId: user.id,
         email: user.email,
         subscriptionStatus: subscription?.status,
-        trialValid: isTrialValid,
-        daysLeft: daysLeftInTrial,
+        isSubscriptionActive,
+        isLoading,
         timestamp: new Date().toISOString()
       });
     }
-  }, [user, subscription, isTrialValid, daysLeftInTrial, requiresSubscription]);
+  }, [user, subscription, isSubscriptionActive, isLoading, requiresSubscription]);
 
   useEffect(() => {
-    // Create trial subscription for new users
-    if (user && !subscription && requiresSubscription) {
+    // Only create trial AFTER loading completes and subscription is confirmed null
+    if (
+      user &&
+      !isLoading &&
+      !subscription &&
+      requiresSubscription &&
+      !trialCreationAttempted.current &&
+      !isCreatingTrial
+    ) {
+      trialCreationAttempted.current = true;
       console.log('Creating trial subscription for new user:', user.email);
       setIsCreatingTrial(true);
       createTrialSubscription().finally(() => {
         setIsCreatingTrial(false);
       });
     }
-  }, [user, subscription, requiresSubscription, createTrialSubscription]);
+  }, [user, subscription, isLoading, requiresSubscription, createTrialSubscription, isCreatingTrial]);
 
   // Check if trial has expired and redirect accordingly
   useEffect(() => {
-    if (user && subscription && subscription.status === 'trial' && !isTrialValid && requiresSubscription) {
+    if (user && subscription && subscription.status === 'trial' && !isTrialValid && !isLoading && requiresSubscription) {
       console.log('Trial expired for user:', user.email, 'Redirecting to subscribe page');
       navigate('/subscribe?expired=true&userId=' + user.id + '&email=' + encodeURIComponent(user.email));
     }
-  }, [user, subscription, isTrialValid, requiresSubscription, navigate]);
+  }, [user, subscription, isTrialValid, isLoading, requiresSubscription, navigate]);
 
-  // Show loading while creating trial
-  if (isCreatingTrial) {
+  // Show loading while fetching subscription or creating trial
+  if (isLoading || isCreatingTrial) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-gray-600">מכין את החשבון שלך...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="mt-2 text-muted-foreground">טוען נתוני מנוי...</p>
         </div>
       </div>
     );
@@ -73,9 +82,9 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
   }
 
   // If user has active subscription or valid trial, show content
-  if (isSubscriptionActive && isTrialValid) {
+  if (isSubscriptionActive) {
     // Show trial warning if in trial period with days remaining info
-    if (subscription?.status === 'trial' && daysLeftInTrial > 0) {
+    if (subscription?.status === 'trial' && isTrialValid && daysLeftInTrial > 0) {
       return (
         <div className="space-y-4">
           <Card className={`border-2 ${daysLeftInTrial <= 3 ? 'border-red-200 bg-red-50' : 'border-orange-200 bg-orange-50'}`} dir="rtl">
@@ -121,7 +130,7 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
             {isExpired ? 'תקופת הניסיון הסתיימה' : 'נדרש מנוי פעיל'}
           </CardTitle>
           {user && (
-            <div className="text-sm text-gray-600 mt-2">
+            <div className="text-sm text-muted-foreground mt-2">
               <p>משתמש: {user.email}</p>
               {daysLeftInTrial === 0 && subscription?.trial_ends_at && (
                 <p>תקופת הניסיון הסתיימה ב: {new Date(subscription.trial_ends_at).toLocaleDateString('he-IL')}</p>
@@ -130,7 +139,7 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
           )}
         </CardHeader>
         <CardContent className="text-center space-y-4">
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             {isExpired 
               ? 'תקופת הניסיון החינמית שלך הסתיימה. כדי להמשיך להשתמש במערכת, יש לבחור תוכנית מנוי.'
               : 'כדי לגשת לתוכן זה, יש צורך במנוי פעיל'
