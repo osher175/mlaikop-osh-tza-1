@@ -127,6 +127,19 @@ export const useSubscription = () => {
     if (!user?.id) return false;
 
     try {
+      // Check if a subscription already exists before inserting
+      const { data: existing } = await supabase
+        .from('user_subscriptions')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existing) {
+        console.log('Subscription already exists, skipping trial creation');
+        await refetchSubscription();
+        return true;
+      }
+
       const now = new Date();
       const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
