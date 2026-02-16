@@ -41,8 +41,7 @@ export const ProductPairsTable: React.FC = () => {
   // Get supplier names map
   const supplierMap = new Map(suppliers.map(s => [s.id, s.name]));
 
-  // Check if product pair overrides a category pair (we'd need category pairs for this)
-  const { pairs: categoryPairs } = useSupplierPairs('category');
+  // Override badge removed — we don't have category context per product in this view
 
   const handleAddProductPair = async () => {
     if (!selectedProduct || !newA || !newB || newA === newB) return;
@@ -139,15 +138,10 @@ export const ProductPairsTable: React.FC = () => {
             </thead>
             <tbody>
               {pairs.map(pair => {
-                // Check if this overrides a category pair
-                const hasOverride = categoryPairs.some(cp => cp.is_active);
                 return (
                   <tr key={pair.id} className="border-b">
                     <td className="p-2 font-medium">
                       {pair.product_id?.slice(0, 8)}...
-                      {hasOverride && (
-                        <Badge variant="outline" className="mr-2 text-xs">Override</Badge>
-                      )}
                     </td>
                     <td className="p-2">{supplierMap.get(pair.supplier_a_id) || '-'}</td>
                     <td className="p-2">{supplierMap.get(pair.supplier_b_id) || '-'}</td>

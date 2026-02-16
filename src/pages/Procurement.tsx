@@ -38,8 +38,9 @@ export const Procurement: React.FC = () => {
   const queryClient = useQueryClient();
 
   const businessId = businessContext?.business_id;
-  const { requests, isLoading: requestsLoading } = useProcurementRequests(statusFilter, searchTerm);
-  const { products: lowStockProducts, isLoading: lowStockLoading } = useLowStockProducts();
+  const { requests = [], isLoading: requestsLoading } = useProcurementRequests(statusFilter, searchTerm);
+  const { products: rawLowStockProducts, isLoading: lowStockLoading } = useLowStockProducts();
+  const lowStockProducts = rawLowStockProducts ?? [];
   const { updateStatus, approveRequest } = useProcurementActions();
 
   const formatDate = (dateStr: string) =>
@@ -94,7 +95,7 @@ export const Procurement: React.FC = () => {
           }}
         >
           <CheckCircle className="h-3 w-3 ml-1" />
-          אשר ושלח
+          אשר (מוכן לשליחה)
         </Button>
       );
     }

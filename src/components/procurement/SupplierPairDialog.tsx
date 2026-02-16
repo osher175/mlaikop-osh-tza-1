@@ -38,26 +38,45 @@ export const SupplierPairDialog: React.FC<SupplierPairDialogProps> = ({
 
   const handleSave = async () => {
     if (!supplierA || !supplierB) return;
+    if (supplierA === supplierB) return;
     setSaving(true);
     try {
+      const categoryId = request.products?.product_category_id;
+
+      // Determine pair source
+      let pairSource: 'category' | 'product' = 'product';
+      if (saveAsDefault && categoryId) {
+        pairSource = 'category';
+      }
+
       // Update the procurement request
       await updateSupplierPair.mutateAsync({
         requestId: request.id,
         supplierAId: supplierA,
         supplierBId: supplierB,
-        pairSource: saveAsDefault ? 'category' : 'product',
+        pairSource,
       });
 
       // Save pair config
-      const categoryId = request.products?.product_category_id;
-      if (saveAsDefault && categoryId) {
-        await upsertPair.mutateAsync({
-          scope: 'category',
-          category_id: categoryId,
-          supplier_a_id: supplierA,
-          supplier_b_id: supplierB,
-          strategy,
-        });
+      if (saveAsDefault) {
+        if (!categoryId) {
+          // No category on this product — skip category save, just save as product
+          await upsertPair.mutateAsync({
+            scope: 'product',
+            product_id: request.product_id,
+            supplier_a_id: supplierA,
+            supplier_b_id: supplierB,
+            strategy,
+          });
+        } else {
+          await upsertPair.mutateAsync({
+            scope: 'category',
+            category_id: categoryId,
+            supplier_a_id: supplierA,
+            supplier_b_id: supplierB,
+            strategy,
+          });
+        }
       } else {
         await upsertPair.mutateAsync({
           scope: 'product',
