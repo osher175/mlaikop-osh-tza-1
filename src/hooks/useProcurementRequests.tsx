@@ -17,10 +17,16 @@ export interface ProcurementRequest {
   notes: string | null;
   created_at: string;
   updated_at: string;
-  products?: { name: string; barcode: string | null; quantity: number } | null;
+  supplier_a_id: string | null;
+  supplier_b_id: string | null;
+  pair_source: 'product' | 'category' | 'none';
+  approval_status: 'pending' | 'approved' | 'rejected';
+  products?: { name: string; barcode: string | null; quantity: number; product_category_id: string | null } | null;
   supplier_quotes?: { id: string }[];
   recommended_quote?: { supplier_id: string; price_per_unit: number; suppliers?: { name: string } | null } | null;
   product_threshold?: number | null;
+  supplier_a_name?: string | null;
+  supplier_b_name?: string | null;
 }
 
 export const useProcurementRequests = (statusFilter?: string, searchTerm?: string) => {
@@ -39,7 +45,7 @@ export const useProcurementRequests = (statusFilter?: string, searchTerm?: strin
         .from('procurement_requests')
         .select(`
           *,
-          products(name, barcode, quantity),
+          products(name, barcode, quantity, product_category_id),
           supplier_quotes(id)
         `)
         .eq('business_id', businessId)
@@ -68,7 +74,7 @@ export const useProcurementRequests = (statusFilter?: string, searchTerm?: strin
       const thresholdMap = new Map<string, number>();
       (thresholds || []).forEach((t: any) => thresholdMap.set(t.product_id, t.low_stock_threshold));
 
-      // Fetch recommended quotes in batch (no N+1)
+      // Fetch recommended quotes in batch
       const quoteIds = rawData
         .map((r: any) => r.recommended_quote_id)
         .filter(Boolean) as string[];
@@ -83,17 +89,36 @@ export const useProcurementRequests = (statusFilter?: string, searchTerm?: strin
         (quotesData || []).forEach((q: any) => quoteMap.set(q.id, q));
       }
 
+      // Fetch supplier names for pairs in batch
+      const supplierIds = new Set<string>();
+      rawData.forEach((r: any) => {
+        if (r.supplier_a_id) supplierIds.add(r.supplier_a_id);
+        if (r.supplier_b_id) supplierIds.add(r.supplier_b_id);
+      });
+
+      let supplierNameMap = new Map<string, string>();
+      if (supplierIds.size > 0) {
+        const { data: suppData } = await supabase
+          .from('suppliers')
+          .select('id, name')
+          .in('id', Array.from(supplierIds));
+
+        (suppData || []).forEach((s: any) => supplierNameMap.set(s.id, s.name));
+      }
+
       return rawData.map((req: any) => ({
         ...req,
         supplier_quotes: Array.isArray(req.supplier_quotes) ? req.supplier_quotes.flat() : [],
         recommended_quote: req.recommended_quote_id ? (quoteMap.get(req.recommended_quote_id) || null) : null,
         product_threshold: thresholdMap.get(req.product_id) ?? null,
+        supplier_a_name: req.supplier_a_id ? (supplierNameMap.get(req.supplier_a_id) || null) : null,
+        supplier_b_name: req.supplier_b_id ? (supplierNameMap.get(req.supplier_b_id) || null) : null,
       })) as unknown as ProcurementRequest[];
     },
     enabled: !!businessId,
   });
 
-  // Client-side search filtering (case-insensitive, null-safe)
+  // Client-side search filtering
   const filteredRequests = searchTerm
     ? requests.filter(r => {
         const term = searchTerm.toLowerCase();

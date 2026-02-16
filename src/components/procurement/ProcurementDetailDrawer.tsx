@@ -24,8 +24,14 @@ interface ProcurementDetailDrawerProps {
     recommended_quote_id: string | null;
     created_at: string;
     updated_at: string;
-    products?: { name: string; quantity: number } | null;
+    products?: { name: string; quantity: number; product_category_id?: string | null } | null;
     product_threshold?: number | null;
+    supplier_a_id?: string | null;
+    supplier_b_id?: string | null;
+    supplier_a_name?: string | null;
+    supplier_b_name?: string | null;
+    pair_source?: string | null;
+    approval_status?: string | null;
   } | null;
 }
 
@@ -106,6 +112,26 @@ export const ProcurementDetailDrawer: React.FC<ProcurementDetailDrawerProps> = (
               <span className="font-medium mr-1">{formatDate(request.updated_at)}</span>
             </div>
           </div>
+
+          {/* Supplier Pair */}
+          {(request.supplier_a_name || request.supplier_b_name) && (
+            <>
+              <Separator />
+              <div>
+                <h4 className="font-medium text-sm mb-2">זוג ספקים</h4>
+                <div className="text-sm space-y-1">
+                  <div><span className="text-muted-foreground">ספק A:</span> <span className="font-medium mr-1">{request.supplier_a_name || '-'}</span></div>
+                  <div><span className="text-muted-foreground">ספק B:</span> <span className="font-medium mr-1">{request.supplier_b_name || '-'}</span></div>
+                  {request.pair_source && request.pair_source !== 'none' && (
+                    <div><span className="text-muted-foreground">מקור:</span> <Badge variant="outline" className="mr-1 text-xs">{request.pair_source === 'product' ? 'מוצר' : 'קטגוריה'}</Badge></div>
+                  )}
+                  {request.approval_status && (
+                    <div><span className="text-muted-foreground">אישור:</span> <Badge variant={request.approval_status === 'approved' ? 'default' : 'outline'} className="mr-1 text-xs">{request.approval_status === 'approved' ? 'אושר' : request.approval_status === 'rejected' ? 'נדחה' : 'ממתין'}</Badge></div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
           <Separator />
 
