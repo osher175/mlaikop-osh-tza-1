@@ -3,15 +3,18 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingCart, Package, Search, ScanLine, MoreVertical, AlertTriangle, Truck, CheckCircle, XCircle, Play } from 'lucide-react';
+import { ShoppingCart, Package, Search, ScanLine, MoreVertical, AlertTriangle, Truck, CheckCircle, XCircle, Play, Settings, Users } from 'lucide-react';
 import { useProcurementRequests } from '@/hooks/useProcurementRequests';
 import { useLowStockProducts } from '@/hooks/useLowStockProducts';
 import { useProcurementActions } from '@/hooks/useProcurementActions';
 import { ProcurementStatusBadge } from '@/components/procurement/ProcurementStatusBadge';
 import { ProcurementDetailDrawer } from '@/components/procurement/ProcurementDetailDrawer';
+import { SupplierPairDialog } from '@/components/procurement/SupplierPairDialog';
+import { ProcurementSettingsTab } from '@/components/procurement/ProcurementSettingsTab';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +29,7 @@ export const Procurement: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [pairDialogRequest, setPairDialogRequest] = useState<any>(null);
 
   const { businessContext } = useBusinessAccess();
   const { user } = useAuth();
@@ -36,7 +40,7 @@ export const Procurement: React.FC = () => {
   const businessId = businessContext?.business_id;
   const { requests, isLoading: requestsLoading } = useProcurementRequests(statusFilter, searchTerm);
   const { products: lowStockProducts, isLoading: lowStockLoading } = useLowStockProducts();
-  const { updateStatus } = useProcurementActions();
+  const { updateStatus, approveRequest } = useProcurementActions();
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' });
@@ -49,9 +53,12 @@ export const Procurement: React.FC = () => {
         body: { business_id: businessId, created_by: user.id, default_requested_quantity: 1 },
       });
       if (error) throw error;
+      const pairedInfo = data.paired !== undefined
+        ? ` (${data.paired} עם זוג ספקים, ${data.unpaired} ללא)`
+        : '';
       toast({
         title: 'סריקה הושלמה',
-        description: `נוצרו ${data.created} בקשות חדשות, ${data.skipped} דולגו (כבר קיימות)`,
+        description: `נוצרו ${data.created} בקשות חדשות${pairedInfo}, ${data.skipped} דולגו (כבר קיימות)`,
       });
       queryClient.invalidateQueries({ queryKey: ['procurement-requests'] });
       queryClient.invalidateQueries({ queryKey: ['low-stock-products'] });
@@ -65,6 +72,69 @@ export const Procurement: React.FC = () => {
   const openDrawer = (req: any) => {
     setSelectedRequest(req);
     setDrawerOpen(true);
+  };
+
+  const getApprovalBadge = (req: any) => {
+    if (req.approval_status === 'approved') {
+      return <Badge className="bg-green-100 text-green-800 border-green-300">אושר</Badge>;
+    }
+    if (req.approval_status === 'rejected') {
+      return <Badge variant="destructive">נדחה</Badge>;
+    }
+    // pending
+    if (req.supplier_a_id && req.supplier_b_id) {
+      return (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs"
+          onClick={(e) => {
+            e.stopPropagation();
+            approveRequest.mutate(req.id);
+          }}
+        >
+          <CheckCircle className="h-3 w-3 ml-1" />
+          אשר ושלח
+        </Button>
+      );
+    }
+    return (
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-7 text-xs"
+        onClick={(e) => {
+          e.stopPropagation();
+          setPairDialogRequest(req);
+        }}
+      >
+        <Users className="h-3 w-3 ml-1" />
+        הגדר ספקים
+      </Button>
+    );
+  };
+
+  const getSupplierPairDisplay = (req: any) => {
+    if (req.supplier_a_name && req.supplier_b_name) {
+      return (
+        <span className="text-xs font-medium">
+          {req.supplier_a_name} + {req.supplier_b_name}
+        </span>
+      );
+    }
+    return (
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-7 text-xs text-muted-foreground"
+        onClick={(e) => {
+          e.stopPropagation();
+          setPairDialogRequest(req);
+        }}
+      >
+        לא הוגדר — הגדר
+      </Button>
+    );
   };
 
   if (!businessId) {
@@ -111,6 +181,10 @@ export const Procurement: React.FC = () => {
             <TabsTrigger value="requests">
               <Package className="h-4 w-4 ml-1" />
               בקשות רכש
+            </TabsTrigger>
+            <TabsTrigger value="settings">
+              <Settings className="h-4 w-4 ml-1" />
+              הגדרות רכש
             </TabsTrigger>
           </TabsList>
 
@@ -228,9 +302,11 @@ export const Procurement: React.FC = () => {
                         <span>כמות: {req.requested_quantity}</span>
                         <span>{formatDate(req.updated_at)}</span>
                       </div>
-                      {req.notes && (
-                        <p className="text-xs text-muted-foreground mt-2 truncate">{req.notes}</p>
-                      )}
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs text-muted-foreground">ספקים:</span>
+                        {getSupplierPairDisplay(req)}
+                      </div>
+                      <div className="mt-2">{getApprovalBadge(req)}</div>
                     </CardContent>
                   </Card>
                 ))}
@@ -245,8 +321,9 @@ export const Procurement: React.FC = () => {
                           <th className="text-right p-3 font-medium text-sm">מוצר</th>
                           <th className="text-right p-3 font-medium text-sm">כמות</th>
                           <th className="text-right p-3 font-medium text-sm">סטטוס</th>
+                          <th className="text-right p-3 font-medium text-sm">זוג ספקים</th>
+                          <th className="text-right p-3 font-medium text-sm">אישור</th>
                           <th className="text-right p-3 font-medium text-sm">עודכן</th>
-                          <th className="text-right p-3 font-medium text-sm">הערות</th>
                           <th className="text-right p-3 font-medium text-sm">פעולות</th>
                         </tr>
                       </thead>
@@ -260,8 +337,9 @@ export const Procurement: React.FC = () => {
                             <td className="p-3 text-sm font-medium">{req.products?.name || '-'}</td>
                             <td className="p-3 text-sm">{req.requested_quantity}</td>
                             <td className="p-3"><ProcurementStatusBadge status={req.status} /></td>
+                            <td className="p-3">{getSupplierPairDisplay(req)}</td>
+                            <td className="p-3">{getApprovalBadge(req)}</td>
                             <td className="p-3 text-sm">{formatDate(req.updated_at)}</td>
-                            <td className="p-3 text-sm text-muted-foreground max-w-[200px] truncate">{req.notes || '-'}</td>
                             <td className="p-3" onClick={e => e.stopPropagation()}>
                               {!['resolved_external', 'cancelled', 'ordered'].includes(req.status) && (
                                 <DropdownMenu>
@@ -304,6 +382,11 @@ export const Procurement: React.FC = () => {
               </Card>
             )}
           </TabsContent>
+
+          {/* Tab: Settings */}
+          <TabsContent value="settings" className="mt-4">
+            <ProcurementSettingsTab />
+          </TabsContent>
         </Tabs>
 
         {/* Detail Drawer */}
@@ -312,6 +395,15 @@ export const Procurement: React.FC = () => {
           onOpenChange={setDrawerOpen}
           request={selectedRequest}
         />
+
+        {/* Supplier Pair Dialog */}
+        {pairDialogRequest && (
+          <SupplierPairDialog
+            open={!!pairDialogRequest}
+            onOpenChange={(open) => { if (!open) setPairDialogRequest(null); }}
+            request={pairDialogRequest}
+          />
+        )}
       </div>
     </MainLayout>
   );

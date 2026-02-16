@@ -62,5 +62,49 @@ export const useProcurementActions = () => {
     },
   });
 
-  return { updateStatus, updateNotes, updateRecommendedQuote };
+  const updateSupplierPair = useMutation({
+    mutationFn: async ({ requestId, supplierAId, supplierBId, pairSource }: {
+      requestId: string;
+      supplierAId: string;
+      supplierBId: string;
+      pairSource: string;
+    }) => {
+      const { error } = await supabase
+        .from('procurement_requests')
+        .update({
+          supplier_a_id: supplierAId,
+          supplier_b_id: supplierBId,
+          pair_source: pairSource,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', requestId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidate();
+      toast({ title: 'זוג ספקים עודכן בבקשה' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'שגיאה בעדכון זוג ספקים', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const approveRequest = useMutation({
+    mutationFn: async (requestId: string) => {
+      const { error } = await supabase
+        .from('procurement_requests')
+        .update({ approval_status: 'approved', updated_at: new Date().toISOString() })
+        .eq('id', requestId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidate();
+      toast({ title: 'אושר. מוכן לשליחה לשני ספקים.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'שגיאה באישור הבקשה', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  return { updateStatus, updateNotes, updateRecommendedQuote, updateSupplierPair, approveRequest };
 };

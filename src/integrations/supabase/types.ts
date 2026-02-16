@@ -883,43 +883,55 @@ export type Database = {
       }
       procurement_requests: {
         Row: {
+          approval_status: string
           business_id: string
           created_at: string
           created_by: string | null
           id: string
           notes: string | null
+          pair_source: string
           product_id: string
           recommended_quote_id: string | null
           requested_quantity: number
           status: string
+          supplier_a_id: string | null
+          supplier_b_id: string | null
           trigger_type: string
           updated_at: string
           urgency: string
         }
         Insert: {
+          approval_status?: string
           business_id: string
           created_at?: string
           created_by?: string | null
           id?: string
           notes?: string | null
+          pair_source?: string
           product_id: string
           recommended_quote_id?: string | null
           requested_quantity?: number
           status?: string
+          supplier_a_id?: string | null
+          supplier_b_id?: string | null
           trigger_type?: string
           updated_at?: string
           urgency?: string
         }
         Update: {
+          approval_status?: string
           business_id?: string
           created_at?: string
           created_by?: string | null
           id?: string
           notes?: string | null
+          pair_source?: string
           product_id?: string
           recommended_quote_id?: string | null
           requested_quantity?: number
           status?: string
+          supplier_a_id?: string | null
+          supplier_b_id?: string | null
           trigger_type?: string
           updated_at?: string
           urgency?: string
@@ -951,6 +963,34 @@ export type Database = {
             columns: ["recommended_quote_id"]
             isOneToOne: false
             referencedRelation: "supplier_quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_requests_supplier_a_id_fkey"
+            columns: ["supplier_a_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_requests_supplier_a_id_fkey"
+            columns: ["supplier_a_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_requests_supplier_b_id_fkey"
+            columns: ["supplier_b_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_requests_supplier_b_id_fkey"
+            columns: ["supplier_b_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -996,6 +1036,105 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: true
             referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      procurement_supplier_pairs: {
+        Row: {
+          business_id: string
+          category_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          product_id: string | null
+          scope: string
+          strategy: string
+          supplier_a_id: string
+          supplier_b_id: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          product_id?: string | null
+          scope: string
+          strategy?: string
+          supplier_a_id: string
+          supplier_b_id: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          product_id?: string | null
+          scope?: string
+          strategy?: string
+          supplier_a_id?: string
+          supplier_b_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procurement_supplier_pairs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_supplier_pairs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_supplier_pairs_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_supplier_pairs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_supplier_pairs_supplier_a_id_fkey"
+            columns: ["supplier_a_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_supplier_pairs_supplier_a_id_fkey"
+            columns: ["supplier_a_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_supplier_pairs_supplier_b_id_fkey"
+            columns: ["supplier_b_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_supplier_pairs_supplier_b_id_fkey"
+            columns: ["supplier_b_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
             referencedColumns: ["id"]
           },
         ]

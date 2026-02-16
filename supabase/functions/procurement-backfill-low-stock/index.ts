@@ -1,6 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// UUID v4 validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const corsHeaders = {
@@ -9,6 +8,44 @@ const corsHeaders = {
 }
 
 const OPEN_STATUSES = ['draft', 'in_progress', 'waiting_for_quotes', 'quotes_received', 'waiting_for_approval', 'recommended']
+
+interface SupplierPairResult {
+  supplier_a_id: string | null;
+  supplier_b_id: string | null;
+  pair_source: 'product' | 'category' | 'none';
+}
+
+function resolveSupplierPair(
+  productId: string,
+  categoryId: string | null,
+  productPairs: Map<string, any>,
+  categoryPairs: Map<string, any>,
+): SupplierPairResult {
+  // 1. Check product-level pair
+  const productPair = productPairs.get(productId);
+  if (productPair) {
+    return {
+      supplier_a_id: productPair.supplier_a_id,
+      supplier_b_id: productPair.supplier_b_id,
+      pair_source: 'product',
+    };
+  }
+
+  // 2. Fallback to category-level pair
+  if (categoryId) {
+    const catPair = categoryPairs.get(categoryId);
+    if (catPair) {
+      return {
+        supplier_a_id: catPair.supplier_a_id,
+        supplier_b_id: catPair.supplier_b_id,
+        pair_source: 'category',
+      };
+    }
+  }
+
+  // 3. No pair found
+  return { supplier_a_id: null, supplier_b_id: null, pair_source: 'none' };
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -40,7 +77,6 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Validate business_id is a proper UUID
     if (!UUID_REGEX.test(business_id)) {
       console.error('[procurement-backfill-low-stock] Invalid business_id UUID format:', {
         received: business_id,
@@ -65,9 +101,10 @@ Deno.serve(async (req) => {
     const qty = Math.max(1, default_requested_quantity)
 
     // Get products with thresholds where quantity <= threshold
+    // Extended to include product_category_id for category-level pair resolution
     const { data: lowStockProducts, error: productsError } = await supabase
       .from('product_thresholds')
-      .select('product_id, low_stock_threshold, products:products!product_thresholds_product_id_fkey(id, name, quantity)')
+      .select('product_id, low_stock_threshold, products:products!product_thresholds_product_id_fkey(id, name, quantity, product_category_id)')
       .eq('business_id', business_id)
 
     if (productsError) throw productsError
@@ -79,7 +116,7 @@ Deno.serve(async (req) => {
 
     if (belowThreshold.length === 0) {
       console.log('No products below threshold')
-      return new Response(JSON.stringify({ ok: true, created: 0, skipped: 0 }), {
+      return new Response(JSON.stringify({ ok: true, created: 0, skipped: 0, paired: 0, unpaired: 0 }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -105,8 +142,53 @@ Deno.serve(async (req) => {
     const toCreate = belowThreshold.filter((pt: any) => !existingProductIds.has(pt.product_id))
     const skipped = belowThreshold.length - toCreate.length
 
-    if (toCreate.length > 0) {
-      const rows = toCreate.map((pt: any) => ({
+    if (toCreate.length === 0) {
+      console.log(`No new requests to create, skipped=${skipped}`)
+      return new Response(JSON.stringify({ ok: true, created: 0, skipped, paired: 0, unpaired: 0 }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Batch-fetch all active supplier pairs for this business
+    const { data: allPairs, error: pairsError } = await supabase
+      .from('procurement_supplier_pairs')
+      .select('scope, product_id, category_id, supplier_a_id, supplier_b_id')
+      .eq('business_id', business_id)
+      .eq('is_active', true)
+
+    if (pairsError) {
+      console.error('[procurement-backfill-low-stock] Error fetching supplier pairs:', pairsError.message)
+      // Non-fatal: continue without pairs
+    }
+
+    const productPairs = new Map<string, any>()
+    const categoryPairs = new Map<string, any>()
+    ;(allPairs || []).forEach((p: any) => {
+      if (p.scope === 'product' && p.product_id) {
+        productPairs.set(p.product_id, p)
+      } else if (p.scope === 'category' && p.category_id) {
+        categoryPairs.set(p.category_id, p)
+      }
+    })
+
+    let paired = 0
+    let unpaired = 0
+
+    const rows = toCreate.map((pt: any) => {
+      const pair = resolveSupplierPair(
+        pt.product_id,
+        pt.products.product_category_id || null,
+        productPairs,
+        categoryPairs,
+      )
+
+      if (pair.pair_source !== 'none') {
+        paired++
+      } else {
+        unpaired++
+      }
+
+      return {
         business_id,
         product_id: pt.product_id,
         requested_quantity: qty,
@@ -114,18 +196,22 @@ Deno.serve(async (req) => {
         urgency: pt.products.quantity === 0 ? 'high' : 'normal',
         status: 'draft',
         created_by,
-      }))
+        supplier_a_id: pair.supplier_a_id,
+        supplier_b_id: pair.supplier_b_id,
+        pair_source: pair.pair_source,
+        approval_status: 'pending',
+      }
+    })
 
-      const { error: insertError } = await supabase
-        .from('procurement_requests')
-        .insert(rows)
+    const { error: insertError } = await supabase
+      .from('procurement_requests')
+      .insert(rows)
 
-      if (insertError) throw insertError
-    }
+    if (insertError) throw insertError
 
-    console.log(`Backfill complete: created=${toCreate.length}, skipped=${skipped}`)
+    console.log(`Backfill complete: created=${toCreate.length}, skipped=${skipped}, paired=${paired}, unpaired=${unpaired}`)
 
-    return new Response(JSON.stringify({ ok: true, created: toCreate.length, skipped }), {
+    return new Response(JSON.stringify({ ok: true, created: toCreate.length, skipped, paired, unpaired }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
