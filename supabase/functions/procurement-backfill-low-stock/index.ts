@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
     // Extended to include product_category_id for category-level pair resolution
     const { data: lowStockProducts, error: productsError } = await supabase
       .from('product_thresholds')
-      .select('product_id, low_stock_threshold, products:products!product_thresholds_product_id_fkey(id, name, quantity, product_category_id)')
+      .select('product_id, low_stock_threshold, products:products!product_thresholds_product_id_fkey(id, name, quantity, product_category_id, category_id)')
       .eq('business_id', business_id)
 
     if (productsError) throw productsError
@@ -175,9 +175,10 @@ Deno.serve(async (req) => {
     let unpaired = 0
 
     const rows = toCreate.map((pt: any) => {
+      const categoryId = pt.products?.product_category_id ?? pt.products?.category_id ?? null
       const pair = resolveSupplierPair(
         pt.product_id,
-        pt.products.product_category_id || null,
+        categoryId,
         productPairs,
         categoryPairs,
       )

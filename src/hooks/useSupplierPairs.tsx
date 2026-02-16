@@ -61,6 +61,11 @@ export const useSupplierPairs = (scopeFilter?: 'category' | 'product') => {
     }) => {
       if (!businessId) throw new Error('Missing business context');
 
+      // Prevent same supplier
+      if (pair.supplier_a_id === pair.supplier_b_id) {
+        throw new Error('ספק A וספק B לא יכולים להיות אותו ספק');
+      }
+
       const row = {
         business_id: businessId,
         scope: pair.scope,
@@ -73,11 +78,46 @@ export const useSupplierPairs = (scopeFilter?: 'category' | 'product') => {
         updated_at: new Date().toISOString(),
       };
 
+      // If we have an explicit id, just update
       if (pair.id) {
         const { error } = await supabase
           .from('procurement_supplier_pairs')
           .update(row)
           .eq('id', pair.id);
+        if (error) throw error;
+        return;
+      }
+
+      // True upsert: look for existing active pair matching scope key
+      let existingId: string | null = null;
+
+      if (pair.scope === 'category' && pair.category_id) {
+        const { data: existing } = await supabase
+          .from('procurement_supplier_pairs')
+          .select('id')
+          .eq('business_id', businessId)
+          .eq('scope', 'category')
+          .eq('category_id', pair.category_id)
+          .eq('is_active', true)
+          .maybeSingle();
+        existingId = existing?.id ?? null;
+      } else if (pair.scope === 'product' && pair.product_id) {
+        const { data: existing } = await supabase
+          .from('procurement_supplier_pairs')
+          .select('id')
+          .eq('business_id', businessId)
+          .eq('scope', 'product')
+          .eq('product_id', pair.product_id)
+          .eq('is_active', true)
+          .maybeSingle();
+        existingId = existing?.id ?? null;
+      }
+
+      if (existingId) {
+        const { error } = await supabase
+          .from('procurement_supplier_pairs')
+          .update(row)
+          .eq('id', existingId);
         if (error) throw error;
       } else {
         const { error } = await supabase

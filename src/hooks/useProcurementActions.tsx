@@ -99,7 +99,7 @@ export const useProcurementActions = () => {
     },
     onSuccess: () => {
       invalidate();
-      toast({ title: 'אושר. מוכן לשליחה לשני ספקים.' });
+      toast({ title: 'אושר. מוכן לשליחה לשני הספקים.' });
     },
     onError: (error: Error) => {
       toast({ title: 'שגיאה באישור הבקשה', description: error.message, variant: 'destructive' });
