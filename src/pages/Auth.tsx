@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Mail, Lock, User, Bell, Cpu, BarChart3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -14,25 +9,15 @@ export const Auth = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Sign In Form State
-  const [signInData, setSignInData] = useState({
-    email: '',
-    password: '',
-  });
-
-  // Sign Up Form State
+  const [signInData, setSignInData] = useState({ email: '', password: '' });
   const [signUpData, setSignUpData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    firstName: '', lastName: '', email: '', password: '', confirmPassword: '',
   });
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (user && !loading) {
       console.log('User is authenticated, redirecting to dashboard...');
@@ -43,25 +28,19 @@ export const Auth = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       const { error } = await signIn(signInData.email, signInData.password);
-      
       if (error) {
         toast({
           title: 'שגיאה בהתחברות',
-          description: error.message === 'Invalid login credentials' 
+          description: error.message === 'Invalid login credentials'
             ? 'פרטי ההתחברות שגויים'
             : 'אירעה שגיאה בעת ההתחברות',
           variant: 'destructive',
         });
       }
     } catch (error) {
-      toast({
-        title: 'שגיאה',
-        description: 'אירעה שגיאה בלתי צפויה',
-        variant: 'destructive',
-      });
+      toast({ title: 'שגיאה', description: 'אירעה שגיאה בלתי צפויה', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -69,61 +48,28 @@ export const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (signUpData.password !== signUpData.confirmPassword) {
-      toast({
-        title: 'שגיאה',
-        description: 'הסיסמאות אינן תואמות',
-        variant: 'destructive',
-      });
+      toast({ title: 'שגיאה', description: 'הסיסמאות אינן תואמות', variant: 'destructive' });
       return;
     }
-
     if (signUpData.password.length < 6) {
-      toast({
-        title: 'שגיאה',
-        description: 'הסיסמה חייבת להכיל לפחות 6 תווים',
-        variant: 'destructive',
-      });
+      toast({ title: 'שגיאה', description: 'הסיסמה חייבת להכיל לפחות 6 תווים', variant: 'destructive' });
       return;
     }
-
     setIsLoading(true);
-
     try {
-      const { error } = await signUp(
-        signUpData.email, 
-        signUpData.password, 
-        signUpData.firstName, 
-        signUpData.lastName
-      );
-      
+      const { error } = await signUp(signUpData.email, signUpData.password, signUpData.firstName, signUpData.lastName);
       if (error) {
         if (error.message.includes('already registered')) {
-          toast({
-            title: 'שגיאה בהרשמה',
-            description: 'משתמש עם כתובת אימייל זו כבר קיים',
-            variant: 'destructive',
-          });
+          toast({ title: 'שגיאה בהרשמה', description: 'משתמש עם כתובת אימייל זו כבר קיים', variant: 'destructive' });
         } else {
-          toast({
-            title: 'שגיאה בהרשמה',
-            description: 'אירעה שגיאה בעת ההרשמה',
-            variant: 'destructive',
-          });
+          toast({ title: 'שגיאה בהרשמה', description: 'אירעה שגיאה בעת ההרשמה', variant: 'destructive' });
         }
       } else {
-        toast({
-          title: 'הרשמה בוצעה בהצלחה!',
-          description: 'בדוק את תיבת המייל שלך לאישור החשבון',
-        });
+        toast({ title: 'הרשמה בוצעה בהצלחה!', description: 'בדוק את תיבת המייל שלך לאישור החשבון' });
       }
     } catch (error) {
-      toast({
-        title: 'שגיאה',
-        description: 'אירעה שגיאה בלתי צפויה',
-        variant: 'destructive',
-      });
+      toast({ title: 'שגיאה', description: 'אירעה שגיאה בלתי צפויה', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -131,228 +77,356 @@ export const Auth = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F8FAFC' }}>
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#14B8A6' }} />
       </div>
     );
   }
 
+  const features = [
+    { icon: Bell, title: 'Smart Stock Alerts', desc: 'Automated notifications when inventory needs attention' },
+    { icon: Cpu, title: 'AI Procurement Engine', desc: 'Intelligent supplier matching and ordering' },
+    { icon: BarChart3, title: 'Business-Level Insights', desc: 'Analytics built for operational decisions' },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-md">
-        {/* Logo and Brand */}
-        <div className="w-full flex items-center justify-center mb-6">
+    <div className="min-h-screen relative" style={{ background: '#F8FAFC' }}>
+      {/* Subtle background gradients */}
+      <div
+        className="fixed top-0 right-0 w-[600px] h-[600px] pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle at center, rgba(20,184,166,0.05) 0%, transparent 70%)',
+          filter: 'blur(80px)',
+        }}
+      />
+      <div
+        className="fixed bottom-0 left-0 w-[500px] h-[500px] pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle at center, rgba(245,158,11,0.04) 0%, transparent 70%)',
+          filter: 'blur(80px)',
+        }}
+      />
+
+      {/* ─── NAVBAR ─── */}
+      <nav
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 lg:px-10"
+        style={{
+          height: '72px',
+          background: '#FFFFFF',
+          boxShadow: '0 1px 3px rgba(15,23,42,0.06)',
+        }}
+      >
+        <div className="flex items-center gap-3">
           <img
             src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png"
             alt="Mlaiko Logo"
-            className="w-full max-w-xs sm:max-w-sm md:max-w-md h-32 sm:h-40 md:h-48 object-contain"
+            className="h-9 object-contain"
           />
+          <span className="hidden sm:block text-xs" style={{ color: '#475569' }}>
+            by TriggeX Technologies
+          </span>
+        </div>
+        <div className="flex items-center gap-6" dir="rtl">
+          <button
+            onClick={() => setActiveTab('signin')}
+            className="hidden sm:block text-sm font-medium transition-colors duration-150 hover:opacity-80"
+            style={{ color: '#0F172A' }}
+          >
+            התחברות
+          </button>
+          <button
+            onClick={() => setActiveTab('signup')}
+            className="hidden sm:block text-sm font-medium transition-colors duration-150 hover:opacity-80"
+            style={{ color: '#0F172A' }}
+          >
+            הרשמה
+          </button>
+          <div className="hidden sm:block w-px h-5" style={{ background: 'rgba(15,23,42,0.12)' }} />
+          <button
+            className="text-sm font-medium px-4 py-2 rounded-lg transition-all duration-150"
+            style={{
+              border: '1px solid #14B8A6',
+              color: '#14B8A6',
+              background: 'transparent',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(20,184,166,0.05)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            צור קשר
+          </button>
+        </div>
+      </nav>
+
+      {/* ─── MAIN CONTENT ─── */}
+      <main
+        className="max-w-[1240px] mx-auto px-6 lg:px-10 flex flex-col lg:flex-row items-center lg:items-start gap-16"
+        style={{
+          paddingTop: '172px',
+          minHeight: 'calc(100vh - 80px)',
+          animation: 'authFadeIn 400ms ease-out both',
+        }}
+      >
+        {/* ─── LEFT: HERO (LTR) ─── */}
+        <div className="w-full lg:w-[55%] flex flex-col justify-center" dir="ltr">
+          <h1
+            className="text-4xl lg:text-5xl font-bold leading-tight"
+            style={{ color: '#0F172A', letterSpacing: '-0.02em' }}
+          >
+            Inventory Intelligence
+            <br />
+            for Modern Businesses
+          </h1>
+          <p
+            className="mt-5 text-lg leading-relaxed max-w-lg"
+            style={{ color: '#475569' }}
+          >
+            Automated procurement, real-time monitoring and scalable
+            infrastructure — built for precision.
+          </p>
+
+          <div className="mt-10 flex flex-col gap-5">
+            {features.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="flex items-start gap-4">
+                <div
+                  className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{ background: 'rgba(20,184,166,0.08)' }}
+                >
+                  <Icon size={20} strokeWidth={1.5} style={{ color: '#14B8A6' }} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: '#0F172A' }}>{title}</p>
+                  <p className="text-sm mt-0.5" style={{ color: '#475569' }}>{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <Card className="shadow-xl border-0">
-          <CardHeader className="text-center pb-4">
-            <CardTitle className="text-2xl text-gray-900">ברוכים הבאים</CardTitle>
-            <CardDescription className="text-gray-600">
-              התחברו או הירשמו כדי להתחיל
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="signin" className="text-sm">התחברות</TabsTrigger>
-                <TabsTrigger value="signup" className="text-sm">הרשמה</TabsTrigger>
-              </TabsList>
-              
-              {/* Sign In Tab */}
-              <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">כתובת אימייל</Label>
-                    <Input
-                      id="signin-email"
-                      type="email"
-                      placeholder="name@example.com"
-                      value={signInData.email}
-                      onChange={(e) => setSignInData(prev => ({ ...prev, email: e.target.value }))}
-                      required
-                      className="text-right"
+        {/* ─── RIGHT: AUTH CARD (RTL) ─── */}
+        <div className="w-full lg:w-[45%]" dir="rtl">
+          <div
+            className="w-full"
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              boxShadow: '0 20px 40px rgba(15,23,42,0.08)',
+              border: '1px solid rgba(15,23,42,0.06)',
+              padding: '40px',
+            }}
+          >
+            {/* Tabs */}
+            <div className="flex gap-6 mb-8" style={{ borderBottom: '1px solid rgba(15,23,42,0.08)' }}>
+              {(['signin', 'signup'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className="pb-3 text-sm font-medium transition-all duration-150 relative"
+                  style={{
+                    color: activeTab === tab ? '#14B8A6' : '#475569',
+                  }}
+                >
+                  {tab === 'signin' ? 'התחברות' : 'הרשמה'}
+                  {activeTab === tab && (
+                    <span
+                      className="absolute bottom-0 right-0 left-0 h-0.5 rounded-full"
+                      style={{ background: '#14B8A6' }}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password">סיסמה</Label>
-                    <div className="relative">
-                      <Input
-                        id="signin-password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="הכנס סיסמה"
-                        value={signInData.password}
-                        onChange={(e) => setSignInData(prev => ({ ...prev, password: e.target.value }))}
-                        required
-                        className="text-right pl-10"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute left-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4 text-gray-400" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-gray-400" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {/* Forgot Password Link */}
-                  <div className="text-right">
-                    <Link 
-                      to="/forgot-password" 
-                      className="text-sm text-primary hover:text-primary-600 transition-colors"
-                    >
-                      שכחתי את הסיסמה
-                    </Link>
-                  </div>
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-primary hover:bg-primary-600 text-white font-medium py-2.5"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                        מתחבר...
-                      </>
-                    ) : (
-                      'התחבר'
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
-              
-              {/* Sign Up Tab */}
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-firstname">שם פרטי</Label>
-                      <Input
-                        id="signup-firstname"
-                        type="text"
-                        placeholder="שם פרטי"
-                        value={signUpData.firstName}
-                        onChange={(e) => setSignUpData(prev => ({ ...prev, firstName: e.target.value }))}
-                        required
-                        className="text-right"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-lastname">שם משפחה</Label>
-                      <Input
-                        id="signup-lastname"
-                        type="text"
-                        placeholder="שם משפחה"
-                        value={signUpData.lastName}
-                        onChange={(e) => setSignUpData(prev => ({ ...prev, lastName: e.target.value }))}
-                        required
-                        className="text-right"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">כתובת אימייל</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="name@example.com"
-                      value={signUpData.email}
-                      onChange={(e) => setSignUpData(prev => ({ ...prev, email: e.target.value }))}
-                      required
-                      className="text-right"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">סיסמה</Label>
-                    <div className="relative">
-                      <Input
-                        id="signup-password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="בחר סיסמה (לפחות 6 תווים)"
-                        value={signUpData.password}
-                        onChange={(e) => setSignUpData(prev => ({ ...prev, password: e.target.value }))}
-                        required
-                        className="text-right pl-10"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute left-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4 text-gray-400" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-gray-400" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-confirm-password">אישור סיסמה</Label>
-                    <div className="relative">
-                      <Input
-                        id="signup-confirm-password"
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="הכנס שוב את הסיסמה"
-                        value={signUpData.confirmPassword}
-                        onChange={(e) => setSignUpData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                        required
-                        className="text-right pl-10"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute left-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4 text-gray-400" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-gray-400" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-accent hover:bg-accent-600 text-white font-medium py-2.5"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                        נרשם...
-                      </>
-                    ) : (
-                      'הירשם'
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+                  )}
+                </button>
+              ))}
+            </div>
 
-        {/* Footer */}
-        <div className="text-center mt-8 text-sm text-gray-500">
-          <p>פלטפורמת Mlaiko - ניהול מלאי מתקדם</p>
+            {/* SIGN IN FORM */}
+            {activeTab === 'signin' && (
+              <form onSubmit={handleSignIn} className="flex flex-col gap-5">
+                <AuthInput
+                  id="signin-email"
+                  type="email"
+                  label="כתובת אימייל"
+                  placeholder="name@example.com"
+                  icon={<Mail size={18} strokeWidth={1.5} />}
+                  value={signInData.email}
+                  onChange={(v) => setSignInData((p) => ({ ...p, email: v }))}
+                />
+                <AuthInput
+                  id="signin-password"
+                  type={showPassword ? 'text' : 'password'}
+                  label="סיסמה"
+                  placeholder="הכנס סיסמה"
+                  icon={<Lock size={18} strokeWidth={1.5} />}
+                  value={signInData.password}
+                  onChange={(v) => setSignInData((p) => ({ ...p, password: v }))}
+                  trailing={
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="p-1">
+                      {showPassword ? <EyeOff size={16} style={{ color: '#94A3B8' }} /> : <Eye size={16} style={{ color: '#94A3B8' }} />}
+                    </button>
+                  }
+                />
+                <div className="text-right">
+                  <Link to="/forgot-password" className="text-xs font-medium transition-colors duration-150" style={{ color: '#14B8A6' }}>
+                    שכחתי את הסיסמה
+                  </Link>
+                </div>
+                <SubmitButton loading={isLoading} />
+              </form>
+            )}
+
+            {/* SIGN UP FORM */}
+            {activeTab === 'signup' && (
+              <form onSubmit={handleSignUp} className="flex flex-col gap-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <AuthInput
+                    id="signup-firstname"
+                    type="text"
+                    label="שם פרטי"
+                    placeholder="שם פרטי"
+                    icon={<User size={18} strokeWidth={1.5} />}
+                    value={signUpData.firstName}
+                    onChange={(v) => setSignUpData((p) => ({ ...p, firstName: v }))}
+                  />
+                  <AuthInput
+                    id="signup-lastname"
+                    type="text"
+                    label="שם משפחה"
+                    placeholder="שם משפחה"
+                    icon={<User size={18} strokeWidth={1.5} />}
+                    value={signUpData.lastName}
+                    onChange={(v) => setSignUpData((p) => ({ ...p, lastName: v }))}
+                  />
+                </div>
+                <AuthInput
+                  id="signup-email"
+                  type="email"
+                  label="כתובת אימייל"
+                  placeholder="name@example.com"
+                  icon={<Mail size={18} strokeWidth={1.5} />}
+                  value={signUpData.email}
+                  onChange={(v) => setSignUpData((p) => ({ ...p, email: v }))}
+                />
+                <AuthInput
+                  id="signup-password"
+                  type={showPassword ? 'text' : 'password'}
+                  label="סיסמה"
+                  placeholder="לפחות 6 תווים"
+                  icon={<Lock size={18} strokeWidth={1.5} />}
+                  value={signUpData.password}
+                  onChange={(v) => setSignUpData((p) => ({ ...p, password: v }))}
+                  trailing={
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="p-1">
+                      {showPassword ? <EyeOff size={16} style={{ color: '#94A3B8' }} /> : <Eye size={16} style={{ color: '#94A3B8' }} />}
+                    </button>
+                  }
+                />
+                <AuthInput
+                  id="signup-confirm-password"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  label="אישור סיסמה"
+                  placeholder="הכנס שוב את הסיסמה"
+                  icon={<Lock size={18} strokeWidth={1.5} />}
+                  value={signUpData.confirmPassword}
+                  onChange={(v) => setSignUpData((p) => ({ ...p, confirmPassword: v }))}
+                  trailing={
+                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="p-1">
+                      {showConfirmPassword ? <EyeOff size={16} style={{ color: '#94A3B8' }} /> : <Eye size={16} style={{ color: '#94A3B8' }} />}
+                    </button>
+                  }
+                />
+                <SubmitButton loading={isLoading} text="הירשם" />
+              </form>
+            )}
+          </div>
         </div>
-      </div>
+      </main>
+
+      {/* ─── FOOTER ─── */}
+      <footer className="text-center py-10 mt-20">
+        <p className="text-xs" style={{ color: '#475569' }}>
+          © 2026 TriggeX Technologies · Engineered with scalable architecture
+        </p>
+      </footer>
+
+      <style>{`
+        @keyframes authFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 };
+
+/* ─── SUB-COMPONENTS ─── */
+
+function AuthInput({
+  id, type, label, placeholder, icon, value, onChange, trailing,
+}: {
+  id: string; type: string; label: string; placeholder: string;
+  icon: React.ReactNode; value: string;
+  onChange: (v: string) => void; trailing?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-xs font-medium" style={{ color: '#0F172A' }}>
+        {label}
+      </label>
+      <div className="relative">
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#94A3B8' }}>
+          {icon}
+        </span>
+        <input
+          id={id}
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required
+          className="w-full text-sm pr-10 pl-10 py-3 outline-none transition-all duration-150"
+          style={{
+            borderRadius: '10px',
+            border: '1px solid rgba(15,23,42,0.08)',
+            color: '#0F172A',
+            background: '#FFFFFF',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = '#14B8A6';
+            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(20,184,166,0.1)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(15,23,42,0.08)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        />
+        {trailing && (
+          <span className="absolute left-3 top-1/2 -translate-y-1/2">
+            {trailing}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SubmitButton({ loading, text = 'המשך למערכת' }: { loading: boolean; text?: string }) {
+  return (
+    <button
+      type="submit"
+      disabled={loading}
+      className="w-full flex items-center justify-center gap-2 text-sm font-semibold py-3.5 transition-all duration-150 disabled:opacity-60"
+      style={{
+        background: '#F59E0B',
+        color: '#FFFFFF',
+        borderRadius: '12px',
+        boxShadow: '0 2px 8px rgba(245,158,11,0.25)',
+      }}
+      onMouseEnter={(e) => {
+        if (!loading) e.currentTarget.style.background = '#E8930A';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = '#F59E0B';
+      }}
+    >
+      {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+      {loading ? (text === 'הירשם' ? 'נרשם...' : 'מתחבר...') : text}
+    </button>
+  );
+}
