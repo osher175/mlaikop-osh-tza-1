@@ -117,15 +117,12 @@ export const Auth = () => {
           boxShadow: '0 1px 3px rgba(15,23,42,0.06)',
         }}
       >
-        <a
-          href="https://www.triggex.net"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex flex-col items-center justify-center gap-1 transition-opacity duration-150 hover:opacity-70 pr-6"
-        >
-          <span className="text-[12px] sm:text-[13px] tracking-tight font-normal" style={{ color: '#475569' }}>Developed by</span>
-          <img src="/images/triggex-wordmark.png" alt="TriggeX Technologies" className="block h-[72px] md:h-[88px] w-auto object-contain" />
-        </a>
+        {/* Logo */}
+        <img
+          src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png"
+          alt="Mlaiko"
+          className="h-9 w-auto object-contain"
+        />
         <div className="flex items-center gap-6" dir="rtl">
           <button
             onClick={() => { setIsAuthOpen(true); setActiveTab('signin'); }}
@@ -200,6 +197,31 @@ export const Auth = () => {
               </div>
             ))}
           </div>
+
+          {/* ─── TriggeX Signature Panel ─── */}
+          <a
+            href="https://www.triggex.net"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-10 lg:mt-12 inline-flex flex-col items-start gap-1.5 px-6 py-5 rounded-2xl transition-opacity duration-150 hover:opacity-80"
+            style={{
+              background: 'rgba(255,255,255,0.6)',
+              border: '1px solid rgba(15,23,42,0.08)',
+              boxShadow: '0 2px 8px rgba(15,23,42,0.04)',
+            }}
+          >
+            <span className="text-[12px] sm:text-[13px] font-normal" style={{ color: '#475569' }}>
+              Developed by
+            </span>
+            <img
+              src="/images/triggex-wordmark.png"
+              alt="TriggeX Technologies"
+              className="block h-[56px] md:h-[64px] w-auto object-contain"
+            />
+            <span className="text-[12px] sm:text-[13px] font-normal" style={{ color: '#64748B' }}>
+              Engineering scalable digital products
+            </span>
+          </a>
         </div>
 
         {/* ─── RIGHT: LOGO or AUTH CARD ─── */}
