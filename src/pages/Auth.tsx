@@ -9,6 +9,7 @@ export const Auth = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -128,14 +129,14 @@ export const Auth = () => {
         </div>
         <div className="flex items-center gap-6" dir="rtl">
           <button
-            onClick={() => setActiveTab('signin')}
+            onClick={() => { setIsAuthOpen(true); setActiveTab('signin'); }}
             className="hidden sm:block text-sm font-medium transition-colors duration-150 hover:opacity-80"
             style={{ color: '#0F172A' }}
           >
             התחברות
           </button>
           <button
-            onClick={() => setActiveTab('signup')}
+            onClick={() => { setIsAuthOpen(true); setActiveTab('signup'); }}
             className="hidden sm:block text-sm font-medium transition-colors duration-150 hover:opacity-80"
             style={{ color: '#0F172A' }}
           >
@@ -202,139 +203,153 @@ export const Auth = () => {
           </div>
         </div>
 
-        {/* ─── RIGHT: AUTH CARD (RTL) ─── */}
-        <div className="w-full lg:w-[45%]" dir="rtl">
-          <div
-            className="w-full"
-            style={{
-              background: '#FFFFFF',
-              borderRadius: '20px',
-              boxShadow: '0 20px 40px rgba(15,23,42,0.08)',
-              border: '1px solid rgba(15,23,42,0.06)',
-              padding: '40px',
-            }}
-          >
-            {/* Tabs */}
-            <div className="flex gap-6 mb-8" style={{ borderBottom: '1px solid rgba(15,23,42,0.08)' }}>
-              {(['signin', 'signup'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className="pb-3 text-sm font-medium transition-all duration-150 relative"
-                  style={{
-                    color: activeTab === tab ? '#14B8A6' : '#475569',
-                  }}
-                >
-                  {tab === 'signin' ? 'התחברות' : 'הרשמה'}
-                  {activeTab === tab && (
-                    <span
-                      className="absolute bottom-0 right-0 left-0 h-0.5 rounded-full"
-                      style={{ background: '#14B8A6' }}
-                    />
-                  )}
-                </button>
-              ))}
+        {/* ─── RIGHT: LOGO or AUTH CARD ─── */}
+        <div className="w-full lg:w-[45%] flex items-center justify-center" dir="rtl">
+          {!isAuthOpen ? (
+            <div
+              className="flex items-center justify-center w-full"
+              style={{ animation: 'authFadeIn 400ms ease-out both' }}
+            >
+              <img
+                src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png"
+                alt="Mlaiko Logo"
+                className="w-full max-w-[480px] object-contain"
+              />
             </div>
+          ) : (
+            <div
+              className="w-full"
+              style={{
+                background: '#FFFFFF',
+                borderRadius: '20px',
+                boxShadow: '0 20px 40px rgba(15,23,42,0.08)',
+                border: '1px solid rgba(15,23,42,0.06)',
+                padding: '40px',
+                animation: 'authCardIn 200ms ease-out both',
+              }}
+            >
+              {/* Tabs */}
+              <div className="flex gap-6 mb-8" style={{ borderBottom: '1px solid rgba(15,23,42,0.08)' }}>
+                {(['signin', 'signup'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className="pb-3 text-sm font-medium transition-all duration-150 relative"
+                    style={{
+                      color: activeTab === tab ? '#14B8A6' : '#475569',
+                    }}
+                  >
+                    {tab === 'signin' ? 'התחברות' : 'הרשמה'}
+                    {activeTab === tab && (
+                      <span
+                        className="absolute bottom-0 right-0 left-0 h-0.5 rounded-full"
+                        style={{ background: '#14B8A6' }}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
 
-            {/* SIGN IN FORM */}
-            {activeTab === 'signin' && (
-              <form onSubmit={handleSignIn} className="flex flex-col gap-5">
-                <AuthInput
-                  id="signin-email"
-                  type="email"
-                  label="כתובת אימייל"
-                  placeholder="name@example.com"
-                  icon={<Mail size={18} strokeWidth={1.5} />}
-                  value={signInData.email}
-                  onChange={(v) => setSignInData((p) => ({ ...p, email: v }))}
-                />
-                <AuthInput
-                  id="signin-password"
-                  type={showPassword ? 'text' : 'password'}
-                  label="סיסמה"
-                  placeholder="הכנס סיסמה"
-                  icon={<Lock size={18} strokeWidth={1.5} />}
-                  value={signInData.password}
-                  onChange={(v) => setSignInData((p) => ({ ...p, password: v }))}
-                  trailing={
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="p-1">
-                      {showPassword ? <EyeOff size={16} style={{ color: '#94A3B8' }} /> : <Eye size={16} style={{ color: '#94A3B8' }} />}
-                    </button>
-                  }
-                />
-                <div className="text-right">
-                  <Link to="/forgot-password" className="text-xs font-medium transition-colors duration-150" style={{ color: '#14B8A6' }}>
-                    שכחתי את הסיסמה
-                  </Link>
-                </div>
-                <SubmitButton loading={isLoading} />
-              </form>
-            )}
-
-            {/* SIGN UP FORM */}
-            {activeTab === 'signup' && (
-              <form onSubmit={handleSignUp} className="flex flex-col gap-5">
-                <div className="grid grid-cols-2 gap-4">
+              {/* SIGN IN FORM */}
+              {activeTab === 'signin' && (
+                <form onSubmit={handleSignIn} className="flex flex-col gap-5">
                   <AuthInput
-                    id="signup-firstname"
-                    type="text"
-                    label="שם פרטי"
-                    placeholder="שם פרטי"
-                    icon={<User size={18} strokeWidth={1.5} />}
-                    value={signUpData.firstName}
-                    onChange={(v) => setSignUpData((p) => ({ ...p, firstName: v }))}
+                    id="signin-email"
+                    type="email"
+                    label="כתובת אימייל"
+                    placeholder="name@example.com"
+                    icon={<Mail size={18} strokeWidth={1.5} />}
+                    value={signInData.email}
+                    onChange={(v) => setSignInData((p) => ({ ...p, email: v }))}
                   />
                   <AuthInput
-                    id="signup-lastname"
-                    type="text"
-                    label="שם משפחה"
-                    placeholder="שם משפחה"
-                    icon={<User size={18} strokeWidth={1.5} />}
-                    value={signUpData.lastName}
-                    onChange={(v) => setSignUpData((p) => ({ ...p, lastName: v }))}
+                    id="signin-password"
+                    type={showPassword ? 'text' : 'password'}
+                    label="סיסמה"
+                    placeholder="הכנס סיסמה"
+                    icon={<Lock size={18} strokeWidth={1.5} />}
+                    value={signInData.password}
+                    onChange={(v) => setSignInData((p) => ({ ...p, password: v }))}
+                    trailing={
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="p-1">
+                        {showPassword ? <EyeOff size={16} style={{ color: '#94A3B8' }} /> : <Eye size={16} style={{ color: '#94A3B8' }} />}
+                      </button>
+                    }
                   />
-                </div>
-                <AuthInput
-                  id="signup-email"
-                  type="email"
-                  label="כתובת אימייל"
-                  placeholder="name@example.com"
-                  icon={<Mail size={18} strokeWidth={1.5} />}
-                  value={signUpData.email}
-                  onChange={(v) => setSignUpData((p) => ({ ...p, email: v }))}
-                />
-                <AuthInput
-                  id="signup-password"
-                  type={showPassword ? 'text' : 'password'}
-                  label="סיסמה"
-                  placeholder="לפחות 6 תווים"
-                  icon={<Lock size={18} strokeWidth={1.5} />}
-                  value={signUpData.password}
-                  onChange={(v) => setSignUpData((p) => ({ ...p, password: v }))}
-                  trailing={
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="p-1">
-                      {showPassword ? <EyeOff size={16} style={{ color: '#94A3B8' }} /> : <Eye size={16} style={{ color: '#94A3B8' }} />}
-                    </button>
-                  }
-                />
-                <AuthInput
-                  id="signup-confirm-password"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  label="אישור סיסמה"
-                  placeholder="הכנס שוב את הסיסמה"
-                  icon={<Lock size={18} strokeWidth={1.5} />}
-                  value={signUpData.confirmPassword}
-                  onChange={(v) => setSignUpData((p) => ({ ...p, confirmPassword: v }))}
-                  trailing={
-                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="p-1">
-                      {showConfirmPassword ? <EyeOff size={16} style={{ color: '#94A3B8' }} /> : <Eye size={16} style={{ color: '#94A3B8' }} />}
-                    </button>
-                  }
-                />
-                <SubmitButton loading={isLoading} text="הירשם" />
-              </form>
-            )}
-          </div>
+                  <div className="text-right">
+                    <Link to="/forgot-password" className="text-xs font-medium transition-colors duration-150" style={{ color: '#14B8A6' }}>
+                      שכחתי את הסיסמה
+                    </Link>
+                  </div>
+                  <SubmitButton loading={isLoading} />
+                </form>
+              )}
+
+              {/* SIGN UP FORM */}
+              {activeTab === 'signup' && (
+                <form onSubmit={handleSignUp} className="flex flex-col gap-5">
+                  <div className="grid grid-cols-2 gap-4">
+                    <AuthInput
+                      id="signup-firstname"
+                      type="text"
+                      label="שם פרטי"
+                      placeholder="שם פרטי"
+                      icon={<User size={18} strokeWidth={1.5} />}
+                      value={signUpData.firstName}
+                      onChange={(v) => setSignUpData((p) => ({ ...p, firstName: v }))}
+                    />
+                    <AuthInput
+                      id="signup-lastname"
+                      type="text"
+                      label="שם משפחה"
+                      placeholder="שם משפחה"
+                      icon={<User size={18} strokeWidth={1.5} />}
+                      value={signUpData.lastName}
+                      onChange={(v) => setSignUpData((p) => ({ ...p, lastName: v }))}
+                    />
+                  </div>
+                  <AuthInput
+                    id="signup-email"
+                    type="email"
+                    label="כתובת אימייל"
+                    placeholder="name@example.com"
+                    icon={<Mail size={18} strokeWidth={1.5} />}
+                    value={signUpData.email}
+                    onChange={(v) => setSignUpData((p) => ({ ...p, email: v }))}
+                  />
+                  <AuthInput
+                    id="signup-password"
+                    type={showPassword ? 'text' : 'password'}
+                    label="סיסמה"
+                    placeholder="לפחות 6 תווים"
+                    icon={<Lock size={18} strokeWidth={1.5} />}
+                    value={signUpData.password}
+                    onChange={(v) => setSignUpData((p) => ({ ...p, password: v }))}
+                    trailing={
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="p-1">
+                        {showPassword ? <EyeOff size={16} style={{ color: '#94A3B8' }} /> : <Eye size={16} style={{ color: '#94A3B8' }} />}
+                      </button>
+                    }
+                  />
+                  <AuthInput
+                    id="signup-confirm-password"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    label="אישור סיסמה"
+                    placeholder="הכנס שוב את הסיסמה"
+                    icon={<Lock size={18} strokeWidth={1.5} />}
+                    value={signUpData.confirmPassword}
+                    onChange={(v) => setSignUpData((p) => ({ ...p, confirmPassword: v }))}
+                    trailing={
+                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="p-1">
+                        {showConfirmPassword ? <EyeOff size={16} style={{ color: '#94A3B8' }} /> : <Eye size={16} style={{ color: '#94A3B8' }} />}
+                      </button>
+                    }
+                  />
+                  <SubmitButton loading={isLoading} text="הירשם" />
+                </form>
+              )}
+            </div>
+          )}
         </div>
       </main>
 
@@ -349,6 +364,10 @@ export const Auth = () => {
         @keyframes authFadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
+        }
+        @keyframes authCardIn {
+          from { opacity: 0; transform: scale(0.97); }
+          to { opacity: 1; transform: scale(1); }
         }
       `}</style>
     </div>
