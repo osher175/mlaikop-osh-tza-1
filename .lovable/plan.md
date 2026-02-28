@@ -1,37 +1,23 @@
 
 
-# Add TriggeX Attribution to Navbar
+## Plan: Auth Page Layout Adjustments
 
-## Change: `src/pages/Auth.tsx`
+### 1. Navbar — Remove Mlaiko logo (line 73)
+- Delete the `<img>` tag on line 73 that renders the Mlaiko logo
+- Keep only the nav buttons (התחברות / הרשמה)
 
-### 1. Copy uploaded logo to project
-Copy `user-uploads://לוגו_מבריק.png` to `public/images/triggex-logo.png`
+### 2. Hero — Adjust Mlaiko logo sizing (line 124)
+- Change from `h-9 w-auto mb-8` to `h-[30px] w-auto mb-4` (30px height, 16px bottom margin)
+- Already left-aligned with headline — no positioning change needed
 
-### 2. Update navbar left section (lines 120-129)
-Replace the current "by TriggeX Technologies" text with a hyperlink group:
+### 3. Footer — Add TriggeX logo + clickable link (lines 159–162)
+- Save uploaded TriggeX logo to `public/images/triggex-logo.png`
+- Replace the `<footer>` content with a single `<a>` linking to `https://www.triggex.net` (target=_blank, rel=noopener noreferrer)
+- Inside the link: flex row with TriggeX logo (h-[20px]) + gap-2 + text "TriggeX Technologies © 2026"
+- Color: `#94A3B8`, hover: `#475569`
+- Transition on hover for both text and logo opacity
 
-```tsx
-<div className="flex items-center gap-3">
-  <img src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png" alt="Mlaiko Logo" className="h-9 object-contain" />
-  <a
-    href="https://www.triggex.net"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="hidden sm:flex items-center gap-2 transition-opacity duration-150 hover:opacity-70"
-    style={{ color: '#475569' }}
-  >
-    <span className="text-xs" style={{ color: '#475569' }}>Developed by TriggeX Technologies</span>
-    <img src="/images/triggex-logo.png" alt="TriggeX Technologies" className="h-5 object-contain" />
-  </a>
-</div>
-```
-
-Key details:
-- Single `<a>` wrapping text + logo
-- `target="_blank"` + `rel="noopener noreferrer"`
-- Hover: opacity reduction via `hover:opacity-70`
-- Logo height: `h-5` (20px)
-- Gap between text and logo: `gap-2` (8px)
-- Text: small, not bold, secondary color
-- Mobile: stays visible via `sm:flex`, compact spacing
+### Files to modify
+- `src/pages/Auth.tsx` — 3 targeted edits (navbar logo removal, hero logo resize, footer upgrade)
+- `public/images/triggex-logo.png` — copy from uploaded asset
 
