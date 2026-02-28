@@ -123,9 +123,15 @@ export const Auth = () => {
             alt="Mlaiko Logo"
             className="h-9 object-contain"
           />
-          <span className="hidden sm:block text-xs" style={{ color: '#475569' }}>
-            by TriggeX Technologies
-          </span>
+          <a
+            href="https://www.triggex.net"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:flex items-center gap-2 transition-opacity duration-150 hover:opacity-70"
+          >
+            <span className="text-xs" style={{ color: '#475569' }}>Developed by TriggeX Technologies</span>
+            <img src="/images/triggex-logo.png" alt="TriggeX Technologies" className="h-5 object-contain" />
+          </a>
         </div>
         <div className="flex items-center gap-6" dir="rtl">
           <button
