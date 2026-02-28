@@ -117,22 +117,15 @@ export const Auth = () => {
           boxShadow: '0 1px 3px rgba(15,23,42,0.06)',
         }}
       >
-        <div className="flex items-center gap-3">
-          <img
-            src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png"
-            alt="Mlaiko Logo"
-            className="h-9 object-contain"
-          />
-          <a
-            href="https://www.triggex.net"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-2 transition-opacity duration-150 hover:opacity-70"
-          >
-            <span className="text-xs" style={{ color: '#475569' }}>Developed by TriggeX Technologies</span>
-            <img src="/images/triggex-logo.png" alt="TriggeX Technologies" className="h-5 object-contain" />
-          </a>
-        </div>
+        <a
+          href="https://www.triggex.net"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 transition-opacity duration-150 hover:opacity-70 pr-6"
+        >
+          <span className="text-xs font-medium tracking-tight" style={{ color: '#475569' }}>Developed by TriggeX Technologies</span>
+          <img src="/images/triggex-logo.png" alt="TriggeX Technologies" className="h-7 object-contain" />
+        </a>
         <div className="flex items-center gap-6" dir="rtl">
           <button
             onClick={() => { setIsAuthOpen(true); setActiveTab('signin'); }}
