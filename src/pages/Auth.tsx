@@ -121,10 +121,10 @@ export const Auth = () => {
           href="https://www.triggex.net"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 sm:gap-4 transition-opacity duration-150 hover:opacity-70 pr-6"
+          className="flex flex-col items-center justify-center gap-1 transition-opacity duration-150 hover:opacity-70 pr-6"
         >
-          <span className="text-[10px] sm:text-xs font-medium tracking-tight" style={{ color: '#475569' }}>Developed by</span>
-          <img src="/images/triggex-logo.png" alt="TriggeX Technologies" className="h-7 sm:h-10 object-contain" />
+          <span className="text-[12px] sm:text-[13px] tracking-tight" style={{ color: '#475569' }}>Developed by</span>
+          <img src="/images/triggex-logo.png" alt="TriggeX Technologies" className="h-8 sm:h-10 object-contain" />
         </a>
         <div className="flex items-center gap-6" dir="rtl">
           <button
