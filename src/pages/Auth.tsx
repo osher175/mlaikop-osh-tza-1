@@ -123,8 +123,8 @@ export const Auth = () => {
           rel="noopener noreferrer"
           className="flex flex-col items-center justify-center gap-1 transition-opacity duration-150 hover:opacity-70 pr-6"
         >
-          <span className="text-[12px] sm:text-[13px] tracking-tight" style={{ color: '#475569' }}>Developed by</span>
-          <img src="/images/triggex-logo.png" alt="TriggeX Technologies" className="h-8 sm:h-10 object-contain" />
+          <span className="text-[12px] sm:text-[13px] tracking-tight font-normal" style={{ color: '#475569' }}>Developed by</span>
+          <img src="/images/triggex-wordmark.png" alt="TriggeX Technologies" className="h-8 sm:h-10 w-auto object-contain" />
         </a>
         <div className="flex items-center gap-6" dir="rtl">
           <button
