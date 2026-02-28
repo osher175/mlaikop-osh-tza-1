@@ -70,7 +70,7 @@ export const Auth = () => {
         className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-6 lg:px-10"
         style={{ height: '64px', background: 'rgba(248,250,252,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(15,23,42,0.06)' }}
       >
-        <img src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png" alt="Mlaiko" className="h-8 w-auto object-contain" />
+        <div />
         <div className="flex items-center gap-5" dir="rtl">
           <button onClick={() => openAuth('signin')} className="text-sm font-medium transition-colors" style={{ color: '#475569' }} onMouseEnter={(e) => (e.currentTarget.style.color = '#0F172A')} onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}>התחברות</button>
           <button onClick={() => openAuth('signup')} className="text-sm font-medium px-4 py-2 rounded-lg transition-all" style={{ background: '#14B8A6', color: '#FFFFFF' }} onMouseEnter={(e) => (e.currentTarget.style.background = '#0D9488')} onMouseLeave={(e) => (e.currentTarget.style.background = '#14B8A6')}>הרשמה</button>
@@ -121,7 +121,7 @@ export const Auth = () => {
 
           {/* RIGHT: Copy + CTA */}
           <div className="w-full lg:w-[45%] flex flex-col items-start" dir="ltr">
-            <img src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png" alt="Mlaiko" className="h-9 w-auto object-contain mb-8" />
+            <img src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png" alt="Mlaiko" className="h-[30px] w-auto object-contain mb-4" />
             <h1 className="text-[2.5rem] lg:text-[3.25rem] leading-[1.1] tracking-[-0.03em]" style={{ color: '#0F172A', fontWeight: 800 }}>
               Inventory Intelligence
               <br />
@@ -157,8 +157,11 @@ export const Auth = () => {
       </main>
 
       {/* ─── FOOTER ─── */}
-      <footer className="py-8 text-center">
-        <p className="text-xs" style={{ color: '#94A3B8' }}>© 2026 TriggeX Technologies</p>
+      <footer className="py-8 flex justify-center">
+        <a href="https://www.triggex.net" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs transition-colors duration-150" style={{ color: '#94A3B8' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#475569'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#94A3B8'; }}>
+          <img src="/images/triggex-logo.png" alt="TriggeX" className="h-[20px] w-auto object-contain" />
+          TriggeX Technologies © 2026
+        </a>
       </footer>
 
       {/* ─── AUTH MODAL OVERLAY ─── */}
