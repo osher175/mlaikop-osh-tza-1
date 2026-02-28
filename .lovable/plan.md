@@ -1,47 +1,37 @@
 
 
-# Auth Page: Logo-first with Toggle to Auth Card
+# Add TriggeX Attribution to Navbar
 
-## Change
-In `src/pages/Auth.tsx`, add `isAuthOpen` state (default `false`). 
+## Change: `src/pages/Auth.tsx`
 
-**When `isAuthOpen === false`** (initial state):
-- Left column (currently hero) shows the **large Mlaiko logo** centered vertically, max-w-[480px], using the existing uploaded SVG/PNG
-- Right column (hero content) stays unchanged
+### 1. Copy uploaded logo to project
+Copy `user-uploads://לוגו_מבריק.png` to `public/images/triggex-logo.png`
 
-**When `isAuthOpen === true`**:
-- Left column swaps logo for the auth card (fade+scale animation, 200ms)
-- Right column stays unchanged
+### 2. Update navbar left section (lines 120-129)
+Replace the current "by TriggeX Technologies" text with a hyperlink group:
 
-## Trigger
-- Navbar "התחברות" button: sets `isAuthOpen = true` + `activeTab = 'signin'`
-- Navbar "הרשמה" button: sets `isAuthOpen = true` + `activeTab = 'signup'`
+```tsx
+<div className="flex items-center gap-3">
+  <img src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png" alt="Mlaiko Logo" className="h-9 object-contain" />
+  <a
+    href="https://www.triggex.net"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="hidden sm:flex items-center gap-2 transition-opacity duration-150 hover:opacity-70"
+    style={{ color: '#475569' }}
+  >
+    <span className="text-xs" style={{ color: '#475569' }}>Developed by TriggeX Technologies</span>
+    <img src="/images/triggex-logo.png" alt="TriggeX Technologies" className="h-5 object-contain" />
+  </a>
+</div>
+```
 
-## Implementation in `src/pages/Auth.tsx`
-
-1. Add state: `const [isAuthOpen, setIsAuthOpen] = useState(false);`
-
-2. Update navbar buttons (lines 131-142): add `setIsAuthOpen(true)` alongside existing `setActiveTab()` calls
-
-3. Replace left column content (lines 169-203) with conditional:
-   - `!isAuthOpen`: Large logo block — `<div>` centered with `<img>` of existing logo, `max-w-[480px]`, vertically centered via flex
-   - `isAuthOpen`: The current auth card (moved from right column)
-
-4. Right column (lines 206-338): Always shows hero content (swap sides — hero moves to right, auth/logo on left). Actually per the prompt: "Right side hero content remains unchanged" — so hero stays right, logo/auth goes left. Currently hero IS on the left and auth IS on the right. Let me re-read...
-
-The prompt says: "Display a large centered Mlaiko logo in the left section instead of the auth card." The auth card is currently on the RIGHT. So:
-
-- **Right column** currently has the auth card → replace with logo by default, auth card when `isAuthOpen`
-- **Left column** (hero) remains unchanged
-
-5. Right column conditional (replacing lines 206-338):
-   - `!isAuthOpen`: Large centered logo with fade-in
-   - `isAuthOpen`: Auth card with `animation: authCardIn 200ms ease-out both` (opacity 0→1, scale 0.97→1)
-
-6. Add CSS keyframe `authCardIn` alongside existing `authFadeIn`
-
-7. Mobile: Same logic — logo shows above/below hero initially, replaced by auth card on trigger
-
-## Files Modified
-- `src/pages/Auth.tsx` only
+Key details:
+- Single `<a>` wrapping text + logo
+- `target="_blank"` + `rel="noopener noreferrer"`
+- Hover: opacity reduction via `hover:opacity-70`
+- Logo height: `h-5` (20px)
+- Gap between text and logo: `gap-2` (8px)
+- Text: small, not bold, secondary color
+- Mobile: stays visible via `sm:flex`, compact spacing
 
