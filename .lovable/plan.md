@@ -1,23 +1,37 @@
 
 
-## Plan: Auth Page Layout Adjustments
+## Plan: Professional Logo Integration (UX/UI Approach)
 
-### 1. Navbar — Remove Mlaiko logo (line 73)
-- Delete the `<img>` tag on line 73 that renders the Mlaiko logo
-- Keep only the nav buttons (התחברות / הרשמה)
+The current problem: Two separate Mlaiko logos competing for attention -- one faded above the headline, one oversized inside the dashboard card. This creates visual noise and dilutes brand presence.
 
-### 2. Hero — Adjust Mlaiko logo sizing (line 124)
-- Change from `h-9 w-auto mb-8` to `h-[30px] w-auto mb-4` (30px height, 16px bottom margin)
-- Already left-aligned with headline — no positioning change needed
+### Design Decision: Single Logo, Maximum Impact
 
-### 3. Footer — Add TriggeX logo + clickable link (lines 159–162)
-- Save uploaded TriggeX logo to `public/images/triggex-logo.png`
-- Replace the `<footer>` content with a single `<a>` linking to `https://www.triggex.net` (target=_blank, rel=noopener noreferrer)
-- Inside the link: flex row with TriggeX logo (h-[20px]) + gap-2 + text "TriggeX Technologies © 2026"
-- Color: `#94A3B8`, hover: `#475569`
-- Transition on hover for both text and logo opacity
+**Remove** the standalone logo from the hero text column (line 124). It's redundant and weakens the hierarchy.
+
+**Redesign** the dashboard card header to use the logo as a proper product chrome element -- like how Linear, Notion, or Figma show their logo in app headers.
+
+### Dashboard Card Header (lines 89-98)
+
+Replace the current stacked layout (big logo + "Operations Center" below) with a horizontal app-bar pattern:
+
+```text
+[ Mlaiko Logo (24px) ]  Mlaiko  |  Operations Center    [● ● ●]
+```
+
+Structure:
+- Horizontal flex row, vertically centered
+- Logo: `h-[24px]` -- small enough to feel like real product chrome, not a billboard
+- Wordmark "Mlaiko" next to logo: `text-sm font-semibold`, color `#0F172A`
+- Thin vertical separator: 1px line, `#E2E8F0`, 16px height
+- "Operations Center": `text-sm font-medium`, color `#64748B`
+- Status dots pushed to the right with `ml-auto`
+
+This mimics how real SaaS products display their brand in the top-left of the app shell. It feels authentic, not decorative.
+
+### Hero Text Column (line 124)
+
+Remove the faded logo image entirely. The headline "Inventory Intelligence" is strong enough to stand alone. The logo inside the dashboard preview already anchors the brand visually.
 
 ### Files to modify
-- `src/pages/Auth.tsx` — 3 targeted edits (navbar logo removal, hero logo resize, footer upgrade)
-- `public/images/triggex-logo.png` — copy from uploaded asset
+- `src/pages/Auth.tsx` -- 2 edits: remove hero logo (line 124), redesign dashboard header (lines 89-98)
 
