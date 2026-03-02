@@ -44,9 +44,10 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, label, isActive, ba
 
 interface SidebarProps {
   onNavigate?: () => void;
+  isMobileDrawer?: boolean;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ onNavigate, isMobileDrawer }) => {
   const location = useLocation();
   const { userRole, permissions } = useUserRole();
 
@@ -147,17 +148,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
   return (
     <div className="h-full flex flex-col bg-white overflow-hidden">
       {/* Header */}
-      <div className="p-6 border-b border-gray-100 flex-shrink-0">
-        <div className="flex items-center justify-center w-full h-32">
-          <div className="w-24 h-24 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-            <Package className="w-16 h-16 text-white" />
+      <div className={`${isMobileDrawer ? 'p-4' : 'p-6'} border-b border-gray-100 flex-shrink-0`}>
+        <div className={`flex items-center justify-center w-full ${isMobileDrawer ? 'h-20' : 'h-32'}`}>
+          <div className={`${isMobileDrawer ? 'w-14 h-14' : 'w-24 h-24'} bg-primary rounded-lg flex items-center justify-center flex-shrink-0`}>
+            <Package className={`${isMobileDrawer ? 'w-9 h-9' : 'w-16 h-16'} text-white`} />
           </div>
-          <span className="text-2xl font-bold text-gray-900 truncate mr-3">Mlaiko</span>
+          <span className={`${isMobileDrawer ? 'text-xl' : 'text-2xl'} font-bold text-gray-900 truncate mr-3`}>Mlaiko</span>
         </div>
       </div>
 
       {/* Navigation Menu - Scrollable */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto overscroll-contain">
         <nav className="space-y-1 py-4">
           {/* Display appropriate menu items based on user role */}
           {currentMenuItems.filter(item => item.show).map((item) => (
@@ -177,7 +178,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
       {/* Footer - Always at bottom */}
       <div className="p-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
         <div className="text-xs text-gray-500 text-center">
-          © 2024 Mlaiko
+          © 2026 Mlaiko
         </div>
       </div>
     </div>

@@ -155,7 +155,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
               )}
             </div>
           ) : (
-            <div className="space-y-2 md:space-y-3 max-h-[60vh] overflow-y-auto">
+            <div className="space-y-2 flex-1 overflow-y-auto">
               {filteredProducts.map((product) => (
                 <Card 
                   key={product.id} 
@@ -207,7 +207,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                       </div>
                     </div>
                     
-                    <div className="flex gap-2 md:gap-4">
+                    <div className="flex flex-wrap gap-1.5 md:gap-2">
                       <Button 
                         size="sm" 
                         variant="outline"

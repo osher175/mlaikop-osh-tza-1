@@ -14,7 +14,7 @@ import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
 export const Dashboard: React.FC = () => {
   return (
     <MainLayout>
-      <div className="space-y-6 w-full max-w-full overflow-x-hidden" dir="rtl">
+      <div className="space-y-4 md:space-y-5 lg:space-y-6 w-full max-w-full overflow-x-hidden" dir="rtl">
         {/* Dashboard Header */}
         <div className="w-full">
           <h1 className="text-3xl font-bold text-foreground font-rubik break-words">לוח הבקרה</h1>
@@ -33,7 +33,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* BI Analytics Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5 lg:gap-6 w-full">
           <div className="w-full min-w-0">
             <RevenueChart />
           </div>
@@ -42,7 +42,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5 lg:gap-6 w-full">
           <div className="w-full min-w-0">
             <SuppliersChart />
           </div>
@@ -52,7 +52,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Additional Dashboard Components */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6 w-full">
           <div className="lg:col-span-2 w-full min-w-0">
             <RecentActivity />
           </div>
