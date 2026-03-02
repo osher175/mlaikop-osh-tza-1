@@ -7,6 +7,7 @@ import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BusinessDiagnosticPanel } from '@/components/dev/BusinessDiagnosticPanel';
+import mlaikoLogo from '@/assets/mlaiko-logo-full.png';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -36,12 +37,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </DrawerContent>
             </Drawer>
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 md:w-6 md:h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
-                </svg>
-              </div>
-              <span className="text-lg md:text-xl font-bold text-gray-900 truncate">Mlaiko</span>
+              <img 
+                src={mlaikoLogo} 
+                alt="Mlaiko Logo" 
+                className="h-8 md:h-10 flex-shrink-0 object-contain"
+              />
             </div>
           </div>
           <div className="flex-shrink-0">
