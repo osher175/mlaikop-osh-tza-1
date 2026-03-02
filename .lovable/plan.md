@@ -1,37 +1,26 @@
 
 
-## Plan: Professional Logo Integration (UX/UI Approach)
+## Plan: TriggeX Footer — Stacked Brand Signature
 
-The current problem: Two separate Mlaiko logos competing for attention -- one faded above the headline, one oversized inside the dashboard card. This creates visual noise and dilutes brand presence.
+Current layout is a horizontal row (logo + text side by side) — feels like a footnote. Redesign as a vertical, centered brand stamp.
 
-### Design Decision: Single Logo, Maximum Impact
-
-**Remove** the standalone logo from the hero text column (line 124). It's redundant and weakens the hierarchy.
-
-**Redesign** the dashboard card header to use the logo as a proper product chrome element -- like how Linear, Notion, or Figma show their logo in app headers.
-
-### Dashboard Card Header (lines 89-98)
-
-Replace the current stacked layout (big logo + "Operations Center" below) with a horizontal app-bar pattern:
+### New Structure
 
 ```text
-[ Mlaiko Logo (24px) ]  Mlaiko  |  Operations Center    [● ● ●]
+     [ TriggeX Logo (h-24px) ]
+   TriggeX Technologies © 2026
 ```
 
-Structure:
-- Horizontal flex row, vertically centered
-- Logo: `h-[24px]` -- small enough to feel like real product chrome, not a billboard
-- Wordmark "Mlaiko" next to logo: `text-sm font-semibold`, color `#0F172A`
-- Thin vertical separator: 1px line, `#E2E8F0`, 16px height
-- "Operations Center": `text-sm font-medium`, color `#64748B`
-- Status dots pushed to the right with `ml-auto`
+### Changes to `src/pages/Auth.tsx` (lines 159-165)
 
-This mimics how real SaaS products display their brand in the top-left of the app shell. It feels authentic, not decorative.
+Replace the current `<footer>` with:
 
-### Hero Text Column (line 124)
+- **Container**: `py-10 flex justify-center` (more breathing room)
+- **Link**: `flex flex-col items-center gap-2` (vertical stack, centered)
+- **Logo**: Increase from `h-[20px]` to `h-[24px]` — slightly more presence
+- **Text**: `text-[11px] tracking-[0.08em] uppercase font-medium` — small-caps engineering signature style
+- **Color**: Keep `#94A3B8` base, hover to `#475569` with `transition-all duration-200`
+- **Hover**: Both logo and text transition together via the parent `<a>` tag; add subtle `opacity-80 → opacity-100` on hover for the logo
 
-Remove the faded logo image entirely. The headline "Inventory Intelligence" is strong enough to stand alone. The logo inside the dashboard preview already anchors the brand visually.
-
-### Files to modify
-- `src/pages/Auth.tsx` -- 2 edits: remove hero logo (line 124), redesign dashboard header (lines 89-98)
+Single edit, 7 lines.
 
