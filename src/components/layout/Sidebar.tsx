@@ -15,7 +15,7 @@ import {
   HardDrive,
   ShoppingCart
 } from 'lucide-react';
-import mlaikoLogo from '@/assets/mlaiko-logo.png';
+import mlaikoLogo from '@/assets/mlaiko-logo-full.png';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
 
@@ -151,11 +151,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate, isMobileDrawer }) 
       {/* Header */}
       <div className={`${isMobileDrawer ? 'p-4' : 'p-6'} border-b border-gray-100 flex-shrink-0`}>
         <div className={`flex items-center justify-center w-full ${isMobileDrawer ? 'h-20' : 'h-32'}`}>
-          <img 
-            src={mlaikoLogo} 
-            alt="Mlaiko Logo" 
-            className={`${isMobileDrawer ? 'w-14 h-14' : 'w-24 h-24'} rounded-lg flex-shrink-0`}
-          />
+          <div className={`${isMobileDrawer ? 'w-14 h-14' : 'w-24 h-24'} rounded-lg flex-shrink-0 overflow-hidden`}>
+            <img 
+              src={mlaikoLogo} 
+              alt="Mlaiko Logo" 
+              className="w-full h-auto object-cover object-top scale-[1.6] translate-y-[10%]"
+            />
+          </div>
           <span className={`${isMobileDrawer ? 'text-xl' : 'text-2xl'} font-bold text-gray-900 truncate mr-3`}>Mlaiko</span>
         </div>
       </div>
