@@ -86,18 +86,15 @@ export const Auth = () => {
               className="w-full rounded-2xl p-5 lg:p-7"
               style={{ background: '#FFFFFF', border: '1px solid rgba(15,23,42,0.06)', boxShadow: '0 8px 30px rgba(15,23,42,0.06)' }}
             >
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-3">
-                  <img src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png" alt="Mlaiko" className="h-7 w-auto object-contain" />
-                  <div>
-                    <p className="text-[11px] font-medium" style={{ color: '#94A3B8' }}>Dashboard</p>
-                    <p className="text-base font-semibold mt-0.5" style={{ color: '#0F172A' }}>Operations Center</p>
-                  </div>
-                </div>
+              <div className="mb-5">
+                <img src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png" alt="Mlaiko" className="h-[44px] w-auto object-contain mb-3" />
+                <div className="flex items-center justify-between">
+                  <p className="text-base font-semibold" style={{ color: '#0F172A' }}>Operations Center</p>
                 <div className="flex gap-1.5">
                   <div className="w-2 h-2 rounded-full" style={{ background: '#E2E8F0' }} />
                   <div className="w-2 h-2 rounded-full" style={{ background: '#E2E8F0' }} />
                   <div className="w-2 h-2 rounded-full" style={{ background: '#14B8A6' }} />
+                </div>
                 </div>
               </div>
 
@@ -124,7 +121,7 @@ export const Auth = () => {
 
           {/* RIGHT: Copy + CTA */}
           <div className="w-full lg:w-[45%] flex flex-col items-start" dir="ltr">
-            
+            <img src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png" alt="Mlaiko" className="h-[28px] w-auto object-contain mb-5 opacity-70" />
             <h1 className="text-[2.5rem] lg:text-[3.25rem] leading-[1.1] tracking-[-0.03em]" style={{ color: '#0F172A', fontWeight: 800 }}>
               Inventory Intelligence
               <br />
