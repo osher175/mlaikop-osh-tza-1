@@ -56,8 +56,8 @@ export const MonthlyPurchasesChart: React.FC = () => {
           </div>
         ) : (
           <div className="w-full">
-            <ChartContainer config={chartConfig} className="h-64 w-full">
-              <BarChart data={analytics.monthlyPurchases} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <ChartContainer config={chartConfig} className="h-48 md:h-56 lg:h-64 w-full">
+              <BarChart data={analytics.monthlyPurchases} margin={{ top: 5, right: 15, left: 10, bottom: 5 }}>
                 <XAxis 
                   dataKey="month" 
                   tick={{ fontSize: 12 }}

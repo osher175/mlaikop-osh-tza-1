@@ -32,10 +32,10 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-4 py-3 md:px-6">
+    <header className="bg-white border-b border-gray-200 px-3 py-2 md:px-4 md:py-3 lg:px-6">
       <div className="flex items-center justify-end">
         {/* Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           <NotificationDropdown />
           
           <DropdownMenu>
@@ -49,7 +49,7 @@ export const Header: React.FC = () => {
                 </div>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 max-w-[calc(100vw-2rem)]">
               <DropdownMenuLabel className="text-right">
                 <div className="flex flex-col">
                   <span>{user?.email}</span>
