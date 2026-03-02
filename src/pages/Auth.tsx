@@ -157,10 +157,10 @@ export const Auth = () => {
       </main>
 
       {/* ─── FOOTER ─── */}
-      <footer className="py-8 flex justify-center">
-        <a href="https://www.triggex.net" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs transition-colors duration-150" style={{ color: '#94A3B8' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#475569'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#94A3B8'; }}>
-          <img src="/images/triggex-logo.png" alt="TriggeX" className="h-[20px] w-auto object-contain" />
-          TriggeX Technologies © 2026
+      <footer className="py-10 flex justify-center">
+        <a href="https://www.triggex.net" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 transition-all duration-200 group" style={{ color: '#94A3B8' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#475569'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#94A3B8'; }}>
+          <img src="/images/triggex-logo.png" alt="TriggeX" className="h-[24px] w-auto object-contain opacity-80 group-hover:opacity-100 transition-opacity duration-200" />
+          <span className="text-[11px] tracking-[0.08em] uppercase font-medium">TriggeX Technologies © 2026</span>
         </a>
       </footer>
 
