@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Loader2, Eye, EyeOff, Mail, Lock, User, Package, Cpu, AlertTriangle, DollarSign, ArrowRight, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
+import mlaikoLogoHorizontal from '@/assets/mlaiko-logo-horizontal.png';
 
 export const Auth = () => {
   const { signIn, signUp, user, loading } = useAuth();
@@ -87,8 +88,7 @@ export const Auth = () => {
               style={{ background: '#FFFFFF', border: '1px solid rgba(15,23,42,0.06)', boxShadow: '0 8px 30px rgba(15,23,42,0.06)' }}
             >
               <div className="flex items-center mb-5">
-                <img src="/lovable-uploads/5d780163-bc98-49af-94ab-14ac38bf11f4.png" alt="Mlaiko" className="h-[24px] w-auto object-contain" />
-                <span className="text-sm font-semibold ml-2" style={{ color: '#0F172A' }}>Mlaiko</span>
+                <img src={mlaikoLogoHorizontal} alt="Mlaiko" className="h-[28px] w-auto object-contain" />
                 <div className="w-px h-4 mx-3" style={{ background: '#E2E8F0' }} />
                 <span className="text-sm font-medium" style={{ color: '#64748B' }}>Operations Center</span>
                 <div className="flex gap-1.5 ml-auto">
