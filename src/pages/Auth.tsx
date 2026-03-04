@@ -88,7 +88,7 @@ export const Auth = () => {
               style={{ background: '#FFFFFF', border: '1px solid rgba(15,23,42,0.06)', boxShadow: '0 8px 30px rgba(15,23,42,0.06)' }}
             >
               <div className="flex items-center mb-5">
-                <img src={mlaikoLogoHorizontal} alt="Mlaiko" className="h-[38px] w-auto object-contain" />
+                <img src={mlaikoLogoHorizontal} alt="Mlaiko" className="h-[60px] w-auto object-contain" />
                 <div className="w-px h-4 mx-3" style={{ background: '#E2E8F0' }} />
                 <span className="text-sm font-medium" style={{ color: '#64748B' }}>Operations Center</span>
                 <div className="flex gap-1.5 ml-auto">
