@@ -9,7 +9,6 @@ export type ReportsRange = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 /**
  * Get date range for reports, respecting the financial tracking start date
- * Financial data only starts from the configured financial_tracking_start_at date
  */
 function getDateRange(range: ReportsRange): { date_from: string; date_to: string } {
   const now = new Date();
@@ -34,7 +33,6 @@ function getDateRange(range: ReportsRange): { date_from: string; date_to: string
       date_from = new Date(now.getFullYear(), now.getMonth(), 1);
   }
   
-  // Ensure we don't go before the financial tracking start date
   const effectiveFrom = date_from > financialStartDate ? date_from : financialStartDate;
   
   return {
@@ -45,20 +43,21 @@ function getDateRange(range: ReportsRange): { date_from: string; date_to: string
 
 export const useReports = (range: ReportsRange) => {
   const { business } = useBusiness();
-  const { date_from, date_to } = useMemo(() => getDateRange(range), [range]);
 
+  // Stable query key — dates are computed fresh inside queryFn
   const queryKey = useMemo(() => [
     'reports_aggregate',
     business?.id,
     range,
-    date_from,
-    date_to,
-  ], [business?.id, range, date_from, date_to]);
+  ], [business?.id, range]);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey,
     queryFn: async () => {
       if (!business?.id) return null;
+      
+      // Compute fresh dates on every fetch
+      const { date_from, date_to } = getDateRange(range);
       
       console.log('Fetching reports for:', { business_id: business.id, date_from, date_to });
       
@@ -73,7 +72,6 @@ export const useReports = (range: ReportsRange) => {
         throw error;
       }
       
-      // Runtime validation with type guard
       const result = data as unknown;
       if (!isReportsData(result)) {
         console.error('Invalid reports data structure:', result);
@@ -83,11 +81,11 @@ export const useReports = (range: ReportsRange) => {
       return result;
     },
     enabled: !!business?.id,
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 15 * 60 * 1000, // 15 minutes (previously cacheTime)
+    staleTime: 15 * 1000, // 15 seconds
+    gcTime: 5 * 60 * 1000,
     retry: 2,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   return {
