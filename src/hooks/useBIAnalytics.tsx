@@ -337,9 +337,11 @@ export const useBIAnalytics = () => {
       };
     },
     enabled: !!businessContext?.business_id,
-    staleTime: 30 * 1000,
+    staleTime: 0,
     gcTime: 3 * 60 * 1000,
     refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    refetchInterval: false,
   });
 
   return {
