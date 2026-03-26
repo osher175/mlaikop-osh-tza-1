@@ -10,8 +10,10 @@ import { SuppliersChart } from '@/components/dashboard/SuppliersChart';
 import { MonthlyPurchasesChart } from '@/components/dashboard/MonthlyPurchasesChart';
 import { NotificationPanel } from '@/components/dashboard/NotificationPanel';
 import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
+import { useRealtimeDashboard } from '@/hooks/useRealtimeDashboard';
 
 export const Dashboard: React.FC = () => {
+  useRealtimeDashboard();
   return (
     <MainLayout>
       <div className="space-y-4 md:space-y-5 lg:space-y-6 w-full max-w-full overflow-x-hidden" dir="rtl">
