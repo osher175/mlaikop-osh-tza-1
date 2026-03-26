@@ -42,6 +42,7 @@ export const Reports: React.FC = () => {
   
   const { permissions } = useUserRole();
   const { reportsData, isLoading, error } = useReports(selectedRange);
+  useRealtimeReports();
 
   // Block admin users from accessing reports
   if (permissions.isPlatformAdmin) {
