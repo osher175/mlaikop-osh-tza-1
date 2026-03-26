@@ -9,7 +9,8 @@ const DASHBOARD_QUERY_KEYS = [
   'insights',
   'notifications',
   'recent-activity',
-  'reports_aggregate', // shared with dashboard top products via useDashboardReportsData
+  'reports_aggregate',
+  'sales_by_dimension',
   'supplier-rankings',
 ] as const;
 

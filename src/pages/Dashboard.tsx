@@ -40,7 +40,7 @@ export const Dashboard: React.FC = () => {
             <RevenueChart />
           </div>
           <div className="w-full min-w-0">
-            <TopProductsChart />
+            <TopSalesByDimension />
           </div>
         </div>
 
