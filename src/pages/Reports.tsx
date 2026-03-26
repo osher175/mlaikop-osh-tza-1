@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart3, TrendingUp, DollarSign, Package, AlertCircle, Loader2, Shield, Lightbulb } from 'lucide-react';
 import { useReports, ReportsRange } from '@/hooks/useReports';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useRealtimeReports } from '@/hooks/useRealtimeReports';
 import { useNavigate } from 'react-router-dom';
 import ReportsCharts from '@/components/reports/ReportsCharts';
 import { InsightsTabs } from '@/components/reports/InsightsTabs';
@@ -41,6 +42,7 @@ export const Reports: React.FC = () => {
   
   const { permissions } = useUserRole();
   const { reportsData, isLoading, error } = useReports(selectedRange);
+  useRealtimeReports();
 
   // Block admin users from accessing reports
   if (permissions.isPlatformAdmin) {
@@ -142,10 +144,10 @@ export const Reports: React.FC = () => {
                   <Card>
                     <CardContent className="p-6">
                       <div className="flex items-center">
-                        <BarChart3 className="h-8 w-8 text-accent-foreground" />
+                        <BarChart3 className="h-8 w-8 text-purple-600" />
                         <div className="mr-4">
                           <p className="text-sm font-medium text-muted-foreground">סה"כ יצאו</p>
-                          <p className="text-2xl font-bold text-accent-foreground">{reportsData.total_removed ?? 0}</p>
+                          <p className="text-2xl font-bold text-purple-600">{reportsData.total_removed ?? 0}</p>
                         </div>
                       </div>
                     </CardContent>
