@@ -1,19 +1,20 @@
-
 import * as React from 'react';
 import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button, type ButtonProps } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart3, TrendingUp, DollarSign, Package, AlertCircle, Loader2, Shield, Lightbulb } from 'lucide-react';
-import { useReports, ReportsRange } from '@/hooks/useReports';
+import { BarChart3, AlertCircle, Loader2, Shield, Lightbulb } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useRealtimeReports } from '@/hooks/useRealtimeReports';
 import { useNavigate } from 'react-router-dom';
+import { useReportFilters } from '@/hooks/useReportFilters';
+import { useReportsData } from '@/hooks/useReportsData';
+import { ReportsFilterBar } from '@/components/reports/ReportsFilterBar';
+import { ReportsSummaryCards } from '@/components/reports/ReportsSummaryCards';
 import ReportsCharts from '@/components/reports/ReportsCharts';
 import { InsightsTabs } from '@/components/reports/InsightsTabs';
 import { TopProductsRanking } from '@/components/reports/TopProductsRanking';
-import { formatCurrency } from '@/lib/formatCurrency';
 
 const ErrorFallback = ({ error, retry }: { error: Error; retry: () => void }) => (
   <Card className="border-destructive/50 bg-destructive/10">
@@ -28,20 +29,20 @@ const ErrorFallback = ({ error, retry }: { error: Error; retry: () => void }) =>
   </Card>
 );
 
-const rangeOptions: { label: string; value: ReportsRange }[] = [
-  { label: 'יומי', value: 'daily' },
-  { label: 'שבועי', value: 'weekly' },
-  { label: 'חודשי', value: 'monthly' },
-  { label: 'שנתי', value: 'yearly' },
-];
-
 export const Reports: React.FC = () => {
-  const [selectedRange, setSelectedRange] = useState<ReportsRange>('monthly');
   const [activeTab, setActiveTab] = useState<string>('overview');
   const navigate = useNavigate();
-  
+
   const { permissions } = useUserRole();
-  const { reportsData, isLoading, error } = useReports(selectedRange);
+
+  // Single source of truth for all report filters
+  const filtersResult = useReportFilters();
+  const { filters, dateRange, dateRangeLabel } = filtersResult;
+
+  // Single data fetch — all widgets consume this
+  const { reportsData, isLoading, error } = useReportsData(filters, dateRange);
+
+  // Realtime subscription for auto-refresh
   useRealtimeReports();
 
   // Block admin users from accessing reports
@@ -63,7 +64,6 @@ export const Reports: React.FC = () => {
       </MainLayout>
     );
   }
-
 
   const retryFetch = () => {
     window.location.reload();
@@ -106,95 +106,30 @@ export const Reports: React.FC = () => {
 
           {/* Overview Tab */}
           <TabsContent value="overview">
-            {/* Range Selector */}
-            <div className="flex gap-2 mb-6">
-              {rangeOptions.map((opt) => (
-                <Button
-                  key={opt.value}
-                  variant={selectedRange === opt.value ? 'default' : 'outline'}
-                  onClick={() => setSelectedRange(opt.value)}
-                  className="min-w-[70px]"
-                  type="button"
-                >
-                  {opt.label}
-                </Button>
-              ))}
+            {/* Unified Filter Bar */}
+            <div className="mb-6">
+              <ReportsFilterBar filtersResult={filtersResult} />
             </div>
 
-            {/* Loader or Error */}
+            {/* Loader */}
             {isLoading ? (
               <div className="flex justify-center items-center min-h-[30vh]">
                 <Loader2 className="animate-spin w-10 h-10 text-muted-foreground" />
               </div>
             ) : reportsData ? (
               <>
-                {/* Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center">
-                        <Package className="h-8 w-8 text-primary" />
-                        <div className="mr-4">
-                          <p className="text-sm font-medium text-muted-foreground">סה"כ נכנסו</p>
-                          <p className="text-2xl font-bold text-primary">{reportsData.total_added ?? 0}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center">
-                        <BarChart3 className="h-8 w-8 text-purple-600" />
-                        <div className="mr-4">
-                          <p className="text-sm font-medium text-muted-foreground">סה"כ יצאו</p>
-                          <p className="text-2xl font-bold text-purple-600">{reportsData.total_removed ?? 0}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center">
-                        <DollarSign className="h-8 w-8 text-emerald-600" />
-                        <div className="mr-4">
-                          <p className="text-sm font-medium text-muted-foreground">שווי מלאי</p>
-                          <p className="text-2xl font-bold text-emerald-600">{formatCurrency(reportsData.total_value)}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center">
-                        <TrendingUp className="h-8 w-8 text-blue-600" />
-                        <div className="mr-4">
-                          <p className="text-sm font-medium text-muted-foreground">רווח גולמי</p>
-                          <p className="text-2xl font-bold text-blue-600">{formatCurrency(reportsData.gross_profit)}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                {/* Summary Cards — same data, same date range */}
+                <ReportsSummaryCards reportsData={reportsData} />
 
-                {/* Net Profit Card */}
+                {/* Top 20 Products Ranking — same data, same date range */}
                 <div className="mb-6">
-                  <Card>
-                    <CardContent className="p-6 flex items-center gap-4">
-                      <DollarSign className="h-8 w-8 text-emerald-600" />
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">רווח נטו (לאחר מע"מ)</p>
-                        <p className="text-lg font-bold text-emerald-600">{formatCurrency(reportsData.net_profit)}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <TopProductsRanking
+                    products={reportsData.top_products_list || []}
+                    dateRangeLabel={dateRangeLabel}
+                  />
                 </div>
 
-                {/* Top 20 Products Ranking */}
-                <div className="mb-6">
-                  <TopProductsRanking />
-                </div>
-
-                {/* Charts */}
+                {/* Charts — same data, same date range */}
                 <ReportsCharts
                   timeline={reportsData.timeline_breakdown}
                   suppliers={reportsData.suppliers_breakdown}
