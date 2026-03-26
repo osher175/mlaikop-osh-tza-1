@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -16,8 +15,8 @@ const chartConfig = {
     label: "הכנסות",
     color: "#00BFBF",
   },
-  grossProfit: {
-    label: "רווח גולמי",
+  netProfit: {
+    label: "רווח נטו",
     color: "#27AE60",
   },
 };
@@ -32,7 +31,7 @@ export const RevenueChart: React.FC = () => {
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-foreground" dir="rtl">
-          הכנסות ורווחיות חודשית
+          הכנסות ורווחיות נטו חודשית
         </CardTitle>
         <div className="text-sm text-muted-foreground" dir="rtl">
           נתונים אמיתיים ממכירות שנרשמו במערכת (₪)
@@ -78,7 +77,7 @@ export const RevenueChart: React.FC = () => {
                   content={<ChartTooltipContent />}
                   formatter={(value, name) => [
                     formatCurrency(Number(value)), 
-                    name === 'revenue' ? 'הכנסות' : 'רווח גולמי'
+                    name === 'revenue' ? 'הכנסות' : 'רווח נטו'
                   ]}
                 />
                 <Legend />
@@ -90,11 +89,11 @@ export const RevenueChart: React.FC = () => {
                   name="הכנסות"
                 />
                 <Line 
-                  dataKey="grossProfit" 
+                  dataKey="netProfit" 
                   stroke="#27AE60" 
                   strokeWidth={3}
                   dot={{ fill: '#27AE60', strokeWidth: 2, r: 4 }}
-                  name="רווח גולמי"
+                  name="רווח נטו"
                 />
               </LineChart>
             </ChartContainer>

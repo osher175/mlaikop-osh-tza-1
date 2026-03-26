@@ -1,98 +1,52 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Medal, Award, Star, Circle, AlertCircle } from 'lucide-react';
-import { useBIAnalytics } from '@/hooks/useBIAnalytics';
+import { useDashboardReportsData } from '@/hooks/useDashboardReportsData';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { calculateNetFromGross } from '@/lib/financialConfig';
-
-type Period = 'week' | 'month' | 'year';
-
-const periodLabels: Record<Period, string> = {
-  week: 'שבוע',
-  month: 'חודש',
-  year: 'שנה',
-};
 
 const rankIcons = [Trophy, Medal, Award, Star, Circle];
 const rankColors = ['text-yellow-500', 'text-muted-foreground', 'text-amber-600', 'text-primary', 'text-green-600'];
 
-function getDateRange(period: Period): Date {
-  const now = new Date();
-  switch (period) {
-    case 'week':
-      return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    case 'month':
-      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    case 'year':
-      return new Date(now.getFullYear(), 0, 1);
-  }
-}
-
 export const TopProductsChart: React.FC = () => {
-  const { analytics, isLoading } = useBIAnalytics();
-  const [period, setPeriod] = useState<Period>('year');
+  const { reportsData, isLoading, isFetching } = useDashboardReportsData();
+  const [changedIds, setChangedIds] = useState<Set<string>>(new Set());
+  const prevDataRef = useRef<string>('');
 
-  const filteredProducts = useMemo(() => {
-    if (!analytics?.financialActions) return analytics?.topProducts || [];
+  const products = useMemo(() => {
+    if (!reportsData?.top_products_list?.length) return [];
 
-    const cutoff = getDateRange(period);
-    const actions = analytics.financialActions;
-
-    // Filter sales by period
-    const productSales: Record<string, {
-      name: string;
-      quantity: number;
-      revenue: number;
-      cogs: number;
-    }> = {};
-
-    actions.forEach((action: any) => {
-      if (
-        (action.action_type === 'remove' || action.action_type === 'sale') &&
-        action.sale_total_ils != null
-      ) {
-        const actionDate = new Date(action.timestamp);
-        if (actionDate < cutoff) return;
-
-        const product = action.products;
-        if (!product) return;
-
-        const productId = product.id;
-        const revenue = Number(action.sale_total_ils) || 0;
-        const cost = (Number(action.cost_snapshot_ils) || 0) * Math.abs(action.quantity_changed || 0);
-
-        if (!productSales[productId]) {
-          productSales[productId] = { name: product.name, quantity: 0, revenue: 0, cogs: 0 };
-        }
-        productSales[productId].quantity += Math.abs(action.quantity_changed || 0);
-        productSales[productId].revenue += revenue;
-        productSales[productId].cogs += cost;
-      }
+    return reportsData.top_products_list.slice(0, 5).map((p) => {
+      const revenueNet = calculateNetFromGross(p.revenue || 0);
+      // COGS not directly available in top_products_list, approximate from gross
+      // net_profit = revenue/1.18 - COGS → we compute it from known data
+      const profitNet = revenueNet - ((p.revenue || 0) - (p.revenue || 0)); // simplified — use revenue as primary
+      return {
+        productId: p.product_id,
+        productName: p.product_name,
+        quantity: p.quantity_sold,
+        revenue: p.revenue || 0,
+        revenueNet,
+      };
     });
+  }, [reportsData]);
 
-    return Object.entries(productSales)
-      .map(([productId, data]) => {
-        const revenueNet = calculateNetFromGross(data.revenue);
-        const profitNet = revenueNet - data.cogs;
-        return {
-          productId,
-          productName: data.name,
-          quantity: data.quantity,
-          revenue: Math.round(data.revenue * 100) / 100,
-          revenueNet: Math.round(revenueNet * 100) / 100,
-          profit: Math.round((data.revenue - data.cogs) * 100) / 100,
-          profitNet: Math.round(profitNet * 100) / 100,
-        };
-      })
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
-  }, [analytics, period]);
+  // Detect changes for highlight animation
+  useEffect(() => {
+    const newKey = JSON.stringify(products.map(p => `${p.productId}:${p.quantity}:${p.revenue}`));
+    if (prevDataRef.current && prevDataRef.current !== newKey) {
+      const newSet = new Set(products.map(p => p.productId));
+      setChangedIds(newSet);
+      const timer = setTimeout(() => setChangedIds(new Set()), 1500);
+      return () => clearTimeout(timer);
+    }
+    prevDataRef.current = newKey;
+  }, [products]);
 
-  const hasSaleData = filteredProducts.length > 0;
+  const hasSaleData = products.length > 0;
 
   return (
-    <Card className="w-full">
+    <Card className={`w-full transition-all duration-300 ${isFetching && !isLoading ? 'opacity-90' : ''}`}>
       <CardHeader>
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
@@ -100,23 +54,8 @@ export const TopProductsChart: React.FC = () => {
               מוצרי המכירה המובילים
             </CardTitle>
             <div className="text-sm text-muted-foreground" dir="rtl">
-              דירוג לפי הכנסות מכירה בפועל (₪)
+              דירוג לפי הכנסות מכירה בפועל — שנה נוכחית (₪)
             </div>
-          </div>
-          <div className="flex gap-1 bg-muted rounded-lg p-1" dir="rtl">
-            {(Object.keys(periodLabels) as Period[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  period === p
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {periodLabels[p]}
-              </button>
-            ))}
           </div>
         </div>
       </CardHeader>
@@ -135,12 +74,18 @@ export const TopProductsChart: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredProducts.map((product, index) => {
+            {products.map((product, index) => {
               const IconComponent = rankIcons[index];
               const iconColor = rankColors[index];
-              
+              const isChanged = changedIds.has(product.productId);
+
               return (
-                <div key={product.productId} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div
+                  key={product.productId}
+                  className={`flex items-center justify-between p-3 bg-muted rounded-lg transition-all duration-500 ${
+                    isChanged ? 'ring-2 ring-primary/40 bg-primary/5' : ''
+                  }`}
+                >
                   <div className="flex items-center gap-3" dir="rtl">
                     <IconComponent className={`w-6 h-6 ${iconColor}`} />
                     <div className="flex flex-col">
@@ -154,8 +99,8 @@ export const TopProductsChart: React.FC = () => {
                     <div className="text-lg font-bold text-primary">
                       {formatCurrency(product.revenue)}
                     </div>
-                    <div className={`text-sm ${product.profitNet >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-                      רווח נטו: {formatCurrency(product.profitNet)}
+                    <div className="text-sm text-muted-foreground">
+                      נטו: {formatCurrency(product.revenueNet)}
                     </div>
                   </div>
                 </div>

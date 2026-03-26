@@ -51,22 +51,9 @@ export const ReportsSummaryCards: React.FC<ReportsSummaryCardsProps> = ({ report
             <div className="flex items-center">
               <TrendingUp className="h-8 w-8 text-blue-600" />
               <div className="mr-4">
-                <p className="text-sm font-medium text-muted-foreground">רווח גולמי</p>
-                <p className="text-2xl font-bold text-blue-600">{formatCurrency(reportsData.gross_profit)}</p>
+                <p className="text-sm font-medium text-muted-foreground">רווח נטו (לאחר מע״מ)</p>
+                <p className="text-2xl font-bold text-blue-600">{formatCurrency(reportsData.net_profit)}</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Net Profit Card */}
-      <div className="mb-6">
-        <Card>
-          <CardContent className="p-6 flex items-center gap-4">
-            <DollarSign className="h-8 w-8 text-emerald-600" />
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">רווח נטו (לאחר מע"מ)</p>
-              <p className="text-lg font-bold text-emerald-600">{formatCurrency(reportsData.net_profit)}</p>
             </div>
           </CardContent>
         </Card>

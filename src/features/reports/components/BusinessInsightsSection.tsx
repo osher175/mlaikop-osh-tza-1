@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lightbulb, TrendingUp, TrendingDown, AlertTriangle, ShieldAlert, Info, CheckCircle2 } from 'lucide-react';
 import { BusinessInsight, InsightSeverity } from '../businessInsights/types';
@@ -51,7 +52,7 @@ const severityConfig: Record<InsightSeverity, {
   },
 };
 
-function InsightCard({ insight }: { insight: BusinessInsight }) {
+function InsightCard({ insight, isNew }: { insight: BusinessInsight; isNew: boolean }) {
   const config = severityConfig[insight.severity];
   const Icon = config.icon;
 
@@ -60,7 +61,9 @@ function InsightCard({ insight }: { insight: BusinessInsight }) {
     : null;
 
   return (
-    <Card className={`${config.border} ${config.bg} transition-all hover:shadow-md`}>
+    <Card className={`${config.border} ${config.bg} transition-all duration-500 hover:shadow-md ${
+      isNew ? 'ring-2 ring-primary/30 animate-in fade-in slide-in-from-top-2' : ''
+    }`}>
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <div className="mt-0.5">
@@ -94,6 +97,24 @@ function InsightCard({ insight }: { insight: BusinessInsight }) {
 }
 
 export function BusinessInsightsSection({ insights, isLoading, dateRangeLabel }: BusinessInsightsSectionProps) {
+  const [newIds, setNewIds] = useState<Set<string>>(new Set());
+  const prevIdsRef = useRef<string>('');
+
+  // Detect new/changed insights for animation
+  useEffect(() => {
+    const currentKey = insights.map(i => i.id).sort().join(',');
+    if (prevIdsRef.current && prevIdsRef.current !== currentKey) {
+      const prevSet = new Set(prevIdsRef.current.split(','));
+      const changed = new Set(insights.filter(i => !prevSet.has(i.id)).map(i => i.id));
+      if (changed.size > 0) {
+        setNewIds(changed);
+        const timer = setTimeout(() => setNewIds(new Set()), 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+    prevIdsRef.current = currentKey;
+  }, [insights]);
+
   if (isLoading) {
     return (
       <Card>
@@ -167,7 +188,7 @@ export function BusinessInsightsSection({ insights, isLoading, dateRangeLabel }:
       </CardHeader>
       <CardContent className="space-y-3">
         {insights.map((insight) => (
-          <InsightCard key={insight.id} insight={insight} />
+          <InsightCard key={insight.id} insight={insight} isNew={newIds.has(insight.id)} />
         ))}
       </CardContent>
     </Card>
