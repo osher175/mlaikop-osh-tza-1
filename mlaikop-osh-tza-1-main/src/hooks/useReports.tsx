@@ -32,15 +32,13 @@ function getDateRange(range: ReportsRange): { date_from: string; date_to: string
 
 export const useReports = (range: ReportsRange) => {
   const { business } = useBusiness();
-  const { date_from, date_to } = getDateRange(range);
+  const { date_from, date_to } = useMemo(() => getDateRange(range), [range]);
 
   const queryKey = useMemo(() => [
     'reports_aggregate',
     business?.id,
     range,
-    date_from,
-    date_to,
-  ], [business?.id, range, date_from, date_to]);
+  ], [business?.id, range]);
 
   const { data, isLoading, error } = useQuery({
     queryKey,
