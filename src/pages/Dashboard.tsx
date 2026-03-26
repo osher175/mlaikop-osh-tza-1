@@ -5,7 +5,7 @@ import { SummaryGrid } from '@/components/dashboard/SummaryGrid';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { QuickActions } from '@/components/dashboard/QuickActions';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
-import { TopProductsChart } from '@/components/dashboard/TopProductsChart';
+import { TopSalesByDimension } from '@/components/dashboard/TopSalesByDimension';
 import { SuppliersChart } from '@/components/dashboard/SuppliersChart';
 import { MonthlyPurchasesChart } from '@/components/dashboard/MonthlyPurchasesChart';
 import { NotificationPanel } from '@/components/dashboard/NotificationPanel';
@@ -40,7 +40,7 @@ export const Dashboard: React.FC = () => {
             <RevenueChart />
           </div>
           <div className="w-full min-w-0">
-            <TopProductsChart />
+            <TopSalesByDimension />
           </div>
         </div>
 
