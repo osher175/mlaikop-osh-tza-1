@@ -2725,6 +2725,16 @@ export type Database = {
           suggestion: string
         }[]
       }
+      get_top_sales_by_dimension: {
+        Args: {
+          p_business_id: string
+          p_date_from: string
+          p_date_to: string
+          p_dimension?: string
+          p_limit?: number
+        }
+        Returns: Json
+      }
       get_user_business_context: {
         Args: { user_uuid?: string }
         Returns: {
