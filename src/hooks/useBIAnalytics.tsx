@@ -333,11 +333,12 @@ export const useBIAnalytics = () => {
         hasSaleData,
         hasPurchaseData,
         currentYear,
+        financialActions,
       };
     },
     enabled: !!businessContext?.business_id,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    gcTime: 3 * 60 * 1000,
     refetchOnWindowFocus: true,
   });
 
