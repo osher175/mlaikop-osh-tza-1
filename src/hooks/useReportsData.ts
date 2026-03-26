@@ -56,11 +56,12 @@ export const useReportsData = (filters: ReportFilters, dateRange: ComputedDateRa
       return result;
     },
     enabled: !!business?.id,
-    staleTime: 15 * 1000,
+    staleTime: 0,
     gcTime: 5 * 60 * 1000,
     retry: 2,
     refetchOnWindowFocus: true,
-    refetchOnMount: true,
+    refetchOnMount: 'always',
+    refetchInterval: false,
   });
 
   return {

@@ -61,10 +61,12 @@ export function useBusinessInsights(
       return isReportsData(result) ? result : null;
     },
     enabled: !!business?.id && !!reportsData,
-    staleTime: 30 * 1000,
+    staleTime: 0,
     gcTime: 5 * 60 * 1000,
     retry: 1,
     refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    refetchInterval: false,
   });
 
   const insights: BusinessInsight[] = useMemo(() => {
