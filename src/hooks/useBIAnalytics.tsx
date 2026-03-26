@@ -333,6 +333,7 @@ export const useBIAnalytics = () => {
         hasSaleData,
         hasPurchaseData,
         currentYear,
+        financialActions,
       };
     },
     enabled: !!businessContext?.business_id,
