@@ -137,20 +137,31 @@ export function buildPreviousDateRange(filters: ReportFilters): ComputedDateRang
 
   switch (filters.periodType) {
     case 'daily': {
-      // Previous day — recompute by shifting the "today" logic isn't possible
-      // so we compute yesterday explicitly
+      // Daily branch in buildReportDateRange always uses "now" for today,
+      // so we manually build yesterday's range using the monthly branch trick
       const now = new Date();
       const tz = 'Asia/Jerusalem';
       const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(now);
       const [y, mo, d] = todayStr.split('-').map(Number);
       const yesterday = new Date(y, mo - 1, d - 1);
-      prev.selectedYear = yesterday.getFullYear();
-      prev.selectedMonth = yesterday.getMonth() + 1;
-      // We'll use the daily branch which reads "now", so we need to build manually
-      return buildReportDateRange({
-        ...prev,
-        periodType: 'daily',
-      });
+      const yy = yesterday.getFullYear();
+      const ym = yesterday.getMonth() + 1;
+      const yd = yesterday.getDate();
+      const daysInMonth = new Date(yy, ym, 0).getDate();
+      // Build as monthly but with single-day boundaries
+      const monthFilters: ReportFilters = {
+        periodType: 'monthly',
+        selectedYear: yy,
+        selectedMonth: ym,
+        selectedWeek: 1,
+      };
+      const fullMonth = buildReportDateRange(monthFilters);
+      // Narrow to just yesterday by reconstructing ISO boundaries
+      const fromDate = new Date(fullMonth.from);
+      fromDate.setUTCDate(fromDate.getUTCDate() + (yd - 1));
+      const toDate = new Date(fromDate);
+      toDate.setUTCHours(toDate.getUTCHours() + 23, 59, 59, 999);
+      return { from: fromDate.toISOString(), to: toDate.toISOString() };
     }
     case 'weekly': {
       if (prev.selectedWeek > 1) {
