@@ -573,9 +573,9 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
       };
     },
     enabled: !!businessContext?.business_id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
   });
 
   return {

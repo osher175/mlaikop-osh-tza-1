@@ -46,9 +46,9 @@ export const useNotifications = () => {
       return data as Notification[];
     },
     enabled: !!user?.id && !!businessContext?.business_id,
-    staleTime: 30 * 1000,
+    staleTime: 15 * 1000,
     gcTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
   });
 
   const markAsRead = useMutation({

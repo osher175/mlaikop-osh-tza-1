@@ -67,9 +67,9 @@ export const useSummaryStats = () => {
       };
     },
     enabled: !!user?.id && !!business?.id,
-    staleTime: 1 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 15 * 1000,
+    gcTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: true,
   });
 
   return {
