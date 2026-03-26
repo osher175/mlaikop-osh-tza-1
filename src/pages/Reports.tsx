@@ -134,7 +134,16 @@ export const Reports: React.FC = () => {
                   />
                 </div>
 
-                {/* Charts — same data, same date range */}
+                {/* Business Insights — same filters, same date range */}
+                <div className="mb-6">
+                  <BusinessInsightsSection
+                    insights={insights}
+                    isLoading={isInsightsLoading}
+                    dateRangeLabel={dateRangeLabel}
+                  />
+                </div>
+
+
                 <ReportsCharts
                   timeline={reportsData.timeline_breakdown}
                   suppliers={reportsData.suppliers_breakdown}
