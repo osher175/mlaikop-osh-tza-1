@@ -125,6 +125,77 @@ export function buildReportDateRange(filters: ReportFilters): ComputedDateRange 
   return range;
 }
 
+/**
+ * Build the equivalent previous period date range for comparison.
+ * monthly March 2026 → February 2026
+ * yearly 2026 → 2025
+ * weekly week 2 of March → week 1 of March
+ * daily → yesterday
+ */
+export function buildPreviousDateRange(filters: ReportFilters): ComputedDateRange {
+  const prev = { ...filters };
+
+  switch (filters.periodType) {
+    case 'daily': {
+      // Daily branch in buildReportDateRange always uses "now" for today,
+      // so we manually build yesterday's range using the monthly branch trick
+      const now = new Date();
+      const tz = 'Asia/Jerusalem';
+      const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(now);
+      const [y, mo, d] = todayStr.split('-').map(Number);
+      const yesterday = new Date(y, mo - 1, d - 1);
+      const yy = yesterday.getFullYear();
+      const ym = yesterday.getMonth() + 1;
+      const yd = yesterday.getDate();
+      const daysInMonth = new Date(yy, ym, 0).getDate();
+      // Build as monthly but with single-day boundaries
+      const monthFilters: ReportFilters = {
+        periodType: 'monthly',
+        selectedYear: yy,
+        selectedMonth: ym,
+        selectedWeek: 1,
+      };
+      const fullMonth = buildReportDateRange(monthFilters);
+      // Narrow to just yesterday by reconstructing ISO boundaries
+      const fromDate = new Date(fullMonth.from);
+      fromDate.setUTCDate(fromDate.getUTCDate() + (yd - 1));
+      const toDate = new Date(fromDate);
+      toDate.setUTCHours(toDate.getUTCHours() + 23, 59, 59, 999);
+      return { from: fromDate.toISOString(), to: toDate.toISOString() };
+    }
+    case 'weekly': {
+      if (prev.selectedWeek > 1) {
+        prev.selectedWeek -= 1;
+      } else {
+        // Go to previous month, last week
+        if (prev.selectedMonth > 1) {
+          prev.selectedMonth -= 1;
+        } else {
+          prev.selectedMonth = 12;
+          prev.selectedYear -= 1;
+        }
+        prev.selectedWeek = 4;
+      }
+      break;
+    }
+    case 'monthly': {
+      if (prev.selectedMonth > 1) {
+        prev.selectedMonth -= 1;
+      } else {
+        prev.selectedMonth = 12;
+        prev.selectedYear -= 1;
+      }
+      break;
+    }
+    case 'yearly': {
+      prev.selectedYear -= 1;
+      break;
+    }
+  }
+
+  return buildReportDateRange(prev);
+}
+
 function buildDateRangeLabel(filters: ReportFilters): string {
   const { periodType, selectedYear, selectedMonth, selectedWeek } = filters;
   const monthName = HEBREW_MONTHS[selectedMonth] || '';

@@ -15,6 +15,8 @@ import { ReportsSummaryCards } from '@/components/reports/ReportsSummaryCards';
 import ReportsCharts from '@/components/reports/ReportsCharts';
 import { InsightsTabs } from '@/components/reports/InsightsTabs';
 import { TopProductsRanking } from '@/components/reports/TopProductsRanking';
+import { useBusinessInsights } from '@/features/reports/businessInsights/useBusinessInsights';
+import { BusinessInsightsSection } from '@/features/reports/components/BusinessInsightsSection';
 
 const ErrorFallback = ({ error, retry }: { error: Error; retry: () => void }) => (
   <Card className="border-destructive/50 bg-destructive/10">
@@ -44,6 +46,9 @@ export const Reports: React.FC = () => {
 
   // Realtime subscription for auto-refresh
   useRealtimeReports();
+
+  // Business Insights — uses same filters and reportsData (single source of truth)
+  const { insights, isLoading: isInsightsLoading } = useBusinessInsights(filters, dateRange, reportsData);
 
   // Block admin users from accessing reports
   if (permissions.isPlatformAdmin) {
@@ -129,7 +134,16 @@ export const Reports: React.FC = () => {
                   />
                 </div>
 
-                {/* Charts — same data, same date range */}
+                {/* Business Insights — same filters, same date range */}
+                <div className="mb-6">
+                  <BusinessInsightsSection
+                    insights={insights}
+                    isLoading={isInsightsLoading}
+                    dateRangeLabel={dateRangeLabel}
+                  />
+                </div>
+
+
                 <ReportsCharts
                   timeline={reportsData.timeline_breakdown}
                   suppliers={reportsData.suppliers_breakdown}
