@@ -47,6 +47,9 @@ export const Reports: React.FC = () => {
   // Realtime subscription for auto-refresh
   useRealtimeReports();
 
+  // Business Insights — uses same filters and reportsData (single source of truth)
+  const { insights, isLoading: isInsightsLoading } = useBusinessInsights(filters, dateRange, reportsData);
+
   // Block admin users from accessing reports
   if (permissions.isPlatformAdmin) {
     return (
