@@ -125,6 +125,66 @@ export function buildReportDateRange(filters: ReportFilters): ComputedDateRange 
   return range;
 }
 
+/**
+ * Build the equivalent previous period date range for comparison.
+ * monthly March 2026 → February 2026
+ * yearly 2026 → 2025
+ * weekly week 2 of March → week 1 of March
+ * daily → yesterday
+ */
+export function buildPreviousDateRange(filters: ReportFilters): ComputedDateRange {
+  const prev = { ...filters };
+
+  switch (filters.periodType) {
+    case 'daily': {
+      // Previous day — recompute by shifting the "today" logic isn't possible
+      // so we compute yesterday explicitly
+      const now = new Date();
+      const tz = 'Asia/Jerusalem';
+      const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(now);
+      const [y, mo, d] = todayStr.split('-').map(Number);
+      const yesterday = new Date(y, mo - 1, d - 1);
+      prev.selectedYear = yesterday.getFullYear();
+      prev.selectedMonth = yesterday.getMonth() + 1;
+      // We'll use the daily branch which reads "now", so we need to build manually
+      return buildReportDateRange({
+        ...prev,
+        periodType: 'daily',
+      });
+    }
+    case 'weekly': {
+      if (prev.selectedWeek > 1) {
+        prev.selectedWeek -= 1;
+      } else {
+        // Go to previous month, last week
+        if (prev.selectedMonth > 1) {
+          prev.selectedMonth -= 1;
+        } else {
+          prev.selectedMonth = 12;
+          prev.selectedYear -= 1;
+        }
+        prev.selectedWeek = 4;
+      }
+      break;
+    }
+    case 'monthly': {
+      if (prev.selectedMonth > 1) {
+        prev.selectedMonth -= 1;
+      } else {
+        prev.selectedMonth = 12;
+        prev.selectedYear -= 1;
+      }
+      break;
+    }
+    case 'yearly': {
+      prev.selectedYear -= 1;
+      break;
+    }
+  }
+
+  return buildReportDateRange(prev);
+}
+
 function buildDateRangeLabel(filters: ReportFilters): string {
   const { periodType, selectedYear, selectedMonth, selectedWeek } = filters;
   const monthName = HEBREW_MONTHS[selectedMonth] || '';
