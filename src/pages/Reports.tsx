@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart3, TrendingUp, DollarSign, Package, AlertCircle, Loader2, Shield, Lightbulb } from 'lucide-react';
 import { useReports, ReportsRange } from '@/hooks/useReports';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useRealtimeReports } from '@/hooks/useRealtimeReports';
 import { useNavigate } from 'react-router-dom';
 import ReportsCharts from '@/components/reports/ReportsCharts';
 import { InsightsTabs } from '@/components/reports/InsightsTabs';
