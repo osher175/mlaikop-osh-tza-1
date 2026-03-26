@@ -20,6 +20,7 @@ export const useRealtimeReports = () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['reports_aggregate'] });
+        queryClient.invalidateQueries({ queryKey: ['reports_aggregate_previous'] });
         queryClient.invalidateQueries({ queryKey: ['top_products_ranking'] });
       }, 500);
     };
