@@ -144,10 +144,10 @@ export const Reports: React.FC = () => {
                   <Card>
                     <CardContent className="p-6">
                       <div className="flex items-center">
-                        <BarChart3 className="h-8 w-8 text-accent-foreground" />
+                        <BarChart3 className="h-8 w-8 text-purple-600" />
                         <div className="mr-4">
                           <p className="text-sm font-medium text-muted-foreground">סה"כ יצאו</p>
-                          <p className="text-2xl font-bold text-accent-foreground">{reportsData.total_removed ?? 0}</p>
+                          <p className="text-2xl font-bold text-purple-600">{reportsData.total_removed ?? 0}</p>
                         </div>
                       </div>
                     </CardContent>

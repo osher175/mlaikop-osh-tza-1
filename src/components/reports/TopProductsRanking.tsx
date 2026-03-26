@@ -175,7 +175,8 @@ export const TopProductsRanking: React.FC = () => {
       return result?.top_products_list || [];
     },
     enabled: !!business?.id,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 15 * 1000, // 15 seconds
+    refetchOnWindowFocus: true,
   });
 
   const handleViewModeChange = (mode: ViewMode) => {
