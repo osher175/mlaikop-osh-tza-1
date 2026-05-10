@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { getDisplayName } from '@/lib/utils/displayName';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
