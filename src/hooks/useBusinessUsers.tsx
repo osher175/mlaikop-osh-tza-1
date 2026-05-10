@@ -26,7 +26,7 @@ export const useBusinessUsers = () => {
       // Get owner profile
       const { data: ownerProfile, error: ownerProfileError } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name')
+        .select('id, first_name, last_name, display_name, username')
         .eq('id', ownerData.owner_id)
         .single();
 
@@ -55,6 +55,8 @@ export const useBusinessUsers = () => {
           id: ownerProfile.id,
           first_name: ownerProfile.first_name,
           last_name: ownerProfile.last_name,
+          display_name: (ownerProfile as any).display_name,
+          username: (ownerProfile as any).username,
           role: 'בעלים'
         });
       }
@@ -65,7 +67,7 @@ export const useBusinessUsers = () => {
         
         const { data: memberProfiles, error: memberProfilesError } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name')
+          .select('id, first_name, last_name, display_name, username')
           .in('id', memberIds);
 
         if (memberProfilesError) {
@@ -80,6 +82,8 @@ export const useBusinessUsers = () => {
             id: profile.id,
             first_name: profile.first_name,
             last_name: profile.last_name,
+            display_name: (profile as any).display_name,
+            username: (profile as any).username,
             role: memberRole || 'משתמש'
           });
         });
