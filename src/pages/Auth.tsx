@@ -231,13 +231,13 @@ function MockStat({ icon: Icon, label, value, color, bg }: { icon: React.Element
 }
 
 /* ─── Auth Input ─── */
-function AuthInput({ id, type, label, placeholder, icon, value, onChange, trailing }: { id: string; type: string; label: string; placeholder: string; icon: React.ReactNode; value: string; onChange: (v: string) => void; trailing?: React.ReactNode }) {
+function AuthInput({ id, type, label, placeholder, icon, value, onChange, trailing, required = true }: { id: string; type: string; label: string; placeholder: string; icon: React.ReactNode; value: string; onChange: (v: string) => void; trailing?: React.ReactNode; required?: boolean }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-xs font-medium" style={{ color: '#0F172A' }}>{label}</label>
       <div className="relative">
         <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#94A3B8' }}>{icon}</span>
-        <input id={id} type={type} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} required className="w-full text-sm pr-10 pl-10 py-3 outline-none transition-all duration-150" style={{ borderRadius: '10px', border: '1px solid rgba(15,23,42,0.08)', color: '#0F172A', background: '#FFFFFF' }} onFocus={(e) => { e.currentTarget.style.borderColor = '#14B8A6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(20,184,166,0.1)'; }} onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(15,23,42,0.08)'; e.currentTarget.style.boxShadow = 'none'; }} />
+        <input id={id} type={type} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} required={required} className="w-full text-sm pr-10 pl-10 py-3 outline-none transition-all duration-150" style={{ borderRadius: '10px', border: '1px solid rgba(15,23,42,0.08)', color: '#0F172A', background: '#FFFFFF' }} onFocus={(e) => { e.currentTarget.style.borderColor = '#14B8A6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(20,184,166,0.1)'; }} onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(15,23,42,0.08)'; e.currentTarget.style.boxShadow = 'none'; }} />
         {trailing && <span className="absolute left-3 top-1/2 -translate-y-1/2">{trailing}</span>}
       </div>
     </div>
