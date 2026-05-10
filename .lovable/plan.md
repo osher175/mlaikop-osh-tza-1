@@ -1,58 +1,47 @@
-## הבעיה
+## חור קריטי שטרם תוקן
 
-הקישור באימייל איפוס הסיסמה של Supabase (גרסאות חדשות, PKCE flow) מחזיר את המשתמש ל-`/reset-password` עם פרמטר `?code=...` ב-query string, או עם `?token_hash=...&type=recovery`. הקובץ `src/pages/ResetPassword.tsx` בודק רק `#access_token` ו-`#refresh_token` ב-hash — לכן הוא תמיד נופל ל-else, מציג "קישור איפוס הסיסמה אינו תקין" ומפנה ל-`/auth`. זו הסיבה שהפיצ'ר נראה לא עובד.
+ב-`src/App.tsx` הנתיבים `/forgot-password` ו-`/reset-password` **כלל אינם רשומים**. ה-catch-all `<Route path="*" element={<Navigate to="/dashboard" replace />} />` תופס אותם, מפנה ל-`/dashboard`, ה-`ProtectedRoute` רואה משתמש לא מחובר ושולח ל-`/auth`.
 
-## מה אתקן
+תוצאה:
+- לחיצה על "שכחתי את הסיסמה" ב-`/auth` → המשתמש מוקפץ בחזרה ל-`/auth` ולא רואה את הטופס.
+- לחיצה על הקישור באימייל (`/reset-password?code=...`) → ה-redirect דורס את ה-URL ו-**הטוקן נזרק לפני שהקוד שלי מצליח לקרוא אותו**.
 
-### 1. `src/pages/ResetPassword.tsx` – תמיכה בכל פורמטי הקישור
-ב-`useEffect` אטפל בשלושה מקרים לפי הסדר:
-1. **PKCE** – אם יש `?code=...` ב-query → `supabase.auth.exchangeCodeForSession(code)`
-2. **OTP token_hash** – אם יש `?token_hash=...&type=recovery` → `supabase.auth.verifyOtp({ token_hash, type: 'recovery' })`
-3. **Legacy implicit** – אם יש `#access_token` + `#refresh_token` ב-hash → `supabase.auth.setSession(...)` (הקוד הקיים)
-4. רק אם אף אחד מהשלושה לא קיים → להציג שגיאה ולהפנות ל-`/auth`
+זה מסביר למה הפיצ'ר לא עבד מלכתחילה — התיקון הקודם ל-`ResetPassword.tsx` נכון לוגית אבל הרכיב לעולם לא נטען.
 
-לאחר הצלחה אנקה את ה-URL (`window.history.replaceState`) כדי שלא יישאר טוקן ב-address bar, ואקבע `setIsValidSession(true)`.
+## תיקון
 
-### 2. `src/hooks/useAuth.tsx` – יישור `resetPassword`
-הפונקציה הנוכחית קוראת `resetPasswordForEmail(email)` בלי `redirectTo`. אוסיף `redirectTo: ${window.location.origin}/reset-password` כדי שתהיה עקבית עם הקריאה הישירה ב-`ForgotPassword.tsx` ולא תפנה לכתובת ברירת מחדל אם תיקרא בעתיד.
+### `src/App.tsx`
+להוסיף שני Public Routes לפני ה-`*`:
 
-### 3. הוראה למשתמש (לא קוד)
-לוודא ב-Supabase Dashboard → Authentication → URL Configuration:
-- **Site URL**: כתובת הפרודקשן (`https://www.mlaiko.com` או `https://mlaiko.com`)
-- **Redirect URLs**: להוסיף את כל אלה אם חסרים:
-  - `https://www.mlaiko.com/reset-password`
-  - `https://mlaiko.com/reset-password`
-  - `https://mlaikop-osh-tza-1.lovable.app/reset-password`
-  - `https://id-preview--189c289a-9430-4114-9212-465332a6e893.lovable.app/reset-password`
+```tsx
+import { ForgotPassword } from "./pages/ForgotPassword";
+import { ResetPassword } from "./pages/ResetPassword";
 
-בלי זה Supabase מתעלם מה-`redirectTo` ושולח את המשתמש ל-Site URL ללא הטוקן.
-
-## מה לא משתנה
-- העיצוב, הטקסטים והלוגיקה של `ForgotPassword.tsx` נשארים זהים.
-- אין שינוי ב-DB, ב-RLS או ב-edge functions.
-- אין שינוי ב-`Auth.tsx` או בנתיבים ב-`App.tsx`.
-
-## פרטים טכניים
-
-```ts
-// pseudo-code – ResetPassword useEffect
-const url = new URL(window.location.href);
-const code = url.searchParams.get('code');
-const tokenHash = url.searchParams.get('token_hash');
-const type = url.searchParams.get('type');
-const hash = new URLSearchParams(window.location.hash.slice(1));
-const accessToken = hash.get('access_token');
-const refreshToken = hash.get('refresh_token');
-
-if (code) {
-  await supabase.auth.exchangeCodeForSession(code);
-} else if (tokenHash && type === 'recovery') {
-  await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' });
-} else if (accessToken && refreshToken) {
-  await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-} else {
-  // show error + navigate('/auth')
-}
+// בתוך <Routes>, ליד /auth ו-/unauthorized:
+<Route path="/forgot-password" element={<ForgotPassword />} />
+<Route path="/reset-password" element={<ResetPassword />} />
 ```
 
-לאחר ההצלחה: `window.history.replaceState({}, '', '/reset-password')` ו-`setIsValidSession(true)`.
+חשוב: שניהם חייבים להיות **Public** (לא עטופים ב-`ProtectedRoute`) כי המשתמש מגיע אליהם לפני התחברות.
+
+## בדיקות נוספות שעשיתי – בלי בעיות נוספות
+
+- `Auth.tsx` כבר מכיל `<Link to="/forgot-password">` — אחרי הוספת הנתיב הקישור יעבוד.
+- `ForgotPassword.tsx` קורא ל-`supabase.auth.resetPasswordForEmail` עם `redirectTo` נכון — תקין.
+- `ResetPassword.tsx` (אחרי התיקון הקודם) תומך בשלושת הפורמטים: `?code=`, `?token_hash=&type=recovery`, ו-`#access_token=` — תקין.
+- `useAuth` provider עוטף את `Routes` — `useNavigate` של ResetPassword יעבוד.
+- ה-`onAuthStateChange` ב-`useAuth.tsx` יוצר trial subscription ב-SIGNED_IN — לא מפריע, כי המשתמש כבר היה רשום. בנוסף, אחרי הצלחה ResetPassword קורא `navigate('/auth')` ו-Auth יזהה משתמש מחובר וינווט ל-`/dashboard` — התנהגות טובה.
+
+## תזכורת חיצונית (לא קוד)
+ב-Supabase Dashboard → Authentication → URL Configuration → **Redirect URLs** ודא שמופיעים:
+- `https://www.mlaiko.com/reset-password`
+- `https://mlaiko.com/reset-password`
+- `https://mlaikop-osh-tza-1.lovable.app/reset-password`
+- `https://id-preview--189c289a-9430-4114-9212-465332a6e893.lovable.app/reset-password`
+
+בלי זה Supabase מתעלם מה-`redirectTo` ושולח את המשתמש ל-Site URL ללא הטוקן — ואז הטופס בכלל לא נטען עם פרטי האימות.
+
+## מה לא משתנה
+- אין שינוי ב-DB, ב-RLS, ב-edge functions או בעיצוב.
+- אין שינוי בתוכן/לוגיקה של `ForgotPassword.tsx`, `ResetPassword.tsx`, `Auth.tsx` או `useAuth.tsx`.
+- שינוי נקודתי ב-`App.tsx` בלבד: הוספת שתי שורות import ושני `<Route>`.
