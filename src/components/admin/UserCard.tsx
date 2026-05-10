@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { getDisplayName } from '@/lib/utils/displayName';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,7 +47,7 @@ export const UserCard: React.FC<UserCardProps> = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const navigate = useNavigate();
 
-  const fullName = `${user.first_name} ${user.last_name}`.trim() || 'לא צוין';
+  const fullName = getDisplayName(user as any);
 
   const handleToggleStatus = () => {
     onToggleStatus(user.user_id);

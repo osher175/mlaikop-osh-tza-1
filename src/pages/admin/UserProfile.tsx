@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { getDisplayName } from '@/lib/utils/displayName';
 import { 
   ArrowRight, 
   User, 
@@ -142,7 +143,7 @@ export const AdminUserProfile: React.FC = () => {
     );
   }
 
-  const fullName = `${userProfile.first_name} ${userProfile.last_name}`.trim() || 'לא צוין';
+  const fullName = getDisplayName(userProfile as any);
   const timeInSystem = formatTimeInSystem(userProfile.created_at);
 
   return (

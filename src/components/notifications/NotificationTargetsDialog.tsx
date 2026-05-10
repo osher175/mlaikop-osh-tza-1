@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { getDisplayName } from '@/lib/utils/displayName';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -81,7 +82,7 @@ export const NotificationTargetsDialog: React.FC<NotificationTargetsDialogProps>
                 onCheckedChange={(checked) => handleUserToggle(user.id, !!checked)}
               />
               <Label htmlFor={user.id} className="flex-1">
-                {user.first_name} {user.last_name}
+                {getDisplayName(user as any)}
                 {user.role && (
                   <span className="text-sm text-gray-500 mr-2">
                     ({user.role})
