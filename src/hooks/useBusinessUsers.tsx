@@ -82,6 +82,8 @@ export const useBusinessUsers = () => {
             id: profile.id,
             first_name: profile.first_name,
             last_name: profile.last_name,
+            display_name: (profile as any).display_name,
+            username: (profile as any).username,
             role: memberRole || 'משתמש'
           });
         });
