@@ -272,48 +272,60 @@ export type Database = {
           address: string | null
           avg_monthly_revenue: number | null
           business_category_id: string | null
+          business_email: string | null
           business_type: string | null
           created_at: string | null
           employee_count: number | null
           id: string
           industry: string | null
+          logo_url: string | null
           name: string
           official_email: string | null
+          onboarding_completed: boolean
           owner_id: string
           phone: string | null
           plan_id: string | null
+          tax_id: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
           avg_monthly_revenue?: number | null
           business_category_id?: string | null
+          business_email?: string | null
           business_type?: string | null
           created_at?: string | null
           employee_count?: number | null
           id?: string
           industry?: string | null
+          logo_url?: string | null
           name: string
           official_email?: string | null
+          onboarding_completed?: boolean
           owner_id: string
           phone?: string | null
           plan_id?: string | null
+          tax_id?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
           avg_monthly_revenue?: number | null
           business_category_id?: string | null
+          business_email?: string | null
           business_type?: string | null
           created_at?: string | null
           employee_count?: number | null
           id?: string
           industry?: string | null
+          logo_url?: string | null
           name?: string
           official_email?: string | null
+          onboarding_completed?: boolean
           owner_id?: string
           phone?: string | null
           plan_id?: string | null
+          tax_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1345,34 +1357,43 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           business_id: string | null
           created_at: string
+          display_name: string | null
           first_name: string | null
           id: string
           is_active: boolean
           last_name: string | null
           role: string | null
           updated_at: string
+          username: string | null
         }
         Insert: {
+          avatar_url?: string | null
           business_id?: string | null
           created_at?: string
+          display_name?: string | null
           first_name?: string | null
           id: string
           is_active?: boolean
           last_name?: string | null
           role?: string | null
           updated_at?: string
+          username?: string | null
         }
         Update: {
+          avatar_url?: string | null
           business_id?: string | null
           created_at?: string
+          display_name?: string | null
           first_name?: string | null
           id?: string
           is_active?: boolean
           last_name?: string | null
           role?: string | null
           updated_at?: string
+          username?: string | null
         }
         Relationships: [
           {
@@ -2663,6 +2684,10 @@ export type Database = {
         Returns: boolean
       }
       cleanup_old_audit_logs: { Args: never; Returns: undefined }
+      complete_business_onboarding: {
+        Args: { p_business_id: string }
+        Returns: boolean
+      }
       create_business_for_new_user: {
         Args: { p_business_name: string; p_phone?: string }
         Returns: string

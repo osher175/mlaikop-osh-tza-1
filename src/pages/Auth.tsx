@@ -17,7 +17,7 @@ export const Auth = () => {
 
   const [signInData, setSignInData] = useState({ email: '', password: '' });
   const [signUpData, setSignUpData] = useState({
-    firstName: '', lastName: '', email: '', password: '', confirmPassword: '',
+    username: '', email: '', password: '', confirmPassword: '',
   });
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export const Auth = () => {
     if (signUpData.password.length < 6) { toast({ title: 'שגיאה', description: 'הסיסמה חייבת להכיל לפחות 6 תווים', variant: 'destructive' }); return; }
     setIsLoading(true);
     try {
-      const { error } = await signUp(signUpData.email, signUpData.password, signUpData.firstName, signUpData.lastName);
+      const { error } = await signUp(signUpData.email, signUpData.password, signUpData.username);
       if (error) {
         toast({ title: 'שגיאה בהרשמה', description: error.message.includes('already registered') ? 'משתמש עם כתובת אימייל זו כבר קיים' : 'אירעה שגיאה בעת ההרשמה', variant: 'destructive' });
       } else {
@@ -198,10 +198,7 @@ export const Auth = () => {
 
             {activeTab === 'signup' && (
               <form onSubmit={handleSignUp} className="flex flex-col gap-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <AuthInput id="signup-firstname" type="text" label="שם פרטי" placeholder="שם פרטי" icon={<User size={18} strokeWidth={1.5} />} value={signUpData.firstName} onChange={(v) => setSignUpData((p) => ({ ...p, firstName: v }))} />
-                  <AuthInput id="signup-lastname" type="text" label="שם משפחה" placeholder="שם משפחה" icon={<User size={18} strokeWidth={1.5} />} value={signUpData.lastName} onChange={(v) => setSignUpData((p) => ({ ...p, lastName: v }))} />
-                </div>
+                <AuthInput id="signup-username" type="text" label="שם משתמש (אופציונלי)" placeholder="ייווצר אוטומטית אם תשאיר ריק" icon={<User size={18} strokeWidth={1.5} />} value={signUpData.username} onChange={(v) => setSignUpData((p) => ({ ...p, username: v }))} required={false} />
                 <AuthInput id="signup-email" type="email" label="כתובת אימייל" placeholder="name@example.com" icon={<Mail size={18} strokeWidth={1.5} />} value={signUpData.email} onChange={(v) => setSignUpData((p) => ({ ...p, email: v }))} />
                 <AuthInput id="signup-password" type={showPassword ? 'text' : 'password'} label="סיסמה" placeholder="לפחות 6 תווים" icon={<Lock size={18} strokeWidth={1.5} />} value={signUpData.password} onChange={(v) => setSignUpData((p) => ({ ...p, password: v }))} trailing={<button type="button" onClick={() => setShowPassword(!showPassword)} className="p-1">{showPassword ? <EyeOff size={16} style={{ color: '#94A3B8' }} /> : <Eye size={16} style={{ color: '#94A3B8' }} />}</button>} />
                 <AuthInput id="signup-confirm-password" type={showConfirmPassword ? 'text' : 'password'} label="אישור סיסמה" placeholder="הכנס שוב את הסיסמה" icon={<Lock size={18} strokeWidth={1.5} />} value={signUpData.confirmPassword} onChange={(v) => setSignUpData((p) => ({ ...p, confirmPassword: v }))} trailing={<button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="p-1">{showConfirmPassword ? <EyeOff size={16} style={{ color: '#94A3B8' }} /> : <Eye size={16} style={{ color: '#94A3B8' }} />}</button>} />
@@ -234,13 +231,13 @@ function MockStat({ icon: Icon, label, value, color, bg }: { icon: React.Element
 }
 
 /* ─── Auth Input ─── */
-function AuthInput({ id, type, label, placeholder, icon, value, onChange, trailing }: { id: string; type: string; label: string; placeholder: string; icon: React.ReactNode; value: string; onChange: (v: string) => void; trailing?: React.ReactNode }) {
+function AuthInput({ id, type, label, placeholder, icon, value, onChange, trailing, required = true }: { id: string; type: string; label: string; placeholder: string; icon: React.ReactNode; value: string; onChange: (v: string) => void; trailing?: React.ReactNode; required?: boolean }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-xs font-medium" style={{ color: '#0F172A' }}>{label}</label>
       <div className="relative">
         <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#94A3B8' }}>{icon}</span>
-        <input id={id} type={type} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} required className="w-full text-sm pr-10 pl-10 py-3 outline-none transition-all duration-150" style={{ borderRadius: '10px', border: '1px solid rgba(15,23,42,0.08)', color: '#0F172A', background: '#FFFFFF' }} onFocus={(e) => { e.currentTarget.style.borderColor = '#14B8A6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(20,184,166,0.1)'; }} onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(15,23,42,0.08)'; e.currentTarget.style.boxShadow = 'none'; }} />
+        <input id={id} type={type} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} required={required} className="w-full text-sm pr-10 pl-10 py-3 outline-none transition-all duration-150" style={{ borderRadius: '10px', border: '1px solid rgba(15,23,42,0.08)', color: '#0F172A', background: '#FFFFFF' }} onFocus={(e) => { e.currentTarget.style.borderColor = '#14B8A6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(20,184,166,0.1)'; }} onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(15,23,42,0.08)'; e.currentTarget.style.boxShadow = 'none'; }} />
         {trailing && <span className="absolute left-3 top-1/2 -translate-y-1/2">{trailing}</span>}
       </div>
     </div>
