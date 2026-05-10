@@ -58,56 +58,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const createTrialSubscription = async (userId: string) => {
     try {
-      console.log('Creating trial subscription for user:', userId);
-      
-      // First, get the first available plan
-      const { data: plans, error: planError } = await supabase
-        .from('subscription_plans')
-        .select('id')
-        .limit(1);
-
-      if (planError) {
-        console.error('Error fetching plans:', planError);
-        return;
-      }
-
-      if (!plans || plans.length === 0) {
-        console.error('No subscription plans available');
-        return;
-      }
-
-      const defaultPlanId = plans[0].id;
-      const now = new Date();
-      const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
-
-      // Check if user already has a subscription
-      const { data: existingSubscription } = await supabase
-        .from('user_subscriptions')
-        .select('id')
-        .eq('user_id', userId)
-        .single();
-
-      if (existingSubscription) {
-        console.log('User already has a subscription, skipping trial creation');
-        return;
-      }
-
-      const { error: subscriptionError } = await supabase
-        .from('user_subscriptions')
-        .insert({
-          user_id: userId,
-          plan_id: defaultPlanId,
-          status: 'active', // Use 'active' instead of 'trial' to avoid constraint issues
-          started_at: now.toISOString(),
-          expires_at: trialEnd.toISOString(),
-          trial_started_at: now.toISOString(),
-          trial_ends_at: trialEnd.toISOString()
-        });
-
-      if (subscriptionError) {
-        console.error('Error creating trial subscription:', subscriptionError);
+      console.log('Ensuring trial subscription via RPC for user:', userId);
+      const { error } = await supabase.rpc('ensure_trial_subscription');
+      if (error) {
+        console.error('Error in ensure_trial_subscription RPC:', error);
       } else {
-        console.log('Trial subscription created successfully');
+        console.log('Trial subscription ensured (server-side)');
       }
     } catch (error) {
       console.error('Error in createTrialSubscription:', error);
