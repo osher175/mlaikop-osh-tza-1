@@ -198,10 +198,7 @@ export const Auth = () => {
 
             {activeTab === 'signup' && (
               <form onSubmit={handleSignUp} className="flex flex-col gap-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <AuthInput id="signup-firstname" type="text" label="שם פרטי" placeholder="שם פרטי" icon={<User size={18} strokeWidth={1.5} />} value={signUpData.firstName} onChange={(v) => setSignUpData((p) => ({ ...p, firstName: v }))} />
-                  <AuthInput id="signup-lastname" type="text" label="שם משפחה" placeholder="שם משפחה" icon={<User size={18} strokeWidth={1.5} />} value={signUpData.lastName} onChange={(v) => setSignUpData((p) => ({ ...p, lastName: v }))} />
-                </div>
+                <AuthInput id="signup-username" type="text" label="שם משתמש (אופציונלי)" placeholder="ייווצר אוטומטית אם תשאיר ריק" icon={<User size={18} strokeWidth={1.5} />} value={signUpData.username} onChange={(v) => setSignUpData((p) => ({ ...p, username: v }))} required={false} />
                 <AuthInput id="signup-email" type="email" label="כתובת אימייל" placeholder="name@example.com" icon={<Mail size={18} strokeWidth={1.5} />} value={signUpData.email} onChange={(v) => setSignUpData((p) => ({ ...p, email: v }))} />
                 <AuthInput id="signup-password" type={showPassword ? 'text' : 'password'} label="סיסמה" placeholder="לפחות 6 תווים" icon={<Lock size={18} strokeWidth={1.5} />} value={signUpData.password} onChange={(v) => setSignUpData((p) => ({ ...p, password: v }))} trailing={<button type="button" onClick={() => setShowPassword(!showPassword)} className="p-1">{showPassword ? <EyeOff size={16} style={{ color: '#94A3B8' }} /> : <Eye size={16} style={{ color: '#94A3B8' }} />}</button>} />
                 <AuthInput id="signup-confirm-password" type={showConfirmPassword ? 'text' : 'password'} label="אישור סיסמה" placeholder="הכנס שוב את הסיסמה" icon={<Lock size={18} strokeWidth={1.5} />} value={signUpData.confirmPassword} onChange={(v) => setSignUpData((p) => ({ ...p, confirmPassword: v }))} trailing={<button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="p-1">{showConfirmPassword ? <EyeOff size={16} style={{ color: '#94A3B8' }} /> : <Eye size={16} style={{ color: '#94A3B8' }} />}</button>} />
