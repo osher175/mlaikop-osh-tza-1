@@ -32,7 +32,7 @@ export const SubscriptionTable: React.FC = () => {
         subscriptionData.map(async (subscription) => {
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('first_name, last_name')
+            .select('first_name, last_name, display_name, username')
             .eq('id', subscription.user_id)
             .single();
 
