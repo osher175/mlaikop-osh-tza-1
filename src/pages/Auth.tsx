@@ -17,7 +17,7 @@ export const Auth = () => {
 
   const [signInData, setSignInData] = useState({ email: '', password: '' });
   const [signUpData, setSignUpData] = useState({
-    firstName: '', lastName: '', email: '', password: '', confirmPassword: '',
+    username: '', email: '', password: '', confirmPassword: '',
   });
 
   useEffect(() => {
