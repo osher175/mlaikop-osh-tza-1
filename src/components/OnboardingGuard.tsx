@@ -1,15 +1,14 @@
-
 import React from 'react';
-import { useBusinessAccess } from '@/hooks/useBusinessAccess';
-import { OnboardingDecision } from '@/pages/OnboardingDecision';
 import { Loader2 } from 'lucide-react';
+import { useBusinessOnboardingStatus } from '@/hooks/useBusinessOnboardingStatus';
+import { OnboardingDecision } from '@/pages/OnboardingDecision';
 
 interface OnboardingGuardProps {
   children: React.ReactNode;
 }
 
 export const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) => {
-  const { hasAccess, isLoading } = useBusinessAccess();
+  const { hasBusiness, onboardingCompleted, isLoading } = useBusinessOnboardingStatus();
 
   if (isLoading) {
     return (
@@ -22,9 +21,8 @@ export const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) =>
     );
   }
 
-  // For MVP - if user doesn't have business access, redirect to business creation
-  if (!hasAccess) {
-    console.log('User does not have business access, redirecting to onboarding');
+  // No business yet, or onboarding not finished → show progressive wizard
+  if (!hasBusiness || !onboardingCompleted) {
     return <OnboardingDecision />;
   }
 
