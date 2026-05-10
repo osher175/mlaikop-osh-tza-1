@@ -43,7 +43,7 @@ export const Auth = () => {
     if (signUpData.password.length < 6) { toast({ title: 'שגיאה', description: 'הסיסמה חייבת להכיל לפחות 6 תווים', variant: 'destructive' }); return; }
     setIsLoading(true);
     try {
-      const { error } = await signUp(signUpData.email, signUpData.password, signUpData.firstName, signUpData.lastName);
+      const { error } = await signUp(signUpData.email, signUpData.password, signUpData.username);
       if (error) {
         toast({ title: 'שגיאה בהרשמה', description: error.message.includes('already registered') ? 'משתמש עם כתובת אימייל זו כבר קיים' : 'אירעה שגיאה בעת ההרשמה', variant: 'destructive' });
       } else {
