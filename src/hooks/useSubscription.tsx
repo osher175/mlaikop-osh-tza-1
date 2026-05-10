@@ -127,59 +127,11 @@ export const useSubscription = () => {
     if (!user?.id) return false;
 
     try {
-      // Check if a subscription already exists before inserting
-      const { data: existing } = await supabase
-        .from('user_subscriptions')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (existing) {
-        console.log('Subscription already exists, skipping trial creation');
-        await refetchSubscription();
-        return true;
-      }
-
-      const now = new Date();
-      const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
-
-      // Get the first available plan to use as default
-      const { data: plans } = await supabase
-        .from('subscription_plans')
-        .select('id')
-        .limit(1);
-
-      const defaultPlanId = plans?.[0]?.id;
-
-      if (!defaultPlanId) {
-        console.error('No subscription plans available');
-        return false;
-      }
-
-      console.log('Creating trial subscription:', {
-        userId: user.id,
-        email: user.email,
-        planId: defaultPlanId,
-        trialStart: now.toISOString(),
-        trialEnd: trialEnd.toISOString()
-      });
-
-      const { error } = await supabase
-        .from('user_subscriptions')
-        .insert({
-          user_id: user.id,
-          plan_id: defaultPlanId,
-          status: 'trial',
-          trial_started_at: now.toISOString(),
-          trial_ends_at: trialEnd.toISOString()
-        });
-
+      const { error } = await supabase.rpc('ensure_trial_subscription');
       if (error) {
-        console.error('Error creating trial subscription:', error);
+        console.error('Error in ensure_trial_subscription RPC:', error);
         return false;
       }
-
-      console.log('Trial subscription created successfully for user:', user.email);
       await refetchSubscription();
       return true;
     } catch (error) {
