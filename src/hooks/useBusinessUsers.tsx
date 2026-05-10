@@ -67,7 +67,7 @@ export const useBusinessUsers = () => {
         
         const { data: memberProfiles, error: memberProfilesError } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name')
+          .select('id, first_name, last_name, display_name, username')
           .in('id', memberIds);
 
         if (memberProfilesError) {
