@@ -142,7 +142,7 @@ export const AdminUserProfile: React.FC = () => {
     );
   }
 
-  const fullName = `${userProfile.first_name} ${userProfile.last_name}`.trim() || 'לא צוין';
+  const fullName = getDisplayName(userProfile as any);
   const timeInSystem = formatTimeInSystem(userProfile.created_at);
 
   return (
