@@ -114,7 +114,7 @@ export const SubscriptionTable: React.FC = () => {
                   <TableCell className="font-rubik">
                     <div>
                       <div className="font-medium">
-                        {subscription.profiles?.first_name} {subscription.profiles?.last_name}
+                        {getDisplayName(subscription.profiles as any)}
                       </div>
                       <div className="text-sm text-gray-500">{subscription.user_id}</div>
                     </div>
