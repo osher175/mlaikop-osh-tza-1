@@ -8,6 +8,8 @@ import { SmartRedirect } from "@/components/SmartRedirect";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Auth } from "@/pages/Auth";
+import { ForgotPassword } from "@/pages/ForgotPassword";
+import { ResetPassword } from "@/pages/ResetPassword";
 import { Dashboard } from "@/pages/Dashboard";
 import { Inventory } from "@/pages/Inventory";
 import { Suppliers } from "@/pages/Suppliers";
@@ -46,6 +48,8 @@ function App() {
               {/* Public routes */}
               <Route path="/auth" element={<Auth />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               
               {/* Business user routes - admin יכול לגשת לכל הדפים לצורכי ניהול */}
               <Route
