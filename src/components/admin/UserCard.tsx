@@ -46,7 +46,7 @@ export const UserCard: React.FC<UserCardProps> = ({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const navigate = useNavigate();
 
-  const fullName = `${user.first_name} ${user.last_name}`.trim() || 'לא צוין';
+  const fullName = getDisplayName(user as any);
 
   const handleToggleStatus = () => {
     onToggleStatus(user.user_id);
