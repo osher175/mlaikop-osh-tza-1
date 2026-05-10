@@ -2696,6 +2696,7 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: boolean
       }
+      ensure_trial_subscription: { Args: never; Returns: undefined }
       execute_inventory_transaction: {
         Args: {
           p_action_type: string
