@@ -22,42 +22,52 @@ export const ResetPassword = () => {
 
   useEffect(() => {
     const handlePasswordReset = async () => {
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get('code');
+      const tokenHash = url.searchParams.get('token_hash');
+      const type = url.searchParams.get('type');
+      const errorDescription =
+        url.searchParams.get('error_description') ||
+        new URLSearchParams(window.location.hash.replace(/^#/, '')).get('error_description');
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
 
-      if (accessToken && refreshToken) {
-        try {
+      const fail = (msg = 'קישור איפוס הסיסמה אינו תקין או פג תוקף') => {
+        toast({ title: 'שגיאה', description: msg, variant: 'destructive' });
+        navigate('/auth');
+      };
+
+      if (errorDescription) {
+        fail(errorDescription);
+        return;
+      }
+
+      try {
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) return fail();
+        } else if (tokenHash && (type === 'recovery' || type === 'magiclink')) {
+          const { error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'recovery',
+          });
+          if (error) return fail();
+        } else if (accessToken && refreshToken) {
           const { error } = await supabase.auth.setSession({
             access_token: accessToken,
-            refresh_token: refreshToken
+            refresh_token: refreshToken,
           });
-          
-          if (error) {
-            toast({
-              title: 'שגיאה',
-              description: 'קישור איפוס הסיסמה אינו תקין או פג תוקף',
-              variant: 'destructive',
-            });
-            navigate('/auth');
-          } else {
-            setIsValidSession(true);
-          }
-        } catch (error) {
-          toast({
-            title: 'שגיאה',
-            description: 'אירעה שגיאה בעת אימות הקישור',
-            variant: 'destructive',
-          });
-          navigate('/auth');
+          if (error) return fail();
+        } else {
+          return fail('קישור איפוס הסיסמה אינו תקין');
         }
-      } else {
-        toast({
-          title: 'שגיאה',
-          description: 'קישור איפוס הסיסמה אינו תקין',
-          variant: 'destructive',
-        });
-        navigate('/auth');
+
+        // Clean tokens from URL bar
+        window.history.replaceState({}, '', '/reset-password');
+        setIsValidSession(true);
+      } catch (e) {
+        fail('אירעה שגיאה בעת אימות הקישור');
       }
     };
 
