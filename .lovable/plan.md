@@ -1,141 +1,83 @@
-# Refactor: Signup Flow & Profiles Architecture (Privacy-by-Design)
 
-## 1. ניתוח הארכיטקטורה הקיימת
+# M4 — Supplier Invoices Storage Hardening
 
-### טבלאות מעורבות (ממצאים מהקוד והפונקציות)
+## מטרה
+לסגור את הדליפה הפוטנציאלית בבאקט `supplier-invoices` בכך ש:
+1. הבאקט יהפוך ל-**private**.
+2. כל פעולה (SELECT/INSERT/DELETE) תידרש להיות ע"י **חבר מאושר של אותו עסק שהקובץ שייך לו** (לפי תיקיית root = `business_id`).
+3. הקוד יעבור מ-`getPublicUrl` ל-**signed URLs** קצרי-מועד.
 
-| טבלה | תפקיד נוכחי | בעיה ביחס למודל החדש |
-|---|---|---|
-| `auth.users` | זהות בסיסית (Supabase Auth) | תקין |
-| `profiles` | `id, first_name, last_name, is_active, business_id, created_at` | מחזיק `business_id` (כפילות עם `user_businesses`), ללא `username`/`display_name`/`avatar_url` |
-| `businesses` | `name, owner_id, business_category_id, industry, business_type, phone, address, ...` | תקין מבחינת מבנה, חסר `onboarding_completed` |
-| `user_businesses` | `user_id, business_id, role` (ללא `id`) | תקין — נשאר עמוד השדרה של ה-membership |
-| `user_roles` | `user_id, role, business_id` | משמש את `get_user_role()` ו-`has_role_or_higher()` — קריטי |
-| `notification_settings` | נוצר היום ב-`OnboardingDecision` יחד עם business | יעבור ל-onboarding שלב 3 |
-| `user_subscriptions` | מנוי פר-user (לא פר-business) | נשאר, אבל RLS לא יסתמך עליו לגישה |
+## היקף
+- היקף מצומצם בלבד, בלי לגעת ב-business logic.
+- לא נוגעים ב-M5/M6/M7/M8.
+- ללא שינוי בעיצוב, כפתורים, או דפים.
 
-### Triggers/Functions שתלויים במצב הנוכחי
+## מצב נוכחי (אומת)
+- בקאט: `public = true`
+- 3 policies על `{public}` שבודקות רק `auth.uid() IS NOT NULL`
+- נתיב קיים: `<business_id>/<timestamp>.<ext>` ✅ נוח לאכיפה
+- 0 קבצים בבאקט → אפס סיכון רגרסיה
+- טבלת `supplier_invoices` שומרת `file_url` כ-publicUrl (יוחלף ל-path בלבד או יומר ב-runtime ל-signed URL)
 
-- `handle_new_user()` — trigger על `auth.users` שיוצר `profiles` + `user_roles` (`free_user` או `admin`). **חייב לעבור עדכון** כדי לייצר גם `username` אוטומטי.
-- `create_business_for_new_user(name, phone)` — RPC שמייצר business + ממלא `user_businesses` + `user_roles.business_id` + `profiles.business_id`. **בסיס מצוין ל-onboarding החדש**, צריך הרחבה.
-- `is_business_name_available()` — נשאר.
-- `get_user_role()`, `has_role_or_higher()` — קוראים מ-`user_roles`. נשארים.
-- `require_premium()` — קורא `businesses.owner_id` → `user_subscriptions`. נשאר.
-- כל ה-`log_*`, `audit_*`, `enqueue_low_stock_crossing` — תלויים ב-`business_id` קיים על שורות. ללא business עדיין → לא רץ. בטוח.
+## תוכנית שינויים
 
-### Components / Pages שמושפעים
+### A. Migration — Storage
+1. `UPDATE storage.buckets SET public = false WHERE id = 'supplier-invoices';`
+2. `DROP` 3 ה-policies הקיימות.
+3. `CREATE` 3 policies חדשות על `{authenticated}` בלבד, בכולן:
+   - `bucket_id = 'supplier-invoices'`
+   - **AND** המשתמש הוא owner של העסק או חבר מאושר (`user_businesses` עם `role` רלוונטי) שזיהויו תואם ל-`(storage.foldername(name))[1]::uuid`.
 
-| קובץ | שינוי נדרש |
+### B. שינוי קוד מינימלי ב-`useSupplierInvoices.tsx`
+- `uploadFile`: לשמור ב-DB את ה-**path** (`<business_id>/<timestamp>.ext`) במקום publicUrl, או לחלופין להמשיך לשמור URL מלא אבל לייצר Signed URL בעת תצוגה/הורדה.
+- בעת תצוגה/הורדה: `supabase.storage.from('supplier-invoices').createSignedUrl(path, 60)`.
+- שום שינוי UI נראה למשתמש (קישור הורדה ממשיך לעבוד, פשוט נוצר on-demand).
+
+### C. Smoke Tests אחרי המעבר
+| תרחיש | מצופה |
 |---|---|
-| `src/pages/Auth.tsx` | טופס signup מינימלי: email + password + username (אופציונלי). הסרת שדות עסק. |
-| `src/hooks/useAuth.tsx` | `signUp` מקבל `username` במקום `firstName/lastName`. |
-| `src/pages/OnboardingDecision.tsx` | הופך ל-onboarding wizard 3-שלבי. כיום מייצר business + role + notifications במכה אחת. |
-| `src/pages/CreateBusiness.tsx` / `JoinBusiness.tsx` | מתואמים לפלואו החדש (אפשר להישאר נפרדים). |
-| `src/components/OnboardingGuard.tsx` | בודק `businesses.onboarding_completed` במקום רק "יש business". |
-| `src/components/SmartRedirect.tsx` | מפנה ל-`/onboarding` אם אין business או `onboarding_completed=false`. |
-| `src/hooks/useBusinessAccess.tsx` | משתמש ב-`user_has_business_access` — נשאר, אבל הפונקציה תיבדק שתסתמך על `user_businesses`. |
-| `src/pages/UserProfile.tsx` | מציג/עורך `username`, `display_name`, `avatar_url` (לא פרטי עסק). |
+| anon GET ל-publicUrl ישן | 400/403 (כי הבאקט private) |
+| authenticated של עסק B מנסה SELECT על path של עסק A | חסום (RLS) |
+| authenticated של עסק B מנסה DELETE על קובץ של עסק A | חסום (RLS) |
+| member מאושר של עסק A — upload, list, signed URL, delete | ✅ עובד |
+| owner של עסק A — אותו דבר | ✅ עובד |
 
-### RLS Policies תלויות במבנה הקיים (לבדיקה ועדכון)
+## פרטים טכניים (לסקירה לפני הרצה)
 
-- כל פוליסי שמסתמך על `profiles.business_id` — צריך להחליף ל-EXISTS על `user_businesses`.
-- פוליסי שתלוי ב-`user_subscriptions.status='active'` לגישה לנתוני עסק — להסיר/להחליף ב-membership.
-- Storage: `supplier-invoices`, `products` — לוודא שמתבסס על membership ב-business של הקובץ.
-- Realtime על `recent_activity` — לוודא RLS דרך `user_businesses`.
+### דוגמה ל-policy חדשה (SELECT)
+```sql
+CREATE POLICY "Members can read own business invoices"
+ON storage.objects FOR SELECT TO authenticated
+USING (
+  bucket_id = 'supplier-invoices'
+  AND EXISTS (
+    SELECT 1 FROM public.businesses b
+    WHERE b.id::text = (storage.foldername(name))[1]
+      AND b.owner_id = auth.uid()
+  )
+  OR EXISTS (
+    SELECT 1 FROM public.user_businesses ub
+    WHERE ub.business_id::text = (storage.foldername(name))[1]
+      AND ub.user_id = auth.uid()
+  )
+);
+```
+(אותו עיקרון ל-INSERT עם `WITH CHECK` ול-DELETE עם `USING`.)
 
-### Edge Functions שתלויות ב-business בזמן signup
+### שדה `file_url` בטבלה
+שתי אופציות — מבקש החלטה:
+- **(מועדף)** להפסיק לשמור publicUrl, לשמור רק path. בקריאה — לייצר Signed URL.
+- (חלופי) להשאיר את ה-`file_url` כפי שהוא, ולחלץ ממנו path בעת תצוגה כדי לייצר Signed URL.
 
-נסרקו: `procurement-*`, `meta-*`, `n8n-*`, `compress-storage-images`, `check-expiring-products`, `generate-weekly-stock-summary`, `send-admin-email`, `log-stock-alert`.
-**אף אחת לא רצה כחלק מ-signup**. כולן מופעלות לאחר שיש business פעיל. → **בטוח** שלא יישבר דבר אם signup לא מייצר business.
+מאחר וברגע זה אין קבצים בכלל בבאקט (0 רשומות), אופציה (1) חלקה לחלוטין.
 
-### מה עלול להישבר אם business עדיין לא קיים?
+## מה לא נעשה במסגרת M4
+- לא משנה policies על שום טבלה אחרת.
+- לא משנה Edge Functions.
+- לא נוגע ב-`brands` / `categories` / `stock_approval_requests` / `realtime` / dependencies.
+- לא משדרג Postgres ולא מפעיל Leaked Password Protection.
 
-1. כל hook שעושה `useBusiness()` ומניח שיש תוצאה (`useProducts`, `useReports`, `useNotifications`, `useSuppliers`, ...) — צריך שמירה על ה-`OnboardingGuard` שחוסם גישה לעמודי-עסק לפני שיש business.
-2. `useUserRole()` יחזיר `free_user` ללא `business_id` — תקין כברירת מחדל.
-3. `SmartRedirect` חייב להפנות ל-`/onboarding` במקום `/dashboard` כשאין business.
-4. `Dashboard` ו-`MainLayout` — לא נטענים בלי `OnboardingGuard`. → בטוח.
-
----
-
-## 2. תוכנית Migration בטוחה (4 שלבים)
-
-### שלב 0 — הוספת שדות בלי לשבור (Non-breaking, additive)
-
-**SQL Migration #1:**
-- `profiles`: הוסף `username TEXT UNIQUE`, `display_name TEXT`, `avatar_url TEXT` (כולם nullable).
-- `businesses`: הוסף `onboarding_completed BOOLEAN DEFAULT false`, `tax_id TEXT`, `logo_url TEXT`, `business_email TEXT`.
-- Backfill: `businesses.onboarding_completed = true` לכל העסקים הקיימים (הם כבר פעילים).
-- Backfill: `profiles.username = 'mlaiko-' || substr(id::text,1,8)` היכן ש-NULL.
-- Backfill: `profiles.display_name = COALESCE(first_name || ' ' || last_name, username)`.
-- עדכן `handle_new_user()`: בנוסף ל-first_name/last_name (תאימות), צור גם `username` אוטומטי (`mlaiko-XXXXX`) ו-`display_name`.
-- צור RPC חדש `complete_business_onboarding(p_business_id uuid)` שמסמן `onboarding_completed=true` + יוצר `notification_settings` ברירת מחדל אם חסר.
-
-**ללא הסרת עמודות ישנות בשלב זה.** `first_name/last_name` נשארים זמנית.
-
-### שלב 1 — Frontend Signup חדש (Backward compatible)
-
-- `Auth.tsx` — טופס signup מינימלי (email, password, username אופציונלי).
-- `useAuth.signUp(email, password, username?)` — אם אין username, ה-DB יגנרט.
-- ה-trigger הקיים ימשיך לאכלס `profiles` (עם `first_name=null` תקין).
-- משתמשים קיימים לא מושפעים.
-
-### שלב 2 — Onboarding Wizard
-
-- שינוי `OnboardingDecision.tsx` ל-wizard 3-שלבי (state מקומי, או 3 routes):
-  - שלב 1: business_name + business_type → קריאה ל-`create_business_for_new_user` (קיים, idempotent).
-  - שלב 2: address + phone + business_email → `UPDATE businesses ...`.
-  - שלב 3: notification_settings → קריאה ל-`complete_business_onboarding`.
-- `OnboardingGuard` בודק `onboarding_completed=true` במקום רק קיום business.
-- `SmartRedirect` שולח ל-`/onboarding` אם `onboarding_completed=false`.
-
-### שלב 3 — RLS Hardening (מתואם עם תיקוני האבטחה הפתוחים)
-
-נטפל בנפרד אחרי שמודל ה-membership מוצק:
-- כל policy שתלוי ב-`profiles.business_id` → להחליף ב-`EXISTS (SELECT 1 FROM user_businesses WHERE user_id=auth.uid() AND business_id=...)`.
-- הסרת policies שתלויות במנוי פעיל לצורך גישה (subscription gating נשאר רק ב-`require_premium` לפעולות פרימיום).
-- Storage policies: ownership דרך `user_businesses`.
-- בסוף השלב — אפשר להסיר `profiles.business_id` (deprecation) — **לא חלק מה-PR הזה**.
-
----
-
-## 3. רשימת קבצים מושפעים (PR ראשון = שלבים 0-2)
-
-**Migration:**
-- חדש: `supabase/migrations/<timestamp>_profiles_minimal_signup.sql`
-
-**Frontend:**
-- `src/pages/Auth.tsx` — פישוט טופס signup
-- `src/hooks/useAuth.tsx` — חתימת `signUp` חדשה
-- `src/pages/OnboardingDecision.tsx` — wizard 3-שלבי
-- `src/components/OnboardingGuard.tsx` — בדיקת `onboarding_completed`
-- `src/components/SmartRedirect.tsx` — תנאי הפניה
-- `src/pages/UserProfile.tsx` — שדות username/display_name/avatar (אם המשתמש מעוניין)
-
-**ללא שינוי בשלב הזה:** Edge Functions, RLS על טבלאות עסקיות, subscriptions, hooks עסקיים.
-
----
-
-## 4. ניתוח השפעת אבטחה
-
-| נושא | לפני | אחרי שלב 2 | אחרי שלב 3 |
-|---|---|---|---|
-| Cross-business access | קיימים פערים (ראה scan) | ללא שינוי | מתוקן |
-| Signup → אין business | מחייב business דרך onboarding | אותו דבר אבל הדרגתי | אותו דבר |
-| Subscription gating | מעורבב ב-RLS | ללא שינוי | מבודד ל-`require_premium` |
-| Privacy של profile | שומר first/last name | שומר רק username/display_name (חדשים) | אפשר להסיר first/last name |
-
----
-
-## 5. אסטרטגיית Rollout
-
-1. **PR 1** (זה): שלבים 0-2. פריסה → בדיקה ידנית של signup חדש + onboarding wizard + signup ישן (משתמשים קיימים נכנסים לדשבורד כרגיל בזכות backfill `onboarding_completed=true`).
-2. **PR 2**: RLS hardening לפי תוצאות security scan + מעבר policies ל-`user_businesses`.
-3. **PR 3** (אופציונלי, מאוחר): הסרת `profiles.business_id`, `first_name`, `last_name` — רק לאחר ולידציה שאין צרכנים.
-
----
-
-## 6. מה מבקש לאישור לפני implementation
-
-- אישור לתוכנית הזו ככלל.
-- האם להמשיך גם ל-PR 2 (RLS) באותה סשן או רק PR 1?
-- האם להציג ל-username שדה גם ב-Auth screen, או תמיד לגנרט אוטומטית ולתת לערוך אחר כך ב-Profile?
+## מה דרוש מהמשתמש
+1. אישור התוכנית.
+2. אישור לבחירת אופציה לאחסון (path בלבד מומלץ).
+3. אחר כך אריץ את ה-migration ואת שינוי הקוד, ואדווח על תוצאות smoke tests.
