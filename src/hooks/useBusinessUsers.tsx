@@ -55,6 +55,8 @@ export const useBusinessUsers = () => {
           id: ownerProfile.id,
           first_name: ownerProfile.first_name,
           last_name: ownerProfile.last_name,
+          display_name: (ownerProfile as any).display_name,
+          username: (ownerProfile as any).username,
           role: 'בעלים'
         });
       }
