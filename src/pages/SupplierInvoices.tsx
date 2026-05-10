@@ -31,15 +31,20 @@ export const SupplierInvoices: React.FC = () => {
   const [showAddInvoice, setShowAddInvoice] = useState(false);
   const [showDeleteInvoice, setShowDeleteInvoice] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<SupplierInvoice | null>(null);
-  const { invoices, isLoading } = useSupplierInvoices();
+  const { invoices, isLoading, getInvoiceFileUrl } = useSupplierInvoices();
 
   const handleDeleteInvoice = (invoice: SupplierInvoice) => {
     setSelectedInvoice(invoice);
     setShowDeleteInvoice(true);
   };
 
-  const handleViewFile = (fileUrl: string) => {
-    window.open(fileUrl, '_blank');
+  const handleViewFile = async (fileRef: string) => {
+    try {
+      const url = await getInvoiceFileUrl(fileRef);
+      window.open(url, '_blank');
+    } catch (err) {
+      console.error('Failed to open invoice file:', err);
+    }
   };
 
 
