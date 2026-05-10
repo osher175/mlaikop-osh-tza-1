@@ -2932,6 +2932,10 @@ export type Database = {
         Args: { curlopt: string; value: string }
         Returns: boolean
       }
+      is_business_member: {
+        Args: { _business_id: string; _user_id?: string }
+        Returns: boolean
+      }
       is_business_name_available: {
         Args: { business_name: string }
         Returns: boolean
