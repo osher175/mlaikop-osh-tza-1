@@ -46,23 +46,39 @@ export const useSupplierInvoices = () => {
     refetchOnWindowFocus: false,
   });
 
+  // Upload to private bucket. Returns the storage PATH (not a URL).
+  // Path layout is `<business_id>/<timestamp>.<ext>` — required by RLS.
   const uploadFile = async (file: File): Promise<string> => {
+    if (!businessContext?.business_id) {
+      throw new Error('Business context not found');
+    }
     const fileExt = file.name.split('.').pop();
-    const fileName = `${businessContext?.business_id}/${Date.now()}.${fileExt}`;
-    
+    const filePath = `${businessContext.business_id}/${Date.now()}.${fileExt}`;
+
     const { error: uploadError } = await supabase.storage
       .from('supplier-invoices')
-      .upload(fileName, file);
+      .upload(filePath, file);
 
     if (uploadError) {
       throw uploadError;
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('supplier-invoices')
-      .getPublicUrl(fileName);
+    return filePath;
+  };
 
-    return publicUrl;
+  // Generate a short-lived signed URL for a stored invoice path.
+  // Backwards-compatible: if the stored value is a full URL (legacy), return it as-is.
+  const getInvoiceFileUrl = async (pathOrUrl: string): Promise<string> => {
+    if (/^https?:\/\//i.test(pathOrUrl)) {
+      return pathOrUrl;
+    }
+    const { data, error } = await supabase.storage
+      .from('supplier-invoices')
+      .createSignedUrl(pathOrUrl, 60);
+    if (error || !data?.signedUrl) {
+      throw error ?? new Error('Failed to create signed URL');
+    }
+    return data.signedUrl;
   };
 
   const createInvoice = useMutation({
@@ -155,5 +171,6 @@ export const useSupplierInvoices = () => {
     error,
     createInvoice,
     deleteInvoice,
+    getInvoiceFileUrl,
   };
 };
