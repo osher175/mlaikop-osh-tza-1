@@ -26,7 +26,7 @@ export const useBusinessUsers = () => {
       // Get owner profile
       const { data: ownerProfile, error: ownerProfileError } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name')
+        .select('id, first_name, last_name, display_name, username')
         .eq('id', ownerData.owner_id)
         .single();
 
