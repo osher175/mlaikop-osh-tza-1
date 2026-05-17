@@ -1,83 +1,37 @@
+## מה משנים
 
-# M4 — Supplier Invoices Storage Hardening
+### 1. תווית "תפריט" ליד כפתור ההמבורגר (מובייל/טאבלט)
+ב־`src/components/layout/MainLayout.tsx`, בתוך ה־`DrawerTrigger` שמכיל את כפתור ההמבורגר — להוסיף `<span>תפריט</span>` ליד אייקון ה־`Menu`. הטקסט יוצג רק כשהסיידבר במצב drawer (מובייל+טאבלט), בדיוק כמו הכפתור עצמו. ללא שינוי צבעים/פונט — שימוש בטוקנים קיימים.
 
-## מטרה
-לסגור את הדליפה הפוטנציאלית בבאקט `supplier-invoices` בכך ש:
-1. הבאקט יהפוך ל-**private**.
-2. כל פעולה (SELECT/INSERT/DELETE) תידרש להיות ע"י **חבר מאושר של אותו עסק שהקובץ שייך לו** (לפי תיקיית root = `business_id`).
-3. הקוד יעבור מ-`getPublicUrl` ל-**signed URLs** קצרי-מועד.
+### 2. עמוד המלאי כעמוד ראשי במקום לוח בקרה
+ב־`src/components/SmartRedirect.tsx` — לשנות את היעד של משתמשי עסק מ־`/dashboard` ל־`/inventory` (אדמין מערכת ממשיך ל־`/admin`). 
 
-## היקף
-- היקף מצומצם בלבד, בלי לגעת ב-business logic.
-- לא נוגעים ב-M5/M6/M7/M8.
-- ללא שינוי בעיצוב, כפתורים, או דפים.
+הערה: זה משנה רק את היעד אחרי התחברות / כניסה ל־`/`. לוח הבקרה נשאר נגיש דרך התפריט הצדדי — לא נמחק שום דף.
 
-## מצב נוכחי (אומת)
-- בקאט: `public = true`
-- 3 policies על `{public}` שבודקות רק `auth.uid() IS NOT NULL`
-- נתיב קיים: `<business_id>/<timestamp>.<ext>` ✅ נוח לאכיפה
-- 0 קבצים בבאקט → אפס סיכון רגרסיה
-- טבלת `supplier_invoices` שומרת `file_url` כ-publicUrl (יוחלף ל-path בלבד או יומר ב-runtime ל-signed URL)
+צריך לאשר: האם גם בקליק על הלוגו/בית בתפריט להפנות ל־`/inventory`? (כרגע מפנה ל־dashboard)
 
-## תוכנית שינויים
+### 3. שיפור שורת החיפוש (`src/components/inventory/MobileSearchBar.tsx`)
+ההצעה שלי — שילוב של 3 שיפורים קטנים שמבהירים מיידית "כאן מחפשים מוצר":
 
-### A. Migration — Storage
-1. `UPDATE storage.buckets SET public = false WHERE id = 'supplier-invoices';`
-2. `DROP` 3 ה-policies הקיימות.
-3. `CREATE` 3 policies חדשות על `{authenticated}` בלבד, בכולן:
-   - `bucket_id = 'supplier-invoices'`
-   - **AND** המשתמש הוא owner של העסק או חבר מאושר (`user_businesses` עם `role` רלוונטי) שזיהויו תואם ל-`(storage.foldername(name))[1]::uuid`.
+**א. כותרת מעל השדה** — טקסט קטן וברור: "🔍 חיפוש מוצר" (או "מה תרצה למצוא?") כדי שהמשתמש יבין מיד מה תפקיד השורה, גם בלי לקרוא placeholder.
 
-### B. שינוי קוד מינימלי ב-`useSupplierInvoices.tsx`
-- `uploadFile`: לשמור ב-DB את ה-**path** (`<business_id>/<timestamp>.ext`) במקום publicUrl, או לחלופין להמשיך לשמור URL מלא אבל לייצר Signed URL בעת תצוגה/הורדה.
-- בעת תצוגה/הורדה: `supabase.storage.from('supplier-invoices').createSignedUrl(path, 60)`.
-- שום שינוי UI נראה למשתמש (קישור הורדה ממשיך לעבוד, פשוט נוצר on-demand).
+**ב. Placeholder פשוט יותר** — במקום "חפש מוצר לפי שם, קטגוריה או ספק..." → "הקלד שם מוצר כדי לחפש..." (קצר, ברור, בלשון פעולה). הסבר על קטגוריה/ספק יופיע כטקסט עזר אפור קטן מתחת לשדה: "אפשר לחפש גם לפי קטגוריה או ספק".
 
-### C. Smoke Tests אחרי המעבר
-| תרחיש | מצופה |
-|---|---|
-| anon GET ל-publicUrl ישן | 400/403 (כי הבאקט private) |
-| authenticated של עסק B מנסה SELECT על path של עסק A | חסום (RLS) |
-| authenticated של עסק B מנסה DELETE על קובץ של עסק A | חסום (RLS) |
-| member מאושר של עסק A — upload, list, signed URL, delete | ✅ עובד |
-| owner של עסק A — אותו דבר | ✅ עובד |
+**ג. כפתור "נקה" (X) כשיש טקסט** — כשהמשתמש הקליד משהו, יופיע X קטן בצד שמאל של השדה שמאפשר לנקות בלחיצה אחת. עוזר למשתמשים פחות טכנולוגיים שלא יודעים למחוק עם המקלדת.
 
-## פרטים טכניים (לסקירה לפני הרצה)
+ללא שינוי בלוגיקת הסינון עצמה — רק UI/presentation.
 
-### דוגמה ל-policy חדשה (SELECT)
-```sql
-CREATE POLICY "Members can read own business invoices"
-ON storage.objects FOR SELECT TO authenticated
-USING (
-  bucket_id = 'supplier-invoices'
-  AND EXISTS (
-    SELECT 1 FROM public.businesses b
-    WHERE b.id::text = (storage.foldername(name))[1]
-      AND b.owner_id = auth.uid()
-  )
-  OR EXISTS (
-    SELECT 1 FROM public.user_businesses ub
-    WHERE ub.business_id::text = (storage.foldername(name))[1]
-      AND ub.user_id = auth.uid()
-  )
-);
-```
-(אותו עיקרון ל-INSERT עם `WITH CHECK` ול-DELETE עם `USING`.)
+## למה זה עוזר
+- "תפריט" ליד ההמבורגר → משתמשים מבוגרים/לא טכנולוגיים מזהים שזה תפריט ולא "פסים מסתוריים".
+- מלאי כדף ראשון → רוב הפעולות היומיומיות מתחילות במלאי, חוסך קליק.
+- שורת חיפוש עם כותרת + placeholder ברור + כפתור ניקוי → שלוש שכבות של רמזים ויזואליים שמובילות את המשתמש.
 
-### שדה `file_url` בטבלה
-שתי אופציות — מבקש החלטה:
-- **(מועדף)** להפסיק לשמור publicUrl, לשמור רק path. בקריאה — לייצר Signed URL.
-- (חלופי) להשאיר את ה-`file_url` כפי שהוא, ולחלץ ממנו path בעת תצוגה כדי לייצר Signed URL.
+## קבצים שישתנו
+- `src/components/layout/MainLayout.tsx` — הוספת תווית "תפריט"
+- `src/components/SmartRedirect.tsx` — שינוי יעד ל־`/inventory`
+- `src/components/inventory/MobileSearchBar.tsx` — כותרת, placeholder, כפתור ניקוי
 
-מאחר וברגע זה אין קבצים בכלל בבאקט (0 רשומות), אופציה (1) חלקה לחלוטין.
-
-## מה לא נעשה במסגרת M4
-- לא משנה policies על שום טבלה אחרת.
-- לא משנה Edge Functions.
-- לא נוגע ב-`brands` / `categories` / `stock_approval_requests` / `realtime` / dependencies.
-- לא משדרג Postgres ולא מפעיל Leaked Password Protection.
-
-## מה דרוש מהמשתמש
-1. אישור התוכנית.
-2. אישור לבחירת אופציה לאחסון (path בלבד מומלץ).
-3. אחר כך אריץ את ה-migration ואת שינוי הקוד, ואדווח על תוצאות smoke tests.
+## שאלות לאישור
+1. האם להציג "תפריט" גם בדסקטופ (>=1024px) או רק במובייל/טאבלט? (כברירת מחדל — רק במובייל/טאבלט כי בדסקטופ הסיידבר תמיד פתוח)
+2. איזה placeholder אתה מעדיף: "הקלד שם מוצר כדי לחפש..." או נוסח אחר?
+3. האם לוגו/קישור הבית בתפריט אמור גם הוא להפנות ל־`/inventory` במקום `/dashboard`?
