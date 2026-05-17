@@ -21,7 +21,7 @@ export const Auth = () => {
   });
 
   useEffect(() => {
-    if (user && !loading) navigate('/dashboard');
+    if (user && !loading) navigate('/');
   }, [user, loading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
