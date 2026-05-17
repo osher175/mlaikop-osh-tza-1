@@ -51,9 +51,6 @@ export const MobileSearchBar: React.FC<MobileSearchBarProps> = ({
                 </Button>
               )}
             </div>
-            <p className="mt-2 text-xs text-gray-500">
-              💡 אפשר לחפש גם לפי קטגוריה או ספק
-            </p>
           </div>
         </div>
       </CardContent>
