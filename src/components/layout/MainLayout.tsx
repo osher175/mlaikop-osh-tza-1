@@ -26,8 +26,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
               <DrawerTrigger asChild>
-                <Button variant="ghost" size="sm" className="p-2 hover:bg-gray-100 flex-shrink-0 min-h-[44px] min-w-[44px]">
+                <Button variant="ghost" size="sm" className="px-3 gap-2 hover:bg-gray-100 flex-shrink-0 min-h-[44px]">
                   <Menu className="h-5 w-5" />
+                  <span className="text-sm font-medium">תפריט</span>
                 </Button>
               </DrawerTrigger>
               <DrawerContent className="h-full max-h-full z-50">

@@ -28,6 +28,6 @@ export const SmartRedirect = () => {
     return <Navigate to="/admin" replace />;
   }
 
-  // Business users go to dashboard
-  return <Navigate to="/dashboard" replace />;
+  // Business users go to inventory (primary daily workflow)
+  return <Navigate to="/inventory" replace />;
 };
