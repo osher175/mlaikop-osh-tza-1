@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, createContext, useContext } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { useIsMobile, useIsSidebarDrawer } from '@/hooks/use-mobile';
@@ -13,7 +13,16 @@ interface MainLayoutProps {
   children: React.ReactNode;
 }
 
+// Context to detect nested MainLayout — when an outer layout is already mounted (e.g. via
+// a shared route layout), inner per-page MainLayouts become passthroughs so the chrome
+// (Sidebar/Header) doesn't unmount on every navigation.
+const MainLayoutMountedContext = createContext(false);
+
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+  const alreadyMounted = useContext(MainLayoutMountedContext);
+  if (alreadyMounted) {
+    return <>{children}</>;
+  }
   const isMobile = useIsMobile();
   const isSidebarDrawer = useIsSidebarDrawer();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
