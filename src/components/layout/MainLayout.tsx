@@ -92,5 +92,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       </div>
       <BusinessDiagnosticPanel />
     </div>
+    </MainLayoutMountedContext.Provider>
   );
 };
