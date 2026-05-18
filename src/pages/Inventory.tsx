@@ -74,7 +74,8 @@ export const Inventory: React.FC = () => {
 
   const { inStock, lowStock, outOfStock } = getStatusCounts;
 
-  if (businessLoading || productsLoading) {
+  // Only block render when we have no data at all. Otherwise show cached data while refetching.
+  if ((businessLoading || productsLoading) && products.length === 0) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center min-h-[50vh]">
