@@ -52,6 +52,9 @@ function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               
+              {/* Authenticated routes share a single MainLayout so Sidebar/Header
+                  don't unmount on navigation (huge perceived-performance win). */}
+              <Route element={<MainLayout><Outlet /></MainLayout>}>
               {/* Business user routes - admin יכול לגשת לכל הדפים לצורכי ניהול */}
               <Route
                 path="/dashboard"
@@ -195,6 +198,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              </Route>
 
               {/* Default redirects */}
               <Route path="/" element={<SmartRedirect />} />
