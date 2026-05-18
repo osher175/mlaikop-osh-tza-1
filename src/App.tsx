@@ -3,10 +3,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { SmartRedirect } from "@/components/SmartRedirect";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { MainLayout } from "@/components/layout/MainLayout";
 import { Auth } from "@/pages/Auth";
 import { ForgotPassword } from "@/pages/ForgotPassword";
 import { ResetPassword } from "@/pages/ResetPassword";
@@ -51,6 +52,9 @@ function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               
+              {/* Authenticated routes share a single MainLayout so Sidebar/Header
+                  don't unmount on navigation (huge perceived-performance win). */}
+              <Route element={<MainLayout><Outlet /></MainLayout>}>
               {/* Business user routes - admin יכול לגשת לכל הדפים לצורכי ניהול */}
               <Route
                 path="/dashboard"
@@ -194,6 +198,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              </Route>
 
               {/* Default redirects */}
               <Route path="/" element={<SmartRedirect />} />

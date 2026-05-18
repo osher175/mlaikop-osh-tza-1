@@ -62,23 +62,9 @@ export const useRealtimeReports = () => {
       )
       .subscribe();
 
-    // Tab visibility — force refetch when user returns
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        if (import.meta.env.DEV) {
-          console.log('[RealtimeReports] 👁️ Tab visible — forcing refetch');
-        }
-        REPORT_QUERY_KEYS.forEach((key) => {
-          queryClient.refetchQueries({ queryKey: [key], type: 'active' });
-        });
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       supabase.removeChannel(channel);
-      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [business?.id, queryClient]);
 };
