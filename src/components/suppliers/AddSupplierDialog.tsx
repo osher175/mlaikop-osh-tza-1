@@ -144,13 +144,13 @@ export const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button 
-              type="submit" 
+            <BillingLockedButton
+              type="submit"
               disabled={loading}
               className="flex-1"
             >
               {loading ? 'שומר...' : 'הוסף ספק'}
-            </Button>
+            </BillingLockedButton>
             <Button
               type="button"
               variant="outline"
