@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      _qa_billing_results: {
+        Row: {
+          can_write: boolean | null
+          checked_at: string | null
+          computed_status: string | null
+          current_period_end: string | null
+          require_active_error: string | null
+          require_active_raised: boolean | null
+          scenario: string | null
+          sub_status: string | null
+          trial_ends_at: string | null
+        }
+        Insert: {
+          can_write?: boolean | null
+          checked_at?: string | null
+          computed_status?: string | null
+          current_period_end?: string | null
+          require_active_error?: string | null
+          require_active_raised?: boolean | null
+          scenario?: string | null
+          sub_status?: string | null
+          trial_ends_at?: string | null
+        }
+        Update: {
+          can_write?: boolean | null
+          checked_at?: string | null
+          computed_status?: string | null
+          current_period_end?: string | null
+          require_active_error?: string | null
+          require_active_raised?: boolean | null
+          scenario?: string | null
+          sub_status?: string | null
+          trial_ends_at?: string | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action_type: string
