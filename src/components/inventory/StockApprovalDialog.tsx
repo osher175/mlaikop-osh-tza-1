@@ -9,6 +9,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
 import { Send, Loader2 } from 'lucide-react';
 
 interface StockApprovalDialogProps {
@@ -56,7 +57,7 @@ export const StockApprovalDialog: React.FC<StockApprovalDialogProps> = ({
           >
             ביטול
           </Button>
-          <Button
+          <BillingLockedButton
             onClick={handleApprove}
             disabled={isApproving}
             className="bg-primary hover:bg-primary/90"
@@ -72,7 +73,7 @@ export const StockApprovalDialog: React.FC<StockApprovalDialogProps> = ({
                 כן, שלח
               </>
             )}
-          </Button>
+          </BillingLockedButton>
         </div>
       </DialogContent>
     </Dialog>
