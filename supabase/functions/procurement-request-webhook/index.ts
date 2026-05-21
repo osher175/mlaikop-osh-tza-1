@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireActiveBusinessOrRespond } from "../_shared/billing.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -78,6 +79,12 @@ serve(async (req) => {
       return errorResponse(400, 'business_id must be a valid UUID');
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+    const billingGate = await requireActiveBusinessOrRespond(supabase, business_id as string, {
+      source: 'procurement-request-webhook', action: 'inbound_request', corsHeaders,
+      metadata: { procurement_request_id },
+    });
+    if (billingGate) return billingGate;
 
     // Verify request exists and belongs to business
     const { data: request } = await supabase
