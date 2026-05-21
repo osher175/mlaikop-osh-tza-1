@@ -123,6 +123,57 @@ export type Database = {
           },
         ]
       }
+      billing_events: {
+        Row: {
+          business_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          new_status: string | null
+          old_status: string | null
+          source: string
+          user_id: string | null
+        }
+        Insert: {
+          business_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          new_status?: string | null
+          old_status?: string | null
+          source?: string
+          user_id?: string | null
+        }
+        Update: {
+          business_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          new_status?: string | null
+          old_status?: string | null
+          source?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brands: {
         Row: {
           created_at: string
@@ -2241,6 +2292,7 @@ export type Database = {
       }
       user_subscriptions: {
         Row: {
+          admin_note: string | null
           business_id: string | null
           canceled_at: string | null
           cancellation_reason: string | null
@@ -2263,6 +2315,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          admin_note?: string | null
           business_id?: string | null
           canceled_at?: string | null
           cancellation_reason?: string | null
@@ -2285,6 +2338,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          admin_note?: string | null
           business_id?: string | null
           canceled_at?: string | null
           cancellation_reason?: string | null
@@ -2731,6 +2785,7 @@ export type Database = {
         Returns: string
       }
       bytea_to_text: { Args: { data: string }; Returns: string }
+      can_business_write: { Args: { p_business_id: string }; Returns: boolean }
       can_view_business_financials: {
         Args: { business_uuid: string }
         Returns: boolean
@@ -3045,6 +3100,10 @@ export type Database = {
       reports_aggregate: {
         Args: { business_id: string; date_from: string; date_to: string }
         Returns: Json
+      }
+      require_active_business: {
+        Args: { p_business_id: string }
+        Returns: boolean
       }
       require_premium: { Args: { p_business_id: string }; Returns: boolean }
       score_procurement_quotes: {
