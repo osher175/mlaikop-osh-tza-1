@@ -20,6 +20,8 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { useSuppliers } from '@/hooks/useSuppliers';
+import { useRequireCanWriteAction } from '@/hooks/useRequireCanWriteAction';
+import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
 import { AddSupplierDialog } from '@/components/inventory/AddSupplierDialog';
 import { EditSupplierDialog } from '@/components/inventory/EditSupplierDialog';
 import { DeleteSupplierDialog } from '@/components/inventory/DeleteSupplierDialog';
@@ -35,21 +37,22 @@ export const Suppliers: React.FC = () => {
   const [showDeleteSupplier, setShowDeleteSupplier] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const { suppliers, isLoading } = useSuppliers();
+  const { guard } = useRequireCanWriteAction();
 
   const filteredSuppliers = suppliers.filter((supplier) =>
     supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (supplier.agent_name && supplier.agent_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handleEditSupplier = (supplier: Supplier) => {
+  const handleEditSupplier = guard((supplier: Supplier) => {
     setSelectedSupplier(supplier);
     setShowEditSupplier(true);
-  };
+  });
 
-  const handleDeleteSupplier = (supplier: Supplier) => {
+  const handleDeleteSupplier = guard((supplier: Supplier) => {
     setSelectedSupplier(supplier);
     setShowDeleteSupplier(true);
-  };
+  });
 
   return (
     <MainLayout>
@@ -81,13 +84,13 @@ export const Suppliers: React.FC = () => {
                   className="pr-10"
                 />
               </div>
-              <Button 
+              <BillingLockedButton
                 onClick={() => setShowAddSupplier(true)}
                 className="flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
                 הוסף ספק חדש
-              </Button>
+              </BillingLockedButton>
             </div>
           </CardContent>
         </Card>
@@ -119,10 +122,10 @@ export const Suppliers: React.FC = () => {
                   }
                 </p>
                 {!searchTerm && (
-                  <Button onClick={() => setShowAddSupplier(true)}>
+                  <BillingLockedButton onClick={() => setShowAddSupplier(true)}>
                     <Plus className="w-4 h-4 mr-2" />
                     הוסף ספק ראשון
-                  </Button>
+                  </BillingLockedButton>
                 )}
               </div>
             ) : (
