@@ -51,18 +51,19 @@ export const Subscribe: React.FC = () => {
     return () => clearTimeout(timer);
   }, [user, userIdFromUrl, emailFromUrl, isExpired, subscription, isTrialValid, daysLeftInTrial]);
 
-  const handleSelectPlan = async (planId: string) => {
+  const handleSelectPlan = async (planId: string, isSelectable: boolean) => {
+    if (!isSelectable) return;
     const currentUser = user || { id: userIdFromUrl, email: emailFromUrl };
-    
-    console.log('Plan selected:', {
+
+    console.log('Plan selected (payment integration pending):', {
       planId,
       userId: currentUser.id,
       email: currentUser.email,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
-    // For now, just show an alert with user info
-    alert(`תכונת התשלום תתווסף בקרוב.\nמשתמש: ${currentUser.email}\nתוכנית נבחרת: ${planId}\nאנא צרו קשר לרכישת מנוי.`);
+
+    // Payment provider not yet connected (Meshulam/Tranzila integration in progress).
+    alert('חיבור הסליקה נמצא בהפעלה. אנא צרו קשר עם התמיכה להפעלת המנוי.');
   };
 
   const getPlanIcon = (planName: string) => {
