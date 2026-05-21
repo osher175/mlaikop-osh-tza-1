@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireActiveBusinessOrRespond } from "../_shared/billing.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -58,6 +59,13 @@ serve(async (req) => {
           status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
+
+      const billingGate = await requireActiveBusinessOrRespond(supabase, request.business_id, {
+        source: 'procurement-webhook', action: 'inbound_quote', corsHeaders,
+        metadata: { procurement_request_id, supplier_id },
+      });
+      if (billingGate) return billingGate;
+
 
       // Insert the quote
       const { data: quote, error: quoteError } = await supabase
