@@ -812,6 +812,73 @@ export type Database = {
           },
         ]
       }
+      payment_sessions: {
+        Row: {
+          business_id: string
+          checkout_url: string | null
+          completed_at: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          metadata: Json
+          payment_provider: string
+          plan_id: string
+          provider_session_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          checkout_url?: string | null
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          metadata?: Json
+          payment_provider: string
+          plan_id: string
+          provider_session_id?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          checkout_url?: string | null
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          metadata?: Json
+          payment_provider?: string
+          plan_id?: string
+          provider_session_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_sessions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_sessions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_sessions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           access_scope: string
@@ -1799,6 +1866,10 @@ export type Database = {
           max_users: number | null
           monthly_price: number | null
           name: string
+          payment_provider: string | null
+          provider_metadata: Json
+          provider_plan_id: string | null
+          provider_price_id: string | null
           role: Database["public"]["Enums"]["user_role"]
           setup_fee: number | null
           storage_gb: number | null
@@ -1819,6 +1890,10 @@ export type Database = {
           max_users?: number | null
           monthly_price?: number | null
           name: string
+          payment_provider?: string | null
+          provider_metadata?: Json
+          provider_plan_id?: string | null
+          provider_price_id?: string | null
           role: Database["public"]["Enums"]["user_role"]
           setup_fee?: number | null
           storage_gb?: number | null
@@ -1839,6 +1914,10 @@ export type Database = {
           max_users?: number | null
           monthly_price?: number | null
           name?: string
+          payment_provider?: string | null
+          provider_metadata?: Json
+          provider_plan_id?: string | null
+          provider_price_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           setup_fee?: number | null
           storage_gb?: number | null
@@ -2302,7 +2381,13 @@ export type Database = {
           id: string
           next_billing_date: string | null
           payment_link_id: string | null
+          payment_provider: string | null
           plan_id: string
+          provider_customer_id: string | null
+          provider_metadata: Json
+          provider_payment_id: string | null
+          provider_status: string | null
+          provider_subscription_id: string | null
           receipt_url: string | null
           started_at: string | null
           status: string | null
@@ -2325,7 +2410,13 @@ export type Database = {
           id?: string
           next_billing_date?: string | null
           payment_link_id?: string | null
+          payment_provider?: string | null
           plan_id: string
+          provider_customer_id?: string | null
+          provider_metadata?: Json
+          provider_payment_id?: string | null
+          provider_status?: string | null
+          provider_subscription_id?: string | null
           receipt_url?: string | null
           started_at?: string | null
           status?: string | null
@@ -2348,7 +2439,13 @@ export type Database = {
           id?: string
           next_billing_date?: string | null
           payment_link_id?: string | null
+          payment_provider?: string | null
           plan_id?: string
+          provider_customer_id?: string | null
+          provider_metadata?: Json
+          provider_payment_id?: string | null
+          provider_status?: string | null
+          provider_subscription_id?: string | null
           receipt_url?: string | null
           started_at?: string | null
           status?: string | null
@@ -3097,6 +3194,10 @@ export type Database = {
         }
         Returns: string
       }
+      map_provider_status: {
+        Args: { p_provider: string; p_provider_status: string }
+        Returns: string
+      }
       reports_aggregate: {
         Args: { business_id: string; date_from: string; date_to: string }
         Returns: Json
@@ -3145,6 +3246,22 @@ export type Database = {
       toggle_user_active_status: {
         Args: { target_user_id: string }
         Returns: boolean
+      }
+      upsert_business_subscription_from_provider: {
+        Args: {
+          p_business_id: string
+          p_current_period_end: string
+          p_metadata: Json
+          p_payment_provider: string
+          p_plan_id: string
+          p_provider_customer_id: string
+          p_provider_payment_id: string
+          p_provider_status: string
+          p_provider_subscription_id: string
+          p_status: string
+          p_user_id: string
+        }
+        Returns: string
       }
       urlencode:
         | { Args: { data: Json }; Returns: string }
