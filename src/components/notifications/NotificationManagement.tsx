@@ -6,18 +6,20 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
+import { useRequireCanWriteAction } from '@/hooks/useRequireCanWriteAction';
 import { Bell, AlertTriangle, Calendar } from 'lucide-react';
 
 export const NotificationManagement: React.FC = () => {
   const { settings, isLoading, createOrUpdateSettings } = useNotificationSettings();
+  const { guard } = useRequireCanWriteAction();
 
-  const handleSettingChange = async (key: string, value: any) => {
+  const handleSettingChange = guard(async (key: string, value: any) => {
     try {
       await createOrUpdateSettings.mutateAsync({ [key]: value });
     } catch (error) {
       console.error('Error updating notification settings:', error);
     }
-  };
+  });
 
   if (isLoading) {
     return (
