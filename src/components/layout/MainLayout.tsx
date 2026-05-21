@@ -32,6 +32,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   return (
     <MainLayoutMountedContext.Provider value={true}>
       <div className="min-h-screen bg-gray-50 w-full overflow-x-hidden">
+        <BillingReadOnlyBanner />
         {/* Mobile/Tablet Header with Hamburger Menu */}
         {isSidebarDrawer && (
           <div className="bg-white border-b border-gray-200 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between sticky top-0 z-40 w-full">
