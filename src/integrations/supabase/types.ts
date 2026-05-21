@@ -321,6 +321,7 @@ export type Database = {
       businesses: {
         Row: {
           address: string | null
+          admin_note: string | null
           avg_monthly_revenue: number | null
           business_category_id: string | null
           business_email: string | null
@@ -331,6 +332,7 @@ export type Database = {
           employee_count: number | null
           id: string
           industry: string | null
+          is_test: boolean
           logo_url: string | null
           name: string
           official_email: string | null
@@ -345,6 +347,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          admin_note?: string | null
           avg_monthly_revenue?: number | null
           business_category_id?: string | null
           business_email?: string | null
@@ -355,6 +358,7 @@ export type Database = {
           employee_count?: number | null
           id?: string
           industry?: string | null
+          is_test?: boolean
           logo_url?: string | null
           name: string
           official_email?: string | null
@@ -369,6 +373,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          admin_note?: string | null
           avg_monthly_revenue?: number | null
           business_category_id?: string | null
           business_email?: string | null
@@ -379,6 +384,7 @@ export type Database = {
           employee_count?: number | null
           id?: string
           industry?: string | null
+          is_test?: boolean
           logo_url?: string | null
           name?: string
           official_email?: string | null
