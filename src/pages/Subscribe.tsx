@@ -139,19 +139,21 @@ export const Subscribe: React.FC = () => {
         {/* Plans Grid */}
         <Suspense fallback={<LoadingSpinner />}>
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {plans.map((plan) => (
-              <Card 
-                key={plan.id} 
+            {plans.map((plan: any) => {
+              const isSelectable = plan.is_selectable !== false;
+              return (
+              <Card
+                key={plan.id}
                 className={`relative border-2 transition-all hover:shadow-lg ${
-                  plan.name === 'Pro' ? 'border-purple-200 shadow-md' : 'border-gray-200'
+                  !isSelectable ? 'opacity-70 border-gray-200' : (plan.name === 'Pro' || plan.name === 'Advanced' ? 'border-purple-200 shadow-md' : 'border-gray-200')
                 }`}
               >
-                {plan.name === 'Pro' && (
-                  <Badge className="absolute -top-3 right-4 bg-purple-500 text-white">
-                    מומלץ
+                {!isSelectable && (
+                  <Badge className="absolute -top-3 right-4 bg-gray-500 text-white">
+                    בקרוב
                   </Badge>
                 )}
-                
+
                 <CardHeader className="text-center pb-4">
                   <div className="flex justify-center mb-3">
                     {getPlanIcon(plan.name)}
@@ -172,7 +174,7 @@ export const Subscribe: React.FC = () => {
                   <div className="space-y-3">
                     <h4 className="font-semibold text-gray-900">כלול בתוכנית:</h4>
                     <ul className="space-y-2">
-                      {plan.features?.map((feature, index) => (
+                      {plan.features?.map((feature: string, index: number) => (
                         <li key={index} className="flex items-center gap-2 text-sm">
                           <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
                           <span>
@@ -205,16 +207,19 @@ export const Subscribe: React.FC = () => {
                   </div>
 
                   {/* Action Button */}
-                  <Button 
-                    onClick={() => handleSelectPlan(plan.id)}
+                  <Button
+                    onClick={() => handleSelectPlan(plan.id, isSelectable)}
+                    disabled={!isSelectable}
                     className={`w-full py-3 ${
-                      plan.name === 'Pro' 
-                        ? 'bg-purple-600 hover:bg-purple-700' 
-                        : 'bg-primary hover:bg-primary-600'
+                      !isSelectable
+                        ? 'bg-gray-300 hover:bg-gray-300 cursor-not-allowed'
+                        : (plan.name === 'Pro' || plan.name === 'Advanced'
+                          ? 'bg-purple-600 hover:bg-purple-700'
+                          : 'bg-primary hover:bg-primary-600')
                     }`}
                     size="lg"
                   >
-                    בחר תוכנית זו
+                    {isSelectable ? 'בחר תוכנית זו' : 'בקרוב'}
                   </Button>
 
                   {/* Setup Fee Notice */}
@@ -225,7 +230,8 @@ export const Subscribe: React.FC = () => {
                   )}
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         </Suspense>
 
