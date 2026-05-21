@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireActiveBusinessOrRespond } from "../_shared/billing.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -77,6 +78,12 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    const billingGate = await requireActiveBusinessOrRespond(supabase, business_id, {
+      source: 'n8n-select-suppliers', action: 'select_suppliers', corsHeaders,
+      metadata: { product_id },
+    });
+    if (billingGate) return billingGate;
 
     // 7. Load product
     const { data: product, error: prodErr } = await supabase

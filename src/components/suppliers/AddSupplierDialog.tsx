@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -143,13 +144,13 @@ export const AddSupplierDialog: React.FC<AddSupplierDialogProps> = ({
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button 
-              type="submit" 
+            <BillingLockedButton
+              type="submit"
               disabled={loading}
               className="flex-1"
             >
               {loading ? 'שומר...' : 'הוסף ספק'}
-            </Button>
+            </BillingLockedButton>
             <Button
               type="button"
               variant="outline"

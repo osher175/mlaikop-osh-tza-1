@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { requireActiveBusinessOrRespond } from "../_shared/billing.ts";
 
 // UUID v4 validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -97,7 +98,14 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    const billingGate = await requireActiveBusinessOrRespond(supabaseClient, business_id, {
+      source: 'log-stock-alert', action: 'log_alert', corsHeaders,
+      metadata: { product_id, alert_type },
+    });
+    if (billingGate) return billingGate;
+
     console.log('Creating stock alert:', { product_name, alert_type, quantity_at_trigger });
+
 
     // Insert stock alert
     const { data, error } = await supabaseClient

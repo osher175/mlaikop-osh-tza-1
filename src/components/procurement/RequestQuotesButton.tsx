@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,14 +60,14 @@ export const RequestQuotesButton: React.FC<RequestQuotesButtonProps> = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
+        <BillingLockedButton
           size={size}
           variant="outline"
           className={`text-indigo-600 hover:text-indigo-700 ${className}`}
           title="בקש הצעות מחיר"
         >
           <ShoppingCart className="w-3 h-3" />
-        </Button>
+        </BillingLockedButton>
       </DialogTrigger>
       <DialogContent dir="rtl" className="max-w-sm">
         <DialogHeader>
@@ -84,9 +85,9 @@ export const RequestQuotesButton: React.FC<RequestQuotesButtonProps> = ({
             <Label>הערות (אופציונלי)</Label>
             <Input value={notes} onChange={e => setNotes(e.target.value)} />
           </div>
-          <Button onClick={handleSubmit} disabled={createManualRequest.isPending} className="w-full">
+          <BillingLockedButton onClick={handleSubmit} disabled={createManualRequest.isPending} className="w-full">
             {createManualRequest.isPending ? 'שולח...' : 'שלח בקשה'}
-          </Button>
+          </BillingLockedButton>
         </div>
       </DialogContent>
     </Dialog>

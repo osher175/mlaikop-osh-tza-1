@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
 import { Plus, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { exportInventoryToCSV } from '@/utils/exportInventoryCSV';
@@ -91,13 +92,13 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <Button 
+        <BillingLockedButton
           className="bg-primary hover:bg-primary-600 h-12 min-h-[44px] min-w-[44px] w-full md:w-auto"
           onClick={() => navigate('/add-product')}
         >
           <Plus className="w-5 h-5 ml-2" />
           הוסף מוצר חדש
-        </Button>
+        </BillingLockedButton>
       </div>
     </div>
   );

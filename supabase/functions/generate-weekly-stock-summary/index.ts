@@ -48,6 +48,23 @@ const handler = async (req: Request): Promise<Response> => {
     if (businesses && businesses.length > 0) {
       for (const business of businesses) {
         try {
+          // Skip businesses without active billing (read-only mode)
+          const { error: billingError } = await supabaseClient.rpc('require_active_business', {
+            p_business_id: business.id,
+          });
+          if (billingError) {
+            console.log(`Skipping business ${business.name} - billing inactive: ${billingError.message}`);
+            try {
+              await supabaseClient.from('billing_events').insert({
+                business_id: business.id,
+                event_type: 'billing_gate_blocked_action',
+                source: 'generate-weekly-stock-summary',
+                metadata: { action: 'weekly_summary', error_message: billingError.message },
+              });
+            } catch (_) { /* noop */ }
+            continue;
+          }
+
           // Generate summary for each business
           const { data: summary, error: summaryError } = await supabaseClient
             .rpc('generate_weekly_stock_summary', { target_business_id: business.id });
@@ -56,6 +73,7 @@ const handler = async (req: Request): Promise<Response> => {
             console.error(`Error generating summary for business ${business.name}:`, summaryError);
             continue;
           }
+
 
           if (summary) {
             summaries.push({

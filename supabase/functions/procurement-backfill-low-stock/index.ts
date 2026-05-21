@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { requireActiveBusinessOrRespond } from '../_shared/billing.ts'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -97,6 +98,12 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
+    const billingGate = await requireActiveBusinessOrRespond(supabase, business_id, {
+      source: 'procurement-backfill-low-stock', action: 'backfill_low_stock', corsHeaders,
+    })
+    if (billingGate) return billingGate
+
 
     const qty = Math.max(1, default_requested_quantity)
 
