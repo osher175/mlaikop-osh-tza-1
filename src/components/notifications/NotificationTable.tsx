@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Edit2, Trash2, Users, Save, X } from 'lucide-react';
 import { useNotificationManagement } from '@/hooks/useNotificationManagement';
+import { useRequireCanWriteAction } from '@/hooks/useRequireCanWriteAction';
 import { NotificationTargetsDialog } from './NotificationTargetsDialog';
 
 interface NotificationTableProps {
@@ -26,6 +27,7 @@ export const NotificationTable: React.FC<NotificationTableProps> = ({
   const [targetsDialogId, setTargetsDialogId] = useState<string | null>(null);
   
   const { updateNotification, deleteNotification } = useNotificationManagement();
+  const { guard } = useRequireCanWriteAction();
 
   const getNotificationTypeLabel = (type: string) => {
     const labels = {
@@ -37,7 +39,7 @@ export const NotificationTable: React.FC<NotificationTableProps> = ({
     return labels[type] || type;
   };
 
-  const handleInlineEdit = (notification: any) => {
+  const handleInlineEdit = guard((notification: any) => {
     setEditingId(notification.id);
     setEditingData({
       low_stock_threshold: notification.low_stock_threshold,
@@ -45,11 +47,11 @@ export const NotificationTable: React.FC<NotificationTableProps> = ({
       whatsapp_to_supplier: notification.whatsapp_to_supplier,
       is_active: notification.is_active
     });
-  };
+  });
 
-  const handleSaveInline = async () => {
+  const handleSaveInline = guard(async () => {
     if (!editingId) return;
-    
+
     try {
       await updateNotification.mutateAsync({
         id: editingId,
@@ -61,14 +63,14 @@ export const NotificationTable: React.FC<NotificationTableProps> = ({
     } catch (error) {
       console.error('Error updating notification:', error);
     }
-  };
+  });
 
   const handleCancelInline = () => {
     setEditingId(null);
     setEditingData({});
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = guard(async (id: string) => {
     if (window.confirm('האם אתה בטוח שברצונך למחוק התראה זו?')) {
       try {
         await deleteNotification.mutateAsync(id);
@@ -77,7 +79,7 @@ export const NotificationTable: React.FC<NotificationTableProps> = ({
         console.error('Error deleting notification:', error);
       }
     }
-  };
+  });
 
   if (isLoading) {
     return <div className="text-center py-8">טוען התראות...</div>;

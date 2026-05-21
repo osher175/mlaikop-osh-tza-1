@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -154,14 +155,14 @@ export const SupplierPairDialog: React.FC<SupplierPairDialogProps> = ({
             </div>
           )}
 
-          <Button
+          <BillingLockedButton
             onClick={handleSave}
             disabled={!supplierA || !supplierB || supplierA === supplierB || saving}
             className="w-full"
           >
             <Save className="h-4 w-4 ml-2" />
             {saving ? 'שומר...' : 'שמור'}
-          </Button>
+          </BillingLockedButton>
         </div>
       </DialogContent>
     </Dialog>

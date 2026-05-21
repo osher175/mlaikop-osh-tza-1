@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -227,13 +228,13 @@ export const AddSupplierInvoiceDialog: React.FC<AddSupplierInvoiceDialogProps> =
               >
                 ביטול
               </Button>
-              <Button
+              <BillingLockedButton
                 type="submit"
                 disabled={createInvoice.isPending}
                 className="bg-turquoise hover:bg-turquoise/90"
               >
                 {createInvoice.isPending ? 'שומר...' : 'שמור חשבונית'}
-              </Button>
+              </BillingLockedButton>
             </div>
           </form>
         </DialogContent>

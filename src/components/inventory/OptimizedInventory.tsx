@@ -12,6 +12,7 @@ import { MobileSearchBar } from '@/components/inventory/MobileSearchBar';
 import { VirtualizedInventoryTable } from '@/components/inventory/VirtualizedInventoryTable';
 import { useOptimizedProducts } from '@/hooks/useOptimizedProducts';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
+import { useRequireCanWriteAction } from '@/hooks/useRequireCanWriteAction';
 import { useNavigate } from 'react-router-dom';
 import { useDebounce } from '@/hooks/use-debounce';
 
@@ -25,6 +26,7 @@ export const OptimizedInventory: React.FC = React.memo(() => {
   
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const { businessContext, isLoading: businessLoading } = useBusinessAccess();
+  const { guard } = useRequireCanWriteAction();
   const { products, isLoading: productsLoading, refetch } = useOptimizedProducts(debouncedSearchTerm, 100);
 
   const getStatusCounts = useMemo(() => {
@@ -108,8 +110,8 @@ export const OptimizedInventory: React.FC = React.memo(() => {
           <VirtualizedInventoryTable
             products={products}
             searchTerm={debouncedSearchTerm}
-            onEditProduct={setEditingProduct}
-            onDeleteProduct={setDeletingProduct}
+            onEditProduct={guard(setEditingProduct)}
+            onDeleteProduct={guard(setDeletingProduct)}
             onViewProductImage={setViewingProductImage}
             activeStockFilter={activeStockFilter}
           />

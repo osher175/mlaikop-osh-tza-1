@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle } from 'lucide-react';
@@ -72,14 +73,14 @@ export const DeleteSupplierDialog: React.FC<DeleteSupplierDialogProps> = ({
           </p>
           
           <div className="flex gap-3 pt-4">
-            <Button
+            <BillingLockedButton
               variant="destructive"
               onClick={handleDelete}
               disabled={loading}
               className="flex-1"
             >
               {loading ? 'מוחק...' : 'מחק ספק'}
-            </Button>
+            </BillingLockedButton>
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}

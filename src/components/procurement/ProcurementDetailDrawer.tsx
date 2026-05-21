@@ -10,6 +10,7 @@ import { ProcurementStatusBadge } from './ProcurementStatusBadge';
 import { ManualQuoteDialog } from './ManualQuoteDialog';
 import { useSupplierQuotes } from '@/hooks/useSupplierQuotes';
 import { useProcurementActions } from '@/hooks/useProcurementActions';
+import { useRequireCanWriteAction } from '@/hooks/useRequireCanWriteAction';
 import { TERMINAL_STATUSES } from '@/constants/procurement';
 
 interface ProcurementDetailDrawerProps {
@@ -44,6 +45,7 @@ export const ProcurementDetailDrawer: React.FC<ProcurementDetailDrawerProps> = (
   const [notesValue, setNotesValue] = useState('');
   const { quotes, isLoading: quotesLoading } = useSupplierQuotes(request?.id);
   const { updateStatus, updateNotes, updateRecommendedQuote } = useProcurementActions();
+  const { guard } = useRequireCanWriteAction();
 
   useEffect(() => {
     if (request) {
@@ -54,18 +56,18 @@ export const ProcurementDetailDrawer: React.FC<ProcurementDetailDrawerProps> = (
 
   if (!request) return null;
 
-  const handleSaveNotes = () => {
+  const handleSaveNotes = guard(() => {
     updateNotes.mutate({ requestId: request.id, notes: notesValue });
     setEditingNotes(false);
-  };
+  });
 
-  const handleStatusChange = (newStatus: string) => {
+  const handleStatusChange = guard((newStatus: string) => {
     updateStatus.mutate({ requestId: request.id, status: newStatus });
-  };
+  });
 
-  const handleSetRecommended = (quoteId: string) => {
+  const handleSetRecommended = guard((quoteId: string) => {
     updateRecommendedQuote.mutate({ requestId: request.id, quoteId });
-  };
+  });
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });

@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useSupplierInvoices } from '@/hooks/useSupplierInvoices';
+import { useRequireCanWriteAction } from '@/hooks/useRequireCanWriteAction';
 import type { Database } from '@/integrations/supabase/types';
 
 type SupplierInvoice = Database['public']['Tables']['supplier_invoices']['Row'];
@@ -27,13 +28,13 @@ export const DeleteSupplierInvoiceDialog: React.FC<DeleteSupplierInvoiceDialogPr
   invoice
 }) => {
   const { deleteInvoice } = useSupplierInvoices();
+  const { guard } = useRequireCanWriteAction();
 
-  const handleDelete = async () => {
+  const handleDelete = guard(async () => {
     if (!invoice) return;
-    
     await deleteInvoice.mutateAsync(invoice.id);
     onOpenChange(false);
-  };
+  });
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useSuppliers } from '@/hooks/useSuppliers';
@@ -121,14 +122,14 @@ export const CategoryPairsTable: React.FC = () => {
                   <Switch checked={edit.active} onCheckedChange={v => setEdit(cat.id, 'active', v)} />
                 </td>
                 <td className="p-2">
-                  <Button
+                  <BillingLockedButton
                     size="sm"
                     variant="ghost"
                     disabled={!edit.a || !edit.b || edit.a === edit.b || upsertPair.isPending}
                     onClick={() => handleSave(cat.id)}
                   >
                     <Save className="h-3 w-3" />
-                  </Button>
+                  </BillingLockedButton>
                 </td>
               </tr>
             );

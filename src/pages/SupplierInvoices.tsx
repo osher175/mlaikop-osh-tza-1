@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useSupplierInvoices } from '@/hooks/useSupplierInvoices';
+import { useRequireCanWriteAction } from '@/hooks/useRequireCanWriteAction';
+import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
 import { AddSupplierInvoiceDialog } from '@/components/supplier-invoices/AddSupplierInvoiceDialog';
 import { DeleteSupplierInvoiceDialog } from '@/components/supplier-invoices/DeleteSupplierInvoiceDialog';
 import { Plus, Receipt, Eye, Trash, FileText, Download } from 'lucide-react';
@@ -32,11 +34,12 @@ export const SupplierInvoices: React.FC = () => {
   const [showDeleteInvoice, setShowDeleteInvoice] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<SupplierInvoice | null>(null);
   const { invoices, isLoading, getInvoiceFileUrl } = useSupplierInvoices();
+  const { guard } = useRequireCanWriteAction();
 
-  const handleDeleteInvoice = (invoice: SupplierInvoice) => {
+  const handleDeleteInvoice = guard((invoice: SupplierInvoice) => {
     setSelectedInvoice(invoice);
     setShowDeleteInvoice(true);
-  };
+  });
 
   const handleViewFile = async (fileRef: string) => {
     try {
@@ -72,13 +75,13 @@ export const SupplierInvoices: React.FC = () => {
             <CardTitle className="text-lg">הוסף חשבונית חדשה</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button 
+            <BillingLockedButton
               onClick={() => setShowAddInvoice(true)}
               className="flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               הוסף חשבונית
-            </Button>
+            </BillingLockedButton>
           </CardContent>
         </Card>
 
@@ -105,10 +108,10 @@ export const SupplierInvoices: React.FC = () => {
                 <p className="text-gray-600 mb-4">
                   התחל בהוספת החשבונית הראשונה שלך
                 </p>
-                <Button onClick={() => setShowAddInvoice(true)}>
+                <BillingLockedButton onClick={() => setShowAddInvoice(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   הוסף חשבונית ראשונה
-                </Button>
+                </BillingLockedButton>
               </div>
             ) : (
               <>

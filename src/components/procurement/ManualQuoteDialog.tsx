@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -100,9 +101,9 @@ export const ManualQuoteDialog: React.FC<ManualQuoteDialogProps> = ({ requestId 
             <Label>הערות / הודעת ספק</Label>
             <Textarea value={rawMessage} onChange={e => setRawMessage(e.target.value)} />
           </div>
-          <Button onClick={handleSubmit} disabled={!supplierId || !pricePerUnit || addManualQuote.isPending} className="w-full">
+          <BillingLockedButton onClick={handleSubmit} disabled={!supplierId || !pricePerUnit || addManualQuote.isPending} className="w-full">
             {addManualQuote.isPending ? 'שומר...' : 'הוסף הצעה'}
-          </Button>
+          </BillingLockedButton>
         </div>
       </DialogContent>
     </Dialog>

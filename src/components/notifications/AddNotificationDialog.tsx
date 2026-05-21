@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -143,12 +144,12 @@ export const AddNotificationDialog: React.FC<AddNotificationDialogProps> = ({
             >
               ביטול
             </Button>
-            <Button 
+            <BillingLockedButton
               type="submit"
               disabled={createNotification.isPending}
             >
               {createNotification.isPending ? 'יוצר...' : 'צור התראה'}
-            </Button>
+            </BillingLockedButton>
           </div>
         </form>
       </DialogContent>
