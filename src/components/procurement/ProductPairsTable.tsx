@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -112,10 +113,10 @@ export const ProductPairsTable: React.FC = () => {
                 <SelectItem value="balanced">מאוזן</SelectItem>
               </SelectContent>
             </Select>
-            <Button size="sm" onClick={handleAddProductPair} disabled={!newA || !newB || newA === newB}>
+            <BillingLockedButton size="sm" onClick={handleAddProductPair} disabled={!newA || !newB || newA === newB}>
               <Save className="h-3 w-3 ml-1" />
               שמור
-            </Button>
+            </BillingLockedButton>
           </div>
         )}
       </div>
@@ -155,9 +156,9 @@ export const ProductPairsTable: React.FC = () => {
                       />
                     </td>
                     <td className="p-2">
-                      <Button size="sm" variant="ghost" onClick={() => deletePair.mutate(pair.id)}>
+                      <BillingLockedButton size="sm" variant="ghost" onClick={() => deletePair.mutate(pair.id)}>
                         <Trash2 className="h-3 w-3 text-destructive" />
-                      </Button>
+                      </BillingLockedButton>
                     </td>
                   </tr>
                 );
