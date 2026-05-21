@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireActiveBusinessOrRespond } from "../_shared/billing.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -86,6 +87,12 @@ serve(async (req) => {
       ? supplier_confirmation : null;
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+    const billingGate = await requireActiveBusinessOrRespond(supabase, business_id as string, {
+      source: 'procurement-order-confirmed-webhook', action: 'order_confirmed', corsHeaders,
+      metadata: { procurement_request_id, supplier_id },
+    });
+    if (billingGate) return billingGate;
 
     // Fetch request
     const { data: request, error: reqError } = await supabase
