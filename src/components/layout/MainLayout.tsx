@@ -7,6 +7,7 @@ import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BusinessDiagnosticPanel } from '@/components/dev/BusinessDiagnosticPanel';
+import { BillingReadOnlyBanner } from '@/components/billing/BillingReadOnlyBanner';
 import mlaikoLogo from '@/assets/mlaiko-logo-full.png';
 
 interface MainLayoutProps {
