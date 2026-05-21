@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useRequireCanWriteAction } from '@/hooks/useRequireCanWriteAction';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -34,9 +35,11 @@ export const DeleteProductDialog: React.FC<DeleteProductDialogProps> = ({
   onProductDeleted,
 }) => {
   const { toast } = useToast();
+  const { canWrite, blockedClick, tooltipMessage } = useRequireCanWriteAction();
 
   const handleDelete = async () => {
     if (!product) return;
+    if (!canWrite) { blockedClick(); return; }
 
     try {
       const { error } = await supabase
@@ -77,7 +80,9 @@ export const DeleteProductDialog: React.FC<DeleteProductDialogProps> = ({
           <AlertDialogCancel>ביטול</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
-            className="bg-red-600 hover:bg-red-700"
+            disabled={!canWrite}
+            title={!canWrite ? tooltipMessage : undefined}
+            className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
           >
             מחק מוצר
           </AlertDialogAction>
