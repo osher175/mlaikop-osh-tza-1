@@ -26,8 +26,10 @@ const LoadingSpinner = () => (
 export const Subscribe: React.FC = () => {
   const { user } = useAuth();
   const { plans, subscription, daysLeftInTrial, isTrialValid } = useSubscription();
+  const { activeBusinessId } = useActiveBusiness();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
   
   const isExpired = searchParams.get('expired') === 'true';
   const userIdFromUrl = searchParams.get('userId');
