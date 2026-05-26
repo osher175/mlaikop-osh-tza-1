@@ -70,7 +70,7 @@ export const Subscribe: React.FC = () => {
 
     setPendingPlanId(planId);
     try {
-      const { data, error } = await supabase.functions.invoke('grow-create-subscription', {
+      const { data, error } = await supabase.functions.invoke('grow-start-checkout', {
         body: { business_id: activeBusinessId, plan_id: planId },
       });
 
@@ -81,8 +81,9 @@ export const Subscribe: React.FC = () => {
         else if (/business/i.test(msg)) toast.error('בעיה בזיהוי העסק');
         else if (/plan/i.test(msg)) toast.error('המסלול לא נמצא');
         else if (/unauth|forbidden|401|403/i.test(msg)) toast.error('אין הרשאה לבצע פעולה זו');
+        else if (/checkout_link_failed|502/i.test(msg)) toast.error('שגיאה ביצירת קישור התשלום, נסה שוב');
         else toast.error('שגיאה ביצירת בקשת התשלום');
-        console.error('grow-create-subscription error:', error);
+        console.error('grow-start-checkout error:', error);
         return;
       }
 
@@ -92,8 +93,8 @@ export const Subscribe: React.FC = () => {
         return;
       }
 
-      toast.success('בקשת התשלום נוצרה בהצלחה וממתינה ליצירת לינק Grow');
-      console.log('Grow session created:', data);
+      toast.error('לא התקבל קישור תשלום, נסה שוב בעוד רגע');
+      console.error('grow-start-checkout returned without checkout_url:', data);
     } catch (e) {
       console.error('Unexpected error creating subscription:', e);
       toast.error('שגיאה לא צפויה ביצירת התשלום');
@@ -258,7 +259,7 @@ export const Subscribe: React.FC = () => {
                     {pendingPlanId === plan.id ? (
                       <span className="flex items-center justify-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        יוצר בקשת תשלום...
+                        יוצר עבורך קישור תשלום מאובטח...
                       </span>
                     ) : isSelectable ? 'בחר תוכנית זו' : 'בקרוב'}
                   </Button>
