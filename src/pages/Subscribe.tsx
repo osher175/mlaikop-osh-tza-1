@@ -3,12 +3,15 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/hooks/useAuth';
+import { useActiveBusiness } from '@/hooks/useActiveBusiness';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Crown, Star, Zap, Loader2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { formatCurrency } from '@/lib/formatCurrency';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 // Loading component for better UX
 const LoadingSpinner = () => (
