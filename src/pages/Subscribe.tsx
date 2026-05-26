@@ -3,12 +3,15 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/hooks/useAuth';
+import { useActiveBusiness } from '@/hooks/useActiveBusiness';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Crown, Star, Zap, Loader2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { formatCurrency } from '@/lib/formatCurrency';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 // Loading component for better UX
 const LoadingSpinner = () => (
@@ -23,8 +26,10 @@ const LoadingSpinner = () => (
 export const Subscribe: React.FC = () => {
   const { user } = useAuth();
   const { plans, subscription, daysLeftInTrial, isTrialValid } = useSubscription();
+  const { activeBusinessId } = useActiveBusiness();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
   
   const isExpired = searchParams.get('expired') === 'true';
   const userIdFromUrl = searchParams.get('userId');
@@ -52,18 +57,49 @@ export const Subscribe: React.FC = () => {
   }, [user, userIdFromUrl, emailFromUrl, isExpired, subscription, isTrialValid, daysLeftInTrial]);
 
   const handleSelectPlan = async (planId: string, isSelectable: boolean) => {
-    if (!isSelectable) return;
-    const currentUser = user || { id: userIdFromUrl, email: emailFromUrl };
+    if (!isSelectable || pendingPlanId) return;
 
-    console.log('Plan selected (payment integration pending):', {
-      planId,
-      userId: currentUser.id,
-      email: currentUser.email,
-      timestamp: new Date().toISOString(),
-    });
+    if (!user) {
+      toast.error('יש להתחבר כדי לבחור מסלול');
+      return;
+    }
+    if (!activeBusinessId) {
+      toast.error('לא נמצא עסק פעיל למשתמש');
+      return;
+    }
 
-    // Payment provider not yet connected (Meshulam/Tranzila integration in progress).
-    alert('חיבור הסליקה נמצא בהפעלה. אנא צרו קשר עם התמיכה להפעלת המנוי.');
+    setPendingPlanId(planId);
+    try {
+      const { data, error } = await supabase.functions.invoke('grow-create-subscription', {
+        body: { business_id: activeBusinessId, plan_id: planId },
+      });
+
+      if (error) {
+        const msg = (error as any)?.message || '';
+        if (/phone/i.test(msg)) toast.error('חסר מספר טלפון בפרופיל');
+        else if (/email/i.test(msg)) toast.error('חסרה כתובת אימייל בפרופיל');
+        else if (/business/i.test(msg)) toast.error('בעיה בזיהוי העסק');
+        else if (/plan/i.test(msg)) toast.error('המסלול לא נמצא');
+        else if (/unauth|forbidden|401|403/i.test(msg)) toast.error('אין הרשאה לבצע פעולה זו');
+        else toast.error('שגיאה ביצירת בקשת התשלום');
+        console.error('grow-create-subscription error:', error);
+        return;
+      }
+
+      const checkoutUrl = (data as any)?.checkout_url;
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+        return;
+      }
+
+      toast.success('בקשת התשלום נוצרה בהצלחה וממתינה ליצירת לינק Grow');
+      console.log('Grow session created:', data);
+    } catch (e) {
+      console.error('Unexpected error creating subscription:', e);
+      toast.error('שגיאה לא צפויה ביצירת התשלום');
+    } finally {
+      setPendingPlanId(null);
+    }
   };
 
   const getPlanIcon = (planName: string) => {
@@ -209,7 +245,7 @@ export const Subscribe: React.FC = () => {
                   {/* Action Button */}
                   <Button
                     onClick={() => handleSelectPlan(plan.id, isSelectable)}
-                    disabled={!isSelectable}
+                    disabled={!isSelectable || pendingPlanId !== null}
                     className={`w-full py-3 ${
                       !isSelectable
                         ? 'bg-gray-300 hover:bg-gray-300 cursor-not-allowed'
@@ -219,7 +255,12 @@ export const Subscribe: React.FC = () => {
                     }`}
                     size="lg"
                   >
-                    {isSelectable ? 'בחר תוכנית זו' : 'בקרוב'}
+                    {pendingPlanId === plan.id ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        יוצר בקשת תשלום...
+                      </span>
+                    ) : isSelectable ? 'בחר תוכנית זו' : 'בקרוב'}
                   </Button>
 
                   {/* Setup Fee Notice */}
