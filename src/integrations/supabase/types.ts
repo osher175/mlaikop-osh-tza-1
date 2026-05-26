@@ -826,6 +826,7 @@ export type Database = {
           created_at: string
           expires_at: string | null
           id: string
+          is_test: boolean
           metadata: Json
           payment_provider: string
           plan_id: string
@@ -840,6 +841,7 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          is_test?: boolean
           metadata?: Json
           payment_provider: string
           plan_id: string
@@ -854,6 +856,7 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          is_test?: boolean
           metadata?: Json
           payment_provider?: string
           plan_id?: string
@@ -2627,6 +2630,57 @@ export type Database = {
           },
         ]
       }
+      billing_events_live: {
+        Row: {
+          business_id: string | null
+          created_at: string | null
+          event_type: string | null
+          id: string | null
+          metadata: Json | null
+          new_status: string | null
+          old_status: string | null
+          source: string | null
+          user_id: string | null
+        }
+        Insert: {
+          business_id?: string | null
+          created_at?: string | null
+          event_type?: string | null
+          id?: string | null
+          metadata?: Json | null
+          new_status?: string | null
+          old_status?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          business_id?: string | null
+          created_at?: string | null
+          event_type?: string | null
+          id?: string | null
+          metadata?: Json | null
+          new_status?: string | null
+          old_status?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses_safe: {
         Row: {
           address: string | null
@@ -2679,6 +2733,76 @@ export type Database = {
             columns: ["business_category_id"]
             isOneToOne: false
             referencedRelation: "business_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_sessions_live: {
+        Row: {
+          business_id: string | null
+          checkout_url: string | null
+          completed_at: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string | null
+          is_test: boolean | null
+          metadata: Json | null
+          payment_provider: string | null
+          plan_id: string | null
+          provider_session_id: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          business_id?: string | null
+          checkout_url?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          is_test?: boolean | null
+          metadata?: Json | null
+          payment_provider?: string | null
+          plan_id?: string | null
+          provider_session_id?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          business_id?: string | null
+          checkout_url?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          is_test?: boolean | null
+          metadata?: Json | null
+          payment_provider?: string | null
+          plan_id?: string | null
+          provider_session_id?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_sessions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_sessions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_sessions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -2912,6 +3036,10 @@ export type Database = {
       create_business_for_new_user: {
         Args: { p_business_name: string; p_phone?: string }
         Returns: string
+      }
+      delete_test_payment_session: {
+        Args: { p_session_id: string }
+        Returns: undefined
       }
       delete_user_by_admin: {
         Args: { target_user_id: string }
