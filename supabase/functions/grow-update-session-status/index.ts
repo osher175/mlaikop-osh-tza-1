@@ -24,32 +24,45 @@ const BodySchema = z.object({
   detail: z.record(z.unknown()).optional(),
 });
 
+function json(body: unknown, status: number) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  let sessionIdForError: string | null = null;
+
   try {
     const expectedSecret = Deno.env.get('GROW_WEBHOOK_SECRET');
     const got = req.headers.get('x-mlaiko-secret');
     if (!expectedSecret || got !== expectedSecret) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ success: false, session_id: null, error: 'Unauthorized' }, 401);
     }
 
     const body = await req.json().catch(() => null);
     const parsed = BodySchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid input', issues: parsed.error.flatten() }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      sessionIdForError = (body as any)?.session_id ?? null;
+      return json(
+        {
+          success: false,
+          session_id: sessionIdForError,
+          error: 'Invalid input',
+          issues: parsed.error.flatten(),
+        },
+        400,
       );
     }
 
     const { session_id, status, provider_session_id, checkout_url, detail } =
       parsed.data;
+    sessionIdForError = session_id;
 
     const admin = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -62,10 +75,10 @@ serve(async (req) => {
       .eq('id', session_id)
       .maybeSingle();
     if (loadErr || !existing) {
-      return new Response(JSON.stringify({ error: 'Session not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json(
+        { success: false, session_id, error: 'Session not found' },
+        404,
+      );
     }
 
     const update: Record<string, unknown> = {
@@ -86,9 +99,9 @@ serve(async (req) => {
 
     if (updErr) {
       console.error('payment_sessions update failed:', updErr);
-      return new Response(
-        JSON.stringify({ error: 'Update failed', detail: updErr.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      return json(
+        { success: false, session_id, error: `Update failed: ${updErr.message}` },
+        500,
       );
     }
 
@@ -102,16 +115,13 @@ serve(async (req) => {
       metadata: { session_id, provider_session_id, checkout_url, detail },
     });
 
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return json({ success: true, session_id, status }, 200);
   } catch (e) {
     console.error('grow-update-session-status error:', e);
     const msg = e instanceof Error ? e.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return json(
+      { success: false, session_id: sessionIdForError, error: msg },
+      500,
+    );
   }
 });
