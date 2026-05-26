@@ -1,85 +1,103 @@
 
-## מצב נוכחי של שורת הבדיקה
+## תכולה
 
-**`session_id`: `11111111-2222-3333-4444-555555555555`**
+זרימה production-grade שבה כפתור "בחר תוכנית" קורא ל-Edge Function אחת בלבד ומקבל בחזרה `checkout_url` מוכן להפניה.
 
-| בדיקה | מצב | פעולה נדרשת |
-|---|---|---|
-| 1. מסומן `is_test=true` | חלקית — רק ב-`metadata.is_test` | להחזק תיוג ולחזק אותו |
-| 2. לא נספר באנליטיקות | ✅ אין צרכן אנליטי של `payment_sessions` בקוד או ב-RPCs | להוסיף הגנה הצהרתית למקרה עתידי |
-| 3. לא משפיע על מנוי עסק אמיתי | ✅ `user_subscriptions` של העסק נשאר `status='trial'`. אין trigger/RPC שממיר `payment_sessions.paid` למנוי | להוסיף הגנה הצהרתית למקרה עתידי |
-| 4. דרך מחיקה נקייה | ❌ אין | להוסיף RPC ייעודי |
+## תנאי מקדים (חוסם)
 
-הסיבה ל"חלקית" ב-(1): השורה מקושרת ל-`business_id` של עסק אמיתי (M2 Biz A, owner db40d81c…). זה לא בעיה היום, אבל ברגע שתחבר webhook→`user_subscriptions`, השורה הזו תוכל בטעות לסמן עסק אמיתי כמשולם.
+יש להוסיף Secret חדש: **`MAKE_GROW_WEBHOOK_URL`** — כתובת ה-webhook של תרחיש Make שמייצר את ה-Payment Link ב-Grow ומחזיר `{ checkout_url }`.
 
-## תוכנית — 3 שינויי DB בלבד, אפס שינויי קוד/UI
+לפני אישור התוכנית, הצעד הראשון יהיה לבקש את ה-Secret דרך כלי הסודות (המשתמש מזין בטופס מאובטח, לא בצ'אט).
 
-### 1. תיוג ברור גם על העמודה הראשית
-- להוסיף `is_test boolean NOT NULL DEFAULT false` ל-`payment_sessions`.
-- לעדכן את שורת הבדיקה: `is_test=true`.
-- (לשמור גם את `metadata.is_test` לתאימות).
+## רכיבים שייווצרו / ישתנו
 
-### 2. הגנת "test-aware" לכל future consumer
-- להוסיף **VIEW** `payment_sessions_live` שמסנן `WHERE is_test=false`.
-- מוסכמה: כל לוגיקה עתידית שמפעילה מנוי/אנליטיקה תקרא מ-`payment_sessions_live`, לא מהטבלה הגולמית.
-- באותה צורה: `billing_events_live` שמסנן `WHERE (metadata->>'is_test')::boolean IS NOT TRUE`.
-- ב-edge function `grow-create-subscription` (היום) — לא משנים כלום; הוא יוצר session אמיתי עם `is_test=false` (ברירת מחדל החדשה).
+### 1. Edge Function חדשה — `supabase/functions/grow-start-checkout/index.ts`
 
-### 3. דרך מחיקה נקייה
-- RPC `delete_test_payment_session(p_session_id uuid)`:
-  - `SECURITY DEFINER`, `SET search_path = public`
-  - מוגנת ב-`has_role_or_higher('admin')`
-  - מוחקת מ-`billing_events` כל שורה שב-`metadata->>'session_id' = p_session_id::text`, ואז מוחקת את ה-`payment_sessions` עצמה
-  - מוודאת `is_test=true` לפני מחיקה — אחרת זורקת exception ("refuse to delete non-test session")
-- שימוש עתידי: `select public.delete_test_payment_session('11111111-…555');` ינקה את השורה + 3 ה-billing_events שלה באטומיות.
+זרימה פנימית:
 
-## מה לא ייעשה
-- לא נוגעים ב-RLS/הרשאות קיימים.
-- לא משנים את ה-edge functions, את ה-UI, או את ה-Subscribe flow.
-- לא מוחקים את שורת הבדיקה.
-- לא נוגעים בעסק האמיתי או ב-`user_subscriptions`.
+1. **CORS + OPTIONS**
+2. **אימות JWT** — `userClient.auth.getUser()` (אותו דפוס כמו `grow-create-subscription`)
+3. **ולידציה** — Zod: `{ business_id: uuid, plan_id: string }`
+4. **טעינת `businesses`** + בדיקת `owner_id === auth.uid`
+5. **טעינת `subscription_plans`** (המחיר מהשרת בלבד)
+6. **טעינת `profiles` + `emails`** ליצירת `customer`
+7. **בניית payload** (פונקציה פנימית זהה ל-`buildGrowSubscriptionPayload`, משוכפלת ל-Edge כי `src/` לא נגיש מ-Deno)
+8. **`INSERT` ל-`payment_sessions`** עם `status='pending_payment'`, `metadata={ payload, billing_cycle:'monthly', currency:'ILS' }`
+9. **`INSERT` ל-`billing_events`** — `event_type='grow_session_created'`, `new_status='pending_payment'`
+10. **קריאה ל-Make** — `POST` ל-`MAKE_GROW_WEBHOOK_URL` עם:
+    - Body: `{ session_id, payload, callback_status_url }`
+    - Header: `x-mlaiko-secret: GROW_WEBHOOK_SECRET` (אימות הדדי)
+    - **Timeout: 15 שניות** דרך `AbortController` + `setTimeout`
+11. **אם Make מחזיר 2xx + `checkout_url` תקין**:
+    - `UPDATE payment_sessions SET status='payment_link_created', checkout_url=…, provider_session_id=…` לפי `session_id`
+    - `INSERT billing_events` — `event_type='grow_payment_link_created'`, `new_status='payment_link_created'`
+    - מחזיר `{ session_id, checkout_url }` (200)
+12. **אם Make נכשל / timeout / חוסר `checkout_url`**:
+    - `UPDATE payment_sessions SET status='failed'`
+    - `INSERT billing_events` — `event_type='grow_checkout_failed'`, `new_status='failed'`, `metadata={ reason, http_status }`
+    - מחזיר 502 עם `{ error: 'checkout_link_failed', detail }`
 
-## פרטים טכניים (למפתח)
+`verify_jwt = false` ב-`config.toml` (כמו שאר הפונקציות), אבל ה-JWT מאומת בקוד.
 
-```sql
--- 1. עמודה + עדכון השורה הקיימת
-ALTER TABLE public.payment_sessions
-  ADD COLUMN IF NOT EXISTS is_test boolean NOT NULL DEFAULT false;
-UPDATE public.payment_sessions
-  SET is_test = true
-  WHERE id = '11111111-2222-3333-4444-555555555555';
-CREATE INDEX IF NOT EXISTS idx_payment_sessions_is_test
-  ON public.payment_sessions(is_test) WHERE is_test = false;
+### 2. עדכון `src/pages/Subscribe.tsx`
 
--- 2. Views להגנה עתידית
-CREATE OR REPLACE VIEW public.payment_sessions_live AS
-  SELECT * FROM public.payment_sessions WHERE is_test = false;
-CREATE OR REPLACE VIEW public.billing_events_live AS
-  SELECT * FROM public.billing_events
-  WHERE COALESCE((metadata->>'is_test')::boolean, false) = false;
+ב-`handleSelectPlan` להחליף את הקריאה הקיימת מ-`grow-create-subscription` ל-**`grow-start-checkout`**:
 
--- 3. RPC ייעודי למחיקה בטוחה
-CREATE OR REPLACE FUNCTION public.delete_test_payment_session(p_session_id uuid)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE v_is_test boolean;
-BEGIN
-  IF NOT has_role_or_higher('admin'::user_role) THEN
-    RAISE EXCEPTION 'forbidden';
-  END IF;
-  SELECT is_test INTO v_is_test FROM payment_sessions WHERE id = p_session_id;
-  IF v_is_test IS DISTINCT FROM true THEN
-    RAISE EXCEPTION 'refuse to delete non-test session %', p_session_id;
-  END IF;
-  DELETE FROM billing_events WHERE metadata->>'session_id' = p_session_id::text;
-  DELETE FROM payment_sessions WHERE id = p_session_id AND is_test = true;
-END;
-$$;
-REVOKE ALL ON FUNCTION public.delete_test_payment_session(uuid) FROM public, anon;
-GRANT EXECUTE ON FUNCTION public.delete_test_payment_session(uuid) TO authenticated;
+```ts
+const { data, error } = await supabase.functions.invoke('grow-start-checkout', {
+  body: { business_id: activeBusinessId, plan_id: planId },
+});
 ```
 
-אישור → אפעיל כמיגרציה אחת. השורה נשארת במקום.
+טיפול בתשובה:
+- אם יש `data.checkout_url` → `window.location.href = data.checkout_url`
+- אם אין → `toast.error('שגיאה ביצירת קישור התשלום')` + השארת `pendingPlanId` `null`
+- מצב טעינה קיים (`Loader2` + "יוצר בקשת תשלום...") — נעדכן את הטקסט ל: **"יוצר עבורך קישור תשלום מאובטח..."**
+
+### 3. מה לא ייגע
+
+- `grow-create-subscription` — נשאר זמין (גם לצורך תאימות לאחור / debug)
+- `grow-update-session-status` — נשאר כפי שהוא, ממשיך לקבל webhooks מ-Grow לעדכוני סטטוס סופיים (paid/failed)
+- מבנה DB — שום שינוי, כל העמודות הדרושות כבר קיימות (`checkout_url`, `provider_session_id`, `status`)
+- עיצוב, כפתורים, ראוטינג — ללא שינוי
+
+## אבטחה
+
+- `MAKE_GROW_WEBHOOK_URL` אך ורק ב-Edge Secret (לא מגיע לפרונט)
+- אימות הדדי עם Make דרך `x-mlaiko-secret` (משתמש ב-`GROW_WEBHOOK_SECRET` הקיים)
+- אימות בעלות עסק לפני כל פעולה
+- מחיר נטען מהשרת בלבד — לא סומכים על הקלט מהלקוח
+- ולידציית UUID למניעת `22P02`
+
+## תרחישי כשל מטופלים
+
+| תרחיש | תגובת UI | רישום |
+|---|---|---|
+| Make timeout (>15s) | toast "שגיאה ביצירת קישור התשלום" | `billing_events: grow_checkout_failed`, reason=timeout |
+| Make מחזיר 5xx | toast שגיאה | `billing_events: grow_checkout_failed`, http_status |
+| Make מחזיר 200 בלי `checkout_url` | toast שגיאה | `billing_events: grow_checkout_failed`, reason=missing_url |
+| משתמש לא מורשה | 403 → toast "אין הרשאה" | — |
+
+## חוזה Make (לתיעוד)
+
+**Make מקבל** (POST):
+```json
+{
+  "session_id": "uuid",
+  "payload": { /* GrowPayload */ },
+  "callback_status_url": "https://…/functions/v1/grow-update-session-status"
+}
+```
+Header: `x-mlaiko-secret: <GROW_WEBHOOK_SECRET>`
+
+**Make חייב להחזיר** (200):
+```json
+{ "checkout_url": "https://meshulam.co.il/…", "provider_session_id": "..." }
+```
+
+## סדר ביצוע לאחר אישור
+
+1. בקשת `MAKE_GROW_WEBHOOK_URL` דרך כלי הסודות (חוסם)
+2. יצירת `supabase/functions/grow-start-checkout/index.ts`
+3. עדכון `src/pages/Subscribe.tsx` — שם הפונקציה + טקסט הטעינה
+4. אימות: ניתן לבדוק את ה-Edge דרך `curl_edge_functions` לפני שמשתמשים בה ב-UI
