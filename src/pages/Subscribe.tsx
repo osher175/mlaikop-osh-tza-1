@@ -57,18 +57,49 @@ export const Subscribe: React.FC = () => {
   }, [user, userIdFromUrl, emailFromUrl, isExpired, subscription, isTrialValid, daysLeftInTrial]);
 
   const handleSelectPlan = async (planId: string, isSelectable: boolean) => {
-    if (!isSelectable) return;
-    const currentUser = user || { id: userIdFromUrl, email: emailFromUrl };
+    if (!isSelectable || pendingPlanId) return;
 
-    console.log('Plan selected (payment integration pending):', {
-      planId,
-      userId: currentUser.id,
-      email: currentUser.email,
-      timestamp: new Date().toISOString(),
-    });
+    if (!user) {
+      toast.error('יש להתחבר כדי לבחור מסלול');
+      return;
+    }
+    if (!activeBusinessId) {
+      toast.error('לא נמצא עסק פעיל למשתמש');
+      return;
+    }
 
-    // Payment provider not yet connected (Meshulam/Tranzila integration in progress).
-    alert('חיבור הסליקה נמצא בהפעלה. אנא צרו קשר עם התמיכה להפעלת המנוי.');
+    setPendingPlanId(planId);
+    try {
+      const { data, error } = await supabase.functions.invoke('grow-create-subscription', {
+        body: { business_id: activeBusinessId, plan_id: planId },
+      });
+
+      if (error) {
+        const msg = (error as any)?.message || '';
+        if (/phone/i.test(msg)) toast.error('חסר מספר טלפון בפרופיל');
+        else if (/email/i.test(msg)) toast.error('חסרה כתובת אימייל בפרופיל');
+        else if (/business/i.test(msg)) toast.error('בעיה בזיהוי העסק');
+        else if (/plan/i.test(msg)) toast.error('המסלול לא נמצא');
+        else if (/unauth|forbidden|401|403/i.test(msg)) toast.error('אין הרשאה לבצע פעולה זו');
+        else toast.error('שגיאה ביצירת בקשת התשלום');
+        console.error('grow-create-subscription error:', error);
+        return;
+      }
+
+      const checkoutUrl = (data as any)?.checkout_url;
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+        return;
+      }
+
+      toast.success('בקשת התשלום נוצרה בהצלחה וממתינה ליצירת לינק Grow');
+      console.log('Grow session created:', data);
+    } catch (e) {
+      console.error('Unexpected error creating subscription:', e);
+      toast.error('שגיאה לא צפויה ביצירת התשלום');
+    } finally {
+      setPendingPlanId(null);
+    }
   };
 
   const getPlanIcon = (planName: string) => {
