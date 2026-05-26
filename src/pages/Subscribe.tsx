@@ -245,7 +245,7 @@ export const Subscribe: React.FC = () => {
                   {/* Action Button */}
                   <Button
                     onClick={() => handleSelectPlan(plan.id, isSelectable)}
-                    disabled={!isSelectable}
+                    disabled={!isSelectable || pendingPlanId !== null}
                     className={`w-full py-3 ${
                       !isSelectable
                         ? 'bg-gray-300 hover:bg-gray-300 cursor-not-allowed'
@@ -255,7 +255,12 @@ export const Subscribe: React.FC = () => {
                     }`}
                     size="lg"
                   >
-                    {isSelectable ? 'בחר תוכנית זו' : 'בקרוב'}
+                    {pendingPlanId === plan.id ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        יוצר בקשת תשלום...
+                      </span>
+                    ) : isSelectable ? 'בחר תוכנית זו' : 'בקרוב'}
                   </Button>
 
                   {/* Setup Fee Notice */}
