@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Crown, Loader2 } from 'lucide-react';
@@ -17,6 +18,7 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
   requiresSubscription = true 
 }) => {
   const { user } = useAuth();
+  const { userRole } = useUserRole();
   const { subscription, isSubscriptionActive, isTrialValid, isLoading, daysLeftInTrial, createTrialSubscription } = useSubscription();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -74,6 +76,11 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
         </div>
       </div>
     );
+  }
+
+  // Platform admins bypass all subscription checks
+  if (userRole === 'admin') {
+    return <>{children}</>;
   }
 
   // If subscription is not required, show content
