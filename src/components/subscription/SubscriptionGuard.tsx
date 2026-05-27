@@ -78,6 +78,11 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
     );
   }
 
+  // Platform admins bypass all subscription checks
+  if (userRole === 'admin') {
+    return <>{children}</>;
+  }
+
   // If subscription is not required, show content
   if (!requiresSubscription) {
     return <>{children}</>;
