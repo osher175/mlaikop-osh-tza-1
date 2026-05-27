@@ -124,9 +124,16 @@ export const WhatsAppSettings: React.FC = () => {
   const StatusIcon = statusConfig[currentStatus]?.icon || WifiOff;
 
   return (
-    <SubscriptionGuard>
-      <MainLayout>
-        <div className="p-4 md:p-6 space-y-6 max-w-2xl mx-auto" dir="rtl">
+    <div className="p-4 md:p-6 space-y-6 max-w-2xl mx-auto" dir="rtl">
+      <div className="flex items-center gap-3">
+        <MessageSquare className="h-7 w-7 text-primary" />
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">הגדרות WhatsApp</h1>
+          <p className="text-muted-foreground text-sm">חבר את מספר ה-WhatsApp Business שלך למערכת</p>
+        </div>
+      </div>
+
+      {/* Connection Status */}
           <div className="flex items-center gap-3">
             <MessageSquare className="h-7 w-7 text-primary" />
             <div>
