@@ -43,10 +43,34 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Found ${expiringProducts?.length || 0} expiring products`);
 
     let alertsCreated = 0;
+    let skippedBusinesses = 0;
+    const billingCache = new Map<string, boolean>(); // business_id -> isActive
 
     if (expiringProducts && expiringProducts.length > 0) {
       // Create alerts for products that don't already have recent alerts
       for (const product of expiringProducts) {
+        // Per-business billing skip (cached). Do NOT fail the whole run on one inactive business.
+        let isActive = billingCache.get(product.business_id);
+        if (isActive === undefined) {
+          const { error: billingError } = await supabaseClient.rpc('require_active_business', {
+            p_business_id: product.business_id,
+          });
+          isActive = !billingError;
+          billingCache.set(product.business_id, isActive);
+          if (!isActive) {
+            console.log(`Skipping business ${product.business_id} - billing inactive: ${billingError?.message}`);
+            try {
+              await supabaseClient.from('billing_events').insert({
+                business_id: product.business_id,
+                event_type: 'billing_gate_blocked_action',
+                source: 'check-expiring-products',
+                metadata: { action: 'expiration_alert', error_message: billingError?.message },
+              });
+            } catch (_) { /* noop */ }
+          }
+        }
+        if (!isActive) { skippedBusinesses++; continue; }
+
         // Check if alert already exists in the last 24 hours
         const { data: existingAlert } = await supabaseClient
           .from('stock_alerts')
@@ -79,7 +103,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    console.log(`Expiring products check completed. Created ${alertsCreated} new alerts.`);
+    console.log(`Done. Alerts: ${alertsCreated}. Skipped (inactive billing): ${skippedBusinesses}.`);
 
     return new Response(JSON.stringify({ 
       success: true, 
