@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom
 import { SmartRedirect } from "@/components/SmartRedirect";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { SubscriptionGuard } from "@/components/subscription/SubscriptionGuard";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Auth } from "@/pages/Auth";
 import { ForgotPassword } from "@/pages/ForgotPassword";
@@ -21,6 +22,7 @@ import { Unauthorized } from "@/pages/Unauthorized";
 import { UserManagement } from "@/pages/UserManagement";
 import { AdminUserProfile } from "@/pages/admin/UserProfile";
 import { Subscriptions } from "@/pages/Subscriptions";
+import { Subscribe } from "@/pages/Subscribe";
 import { BusinessSettings } from "@/pages/BusinessSettings";
 import { AdminPanel } from "@/pages/AdminPanel";
 import { AdminDashboard } from "@/pages/AdminDashboard";
