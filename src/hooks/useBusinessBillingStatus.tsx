@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
+import { useUserRole } from '@/hooks/useUserRole';
 
 export type BillingStatus =
   | 'active'
