@@ -67,13 +67,13 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Premium gate
-    const { error: premiumError } = await userClient.rpc('require_premium', { p_business_id: business_id })
-    if (premiumError) {
-      return new Response(JSON.stringify({ error: 'Premium subscription required' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    // Billing gate: active or trial subscription required (allows trial owners)
+    const billingGate = await requireActiveBusinessOrRespond(serviceClient, business_id, {
+      source: 'meta-embedded-signup-complete',
+      action: 'connect_whatsapp_channel',
+      corsHeaders,
+    })
+    if (billingGate) return billingGate
 
     // Upsert business channel
     const { data: channel, error: channelError } = await serviceClient
