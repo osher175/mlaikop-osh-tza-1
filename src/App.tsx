@@ -57,47 +57,7 @@ function App() {
               {/* Authenticated routes share a single MainLayout so Sidebar/Header
                   don't unmount on navigation (huge perceived-performance win). */}
               <Route element={<MainLayout><Outlet /></MainLayout>}>
-              {/* Business user routes - admin יכול לגשת לכל הדפים לצורכי ניהול */}
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/inventory"
-                element={
-                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
-                    <Inventory />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/suppliers"
-                element={
-                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
-                    <Suppliers />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/add-product"
-                element={
-                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
-                    <AddProduct />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/reports"
-                element={
-                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
-                    <Reports />
-                  </ProtectedRoute>
-                }
-              />
+              {/* Routes that must remain accessible even without an active subscription */}
               <Route
                 path="/profile"
                 element={
@@ -115,43 +75,92 @@ function App() {
                 }
               />
               <Route
-                path="/settings"
+                path="/subscribe"
                 element={
-                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
-                    <BusinessSettings />
+                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                    <Subscribe />
                   </ProtectedRoute>
                 }
               />
 
-              {/* Procurement routes */}
-              <Route
-                path="/procurement"
-                element={
-                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
-                    <Procurement />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/procurement/:id"
-                element={
-                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
-                    <ProcurementDetail />
-                  </ProtectedRoute>
-                }
-              />
+              {/* Business routes — gated by active subscription / valid trial.
+                  Admins bypass automatically inside SubscriptionGuard. */}
+              <Route element={<SubscriptionGuard><Outlet /></SubscriptionGuard>}>
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/inventory"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                      <Inventory />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/suppliers"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                      <Suppliers />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/add-product"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                      <AddProduct />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/reports"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                      <Reports />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                      <BusinessSettings />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/procurement"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                      <Procurement />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/procurement/:id"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                      <ProcurementDetail />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings/whatsapp"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                      <WhatsAppSettings />
+                    </ProtectedRoute>
+                  }
+                />
+              </Route>
 
-              {/* WhatsApp Settings */}
-              <Route
-                path="/settings/whatsapp"
-                element={
-                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
-                    <WhatsAppSettings />
-                  </ProtectedRoute>
-                }
-              />
-
-              {/* Admin routes */}
+              {/* Admin routes — platform admins, no subscription gating */}
               <Route
                 path="/admin"
                 element={
