@@ -266,8 +266,6 @@ export const WhatsAppSettings: React.FC = () => {
               </CardContent>
             </Card>
           )}
-        </div>
-      </MainLayout>
-    </SubscriptionGuard>
+    </div>
   );
 };
