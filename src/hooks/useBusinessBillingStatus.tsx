@@ -26,7 +26,9 @@ const MESSAGES: Record<BillingStatus, string> = {
 
 export const useBusinessBillingStatus = () => {
   const { businessContext, isLoading: ctxLoading } = useBusinessAccess();
+  const { userRole, isLoading: roleLoading } = useUserRole();
   const businessId = businessContext?.business_id as string | undefined;
+  const isAdmin = userRole === 'admin';
 
   const { data, isLoading } = useQuery({
     queryKey: ['business-billing-status', businessId],
@@ -41,9 +43,21 @@ export const useBusinessBillingStatus = () => {
       }
       return ((data as string) || 'none') as BillingStatus;
     },
-    enabled: !!businessId,
+    enabled: !!businessId && !isAdmin,
     staleTime: 60_000,
   });
+
+  // System admins bypass billing entirely — they are not paying customers.
+  if (isAdmin) {
+    return {
+      status: 'active' as BillingStatus,
+      canWrite: true,
+      isReadOnly: false,
+      loading: roleLoading,
+      message: '',
+      businessId,
+    };
+  }
 
   const status: BillingStatus = data ?? 'none';
   const canWrite = WRITABLE.includes(status);
@@ -52,7 +66,7 @@ export const useBusinessBillingStatus = () => {
     status,
     canWrite,
     isReadOnly: !canWrite,
-    loading: ctxLoading || isLoading,
+    loading: ctxLoading || roleLoading || isLoading,
     message: MESSAGES[status] || MESSAGES.none,
     businessId,
   };
