@@ -134,15 +134,6 @@ export const WhatsAppSettings: React.FC = () => {
       </div>
 
       {/* Connection Status */}
-          <div className="flex items-center gap-3">
-            <MessageSquare className="h-7 w-7 text-primary" />
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">הגדרות WhatsApp</h1>
-              <p className="text-muted-foreground text-sm">חבר את מספר ה-WhatsApp Business שלך למערכת</p>
-            </div>
-          </div>
-
-          {/* Connection Status */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
