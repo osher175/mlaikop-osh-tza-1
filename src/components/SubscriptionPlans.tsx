@@ -103,7 +103,7 @@ export const SubscriptionPlans: React.FC = () => {
                 </div>
               </div>
               
-              <Button className="w-full">
+              <Button className="w-full" onClick={() => navigate('/subscribe')}>
                 בחר תוכנית
               </Button>
             </CardContent>
