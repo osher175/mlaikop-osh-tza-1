@@ -10,6 +10,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 
 export const SubscriptionPlans: React.FC = () => {
   const { userRole } = useUserRole();
+  const navigate = useNavigate();
 
   const { data: plans, isLoading } = useQuery({
     queryKey: ['subscription-plans'],
