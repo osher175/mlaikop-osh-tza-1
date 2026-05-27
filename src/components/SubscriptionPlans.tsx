@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +10,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 
 export const SubscriptionPlans: React.FC = () => {
   const { userRole } = useUserRole();
+  const navigate = useNavigate();
 
   const { data: plans, isLoading } = useQuery({
     queryKey: ['subscription-plans'],
@@ -101,7 +103,7 @@ export const SubscriptionPlans: React.FC = () => {
                 </div>
               </div>
               
-              <Button className="w-full">
+              <Button className="w-full" onClick={() => navigate('/subscribe')}>
                 בחר תוכנית
               </Button>
             </CardContent>
