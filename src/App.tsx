@@ -164,7 +164,7 @@ function App() {
                 <Route
                   path="/settings/api"
                   element={
-                    <ProtectedRoute allowedRoles={['admin', 'OWNER']}>
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
                       <SettingsApi />
                     </ProtectedRoute>
                   }
