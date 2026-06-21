@@ -1,3 +1,5 @@
+// CODE FREEZE: Subscription lock and payment flow are stable.
+// Do not modify without explicit approval. See CODE_FREEZE_SUBSCRIPTION.md
 /**
  * Centralized currency formatting utility for ILS (Israeli New Shekel)
  * All monetary values in the application should use this function
