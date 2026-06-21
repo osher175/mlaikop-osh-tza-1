@@ -33,6 +33,7 @@ import StorageManagement from "@/pages/admin/StorageManagement";
 import { Procurement } from "@/pages/Procurement";
 import { ProcurementDetail } from "@/pages/ProcurementDetail";
 import { WhatsAppSettings } from "@/pages/WhatsAppSettings";
+import SettingsApi from "@/pages/SettingsApi";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -157,6 +158,14 @@ function App() {
                   element={
                     <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
                       <WhatsAppSettings />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings/api"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER']}>
+                      <SettingsApi />
                     </ProtectedRoute>
                   }
                 />

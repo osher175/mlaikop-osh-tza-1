@@ -14,6 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_key_usage_log: {
+        Row: {
+          api_key_id: string
+          business_id: string
+          created_at: string
+          endpoint: string
+          id: string
+          ip: string | null
+          method: string
+          status_code: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          api_key_id: string
+          business_id: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          ip?: string | null
+          method?: string
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          api_key_id?: string
+          business_id?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          ip?: string | null
+          method?: string
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_key_usage_log_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_keys: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_keys_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action_type: string
