@@ -163,14 +163,21 @@ Deno.serve(async (req) => {
       body = { data, page, limit, total: count };
     } else if (path === "/categories") {
       const { page, limit, from, to } = parsePagination(url);
+      // product_categories has no business_id; scope is via
+      // product_categories.business_category_id -> business_categories.id
+      // (business_categories.business_id).
       const { data, count, error } = await admin
         .from("product_categories")
-        .select("*", { count: "exact" })
-        .eq("business_id", bid)
+        .select("*, business_categories!inner(business_id)", { count: "exact" })
+        .eq("business_categories.business_id", bid)
         .order("name")
         .range(from, to);
       if (error) throw error;
-      body = { data, page, limit, total: count };
+      const clean = (data ?? []).map((row: any) => {
+        const { business_categories: _bc, ...rest } = row;
+        return rest;
+      });
+      body = { data: clean, page, limit, total: count };
     } else if (path === "/sales") {
       const { page, limit, from, to } = parsePagination(url);
       const range = parseDateRange(url);
