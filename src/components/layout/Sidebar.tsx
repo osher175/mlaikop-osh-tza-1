@@ -138,6 +138,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate, isMobileDrawer }) 
       show: !permissions.isPlatformAdmin && permissions.canManageSettings
     },
     {
+      to: '/settings/api',
+      icon: <KeyRound className="w-5 h-5" />,
+      label: 'API ואינטגרציות',
+      show: !permissions.isPlatformAdmin && permissions.canManageSettings
+    },
+    {
       to: '/subscriptions',
       icon: <Crown className="w-5 h-5" />,
       label: 'ניהול מנוי',
