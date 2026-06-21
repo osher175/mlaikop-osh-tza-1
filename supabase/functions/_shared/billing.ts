@@ -1,3 +1,5 @@
+// CODE FREEZE: Subscription lock and payment flow are stable.
+// Do not modify without explicit approval. See CODE_FREEZE_SUBSCRIPTION.md
 // Shared billing gate helper for Edge Functions.
 // Calls public.require_active_business(business_id). On failure, logs a
 // billing_events row and returns a 402-style Response.

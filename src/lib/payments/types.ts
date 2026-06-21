@@ -1,3 +1,5 @@
+// CODE FREEZE: Subscription lock and payment flow are stable.
+// Do not modify without explicit approval. See CODE_FREEZE_SUBSCRIPTION.md
 export type GrowPaymentStatus =
   | 'pending_payment'
   | 'payment_link_created'

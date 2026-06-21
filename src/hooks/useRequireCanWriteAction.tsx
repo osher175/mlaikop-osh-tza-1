@@ -1,3 +1,5 @@
+// CODE FREEZE: Subscription lock and payment flow are stable.
+// Do not modify without explicit approval. See CODE_FREEZE_SUBSCRIPTION.md
 import { useCallback } from 'react';
 import { useBusinessBillingStatus } from '@/hooks/useBusinessBillingStatus';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';

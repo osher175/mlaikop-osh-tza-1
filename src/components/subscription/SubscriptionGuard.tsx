@@ -1,3 +1,5 @@
+// CODE FREEZE: Subscription lock and payment flow are stable.
+// Do not modify without explicit approval. See CODE_FREEZE_SUBSCRIPTION.md
 import React, { useEffect, useRef, useState } from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useBusinessBillingStatus } from '@/hooks/useBusinessBillingStatus';
