@@ -51,3 +51,10 @@ verify_jwt = true
 [functions.grow-update-session-status]
 verify_jwt = false
 
+[functions.public-api]
+verify_jwt = false
+
+[functions.api-keys-manage]
+verify_jwt = true
+
+
