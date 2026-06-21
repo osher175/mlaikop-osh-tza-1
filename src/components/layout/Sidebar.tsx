@@ -13,7 +13,8 @@ import {
   User,
   Truck,
   HardDrive,
-  ShoppingCart
+  ShoppingCart,
+  KeyRound
 } from 'lucide-react';
 import mlaikoLogo from '@/assets/mlaiko-logo-full.png';
 import { cn } from '@/lib/utils';
@@ -134,6 +135,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate, isMobileDrawer }) 
       to: '/settings',
       icon: <Settings className="w-5 h-5" />,
       label: 'הגדרות עסק',
+      show: !permissions.isPlatformAdmin && permissions.canManageSettings
+    },
+    {
+      to: '/settings/api',
+      icon: <KeyRound className="w-5 h-5" />,
+      label: 'API ואינטגרציות',
       show: !permissions.isPlatformAdmin && permissions.canManageSettings
     },
     {
