@@ -1,3 +1,5 @@
+// CODE FREEZE: Subscription lock and payment flow are stable.
+// Do not modify without explicit approval. See CODE_FREEZE_SUBSCRIPTION.md
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
