@@ -13,7 +13,8 @@ import {
   User,
   Truck,
   HardDrive,
-  ShoppingCart
+  ShoppingCart,
+  KeyRound
 } from 'lucide-react';
 import mlaikoLogo from '@/assets/mlaiko-logo-full.png';
 import { cn } from '@/lib/utils';
