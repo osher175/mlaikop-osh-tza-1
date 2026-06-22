@@ -98,6 +98,13 @@ Deno.serve(async (req) => {
         return json({ error: "Invalid name (1-100 chars)" }, 400);
       }
       const expires_at = body.expires_at ? new Date(body.expires_at).toISOString() : null;
+      const scopeIn = (body.scope as string | undefined) ?? "public";
+      if (!["public", "retail_iq"].includes(scopeIn)) {
+        return json({ error: "Invalid scope (public | retail_iq)" }, 400);
+      }
+      const rateLimit = Number.isFinite(body.rate_limit_per_min)
+        ? Math.max(1, Math.min(6000, parseInt(body.rate_limit_per_min, 10)))
+        : 60;
 
       const rawKey = generateKey();
       const key_hash = await sha256Hex(rawKey);
@@ -112,8 +119,10 @@ Deno.serve(async (req) => {
           key_hash,
           key_prefix,
           expires_at,
+          scope: scopeIn,
+          rate_limit_per_min: rateLimit,
         })
-        .select("id, name, key_prefix, expires_at, created_at")
+        .select("id, name, key_prefix, scope, rate_limit_per_min, expires_at, created_at")
         .single();
       if (error) throw error;
       // Return raw key ONCE — never stored.
