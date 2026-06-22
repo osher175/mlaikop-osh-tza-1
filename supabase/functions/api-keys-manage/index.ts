@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
       if (!(await assertOwnerOrAdmin(businessId))) return json({ error: "Forbidden" }, 403);
       const { data, error } = await admin
         .from("api_keys")
-        .select("id, name, key_prefix, last_used_at, expires_at, revoked_at, created_at")
+        .select("id, name, key_prefix, scope, rate_limit_per_min, last_used_at, expires_at, revoked_at, created_at")
         .eq("business_id", businessId)
         .order("created_at", { ascending: false });
       if (error) throw error;
