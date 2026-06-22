@@ -69,7 +69,9 @@ export type Database = {
           key_prefix: string
           last_used_at: string | null
           name: string
+          rate_limit_per_min: number
           revoked_at: string | null
+          scope: string
           updated_at: string
         }
         Insert: {
@@ -82,7 +84,9 @@ export type Database = {
           key_prefix: string
           last_used_at?: string | null
           name: string
+          rate_limit_per_min?: number
           revoked_at?: string | null
+          scope?: string
           updated_at?: string
         }
         Update: {
@@ -95,7 +99,9 @@ export type Database = {
           key_prefix?: string
           last_used_at?: string | null
           name?: string
+          rate_limit_per_min?: number
           revoked_at?: string | null
+          scope?: string
           updated_at?: string
         }
         Relationships: [
