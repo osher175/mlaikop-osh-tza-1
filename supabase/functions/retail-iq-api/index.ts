@@ -49,19 +49,18 @@ function updatedSince(url: URL): string | null {
   return url.searchParams.get("updated_since");
 }
 
-// per-key rate limit
-const rateBuckets = new Map<string, { count: number; reset: number }>();
-function checkRate(keyId: string, perMinute: number): boolean {
-  const now = Date.now();
-  const b = rateBuckets.get(keyId);
-  if (!b || b.reset < now) {
-    rateBuckets.set(keyId, { count: 1, reset: now + 60_000 });
-    return true;
-  }
-  if (b.count >= perMinute) return false;
-  b.count++;
-  return true;
+// per-key rate limit — DB-backed so it survives across edge isolates
+async function checkRate(apiKeyId: string, perMinute: number): Promise<boolean> {
+  const since = new Date(Date.now() - 60_000).toISOString();
+  const { count, error } = await admin
+    .from("api_key_usage_log")
+    .select("id", { count: "exact", head: true })
+    .eq("api_key_id", apiKeyId)
+    .gte("created_at", since);
+  if (error) return true; // fail-open on logging errors
+  return (count ?? 0) < perMinute;
 }
+
 
 async function logUsage(
   apiKeyId: string,
