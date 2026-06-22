@@ -114,9 +114,10 @@ Deno.serve(async (req) => {
   }
 
   const perMin = keyRow.rate_limit_per_min ?? 60;
-  if (!checkRate(keyRow.id, perMin)) {
+  if (!(await checkRate(keyRow.id, perMin))) {
     await logUsage(keyRow.id, keyRow.business_id, path, 429,
       req.headers.get("x-forwarded-for"), req.headers.get("user-agent"));
+
     return err(`Rate limit exceeded: ${perMin} requests per minute`, "rate_limited", 429);
   }
 
