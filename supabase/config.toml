@@ -57,4 +57,7 @@ verify_jwt = false
 [functions.api-keys-manage]
 verify_jwt = true
 
+[functions.retail-iq-api]
+verify_jwt = false
+
 
