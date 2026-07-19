@@ -80,6 +80,25 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-12 min-h-[44px] min-w-[44px]"
+                onClick={toggleCost}
+                aria-label={costHidden ? 'הצג מחיר עלות' : 'הסתר מחיר עלות'}
+                aria-pressed={!costHidden}
+              >
+                {costHidden ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{costHidden ? 'הצג מחיר עלות' : 'הסתר מחיר עלות (מומלץ ליד לקוחות)'}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
               <Button 
                 variant="outline"
                 className="h-12 min-h-[44px] min-w-[44px] w-full md:w-auto"
