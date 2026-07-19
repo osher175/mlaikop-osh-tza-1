@@ -22,6 +22,12 @@ export async function requireActiveBusinessOrRespond(
   businessId: string | null | undefined,
   opts: BillingGateOptions,
 ): Promise<Response | null> {
+  // Kill-switch: when BILLING_LOCK_ENABLED is not explicitly 'true', the gate
+  // is neutralized. Safe default = disabled (matches frontend featureFlag.ts).
+  if (Deno.env.get('BILLING_LOCK_ENABLED') !== 'true') {
+    return null;
+  }
+
   if (!businessId) {
     return new Response(
       JSON.stringify({ error: 'Missing business_id for billing gate' }),
