@@ -51,8 +51,10 @@ export const useBusinessBillingStatus = () => {
     staleTime: 60_000,
   });
 
-  // System admins bypass billing entirely — they are not paying customers.
-  if (isAdmin) {
+  // Kill-switch: when billing lock is globally disabled, every user is treated
+  // as active regardless of business subscription state.
+  // System admins also bypass billing entirely — they are not paying customers.
+  if (lockDisabled || isAdmin) {
     return {
       status: 'active' as BillingStatus,
       canWrite: true,
