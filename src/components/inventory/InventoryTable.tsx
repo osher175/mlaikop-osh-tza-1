@@ -42,6 +42,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
   const isMobile = useIsMobile();
   const { businessContext } = useBusinessAccess();
   const { approveStock, isApproving, canSendToSupplier } = useStockApprovals();
+  const { hidden: costHidden } = useCostVisibility();
 
   // Only show approval button for business owners
   const canApproveStock = businessContext?.is_owner;
