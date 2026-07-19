@@ -649,12 +649,16 @@ export type Database = {
           discount_ils: number | null
           discount_percent: number | null
           id: string
+          is_reversal: boolean
           list_unit_ils: number | null
           notes: string | null
           product_id: string
           purchase_total_ils: number | null
           purchase_unit_ils: number | null
           quantity_changed: number
+          reversed_at: string | null
+          reversed_by: string | null
+          reverses_action_id: string | null
           sale_total_ils: number | null
           sale_unit_ils: number | null
           supplier_id: string | null
@@ -669,12 +673,16 @@ export type Database = {
           discount_ils?: number | null
           discount_percent?: number | null
           id?: string
+          is_reversal?: boolean
           list_unit_ils?: number | null
           notes?: string | null
           product_id: string
           purchase_total_ils?: number | null
           purchase_unit_ils?: number | null
           quantity_changed: number
+          reversed_at?: string | null
+          reversed_by?: string | null
+          reverses_action_id?: string | null
           sale_total_ils?: number | null
           sale_unit_ils?: number | null
           supplier_id?: string | null
@@ -689,12 +697,16 @@ export type Database = {
           discount_ils?: number | null
           discount_percent?: number | null
           id?: string
+          is_reversal?: boolean
           list_unit_ils?: number | null
           notes?: string | null
           product_id?: string
           purchase_total_ils?: number | null
           purchase_unit_ils?: number | null
           quantity_changed?: number
+          reversed_at?: string | null
+          reversed_by?: string | null
+          reverses_action_id?: string | null
           sale_total_ils?: number | null
           sale_unit_ils?: number | null
           supplier_id?: string | null
@@ -721,6 +733,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_actions_reverses_action_id_fkey"
+            columns: ["reverses_action_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_actions"
             referencedColumns: ["id"]
           },
           {
@@ -3448,6 +3467,7 @@ export type Database = {
         Returns: boolean
       }
       require_premium: { Args: { p_business_id: string }; Returns: boolean }
+      reverse_inventory_action: { Args: { p_action_id: string }; Returns: Json }
       score_procurement_quotes: {
         Args: { p_request_id: string }
         Returns: undefined
