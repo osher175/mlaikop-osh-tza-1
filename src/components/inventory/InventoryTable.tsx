@@ -40,6 +40,10 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
 }) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const isSidebarDrawer = useIsSidebarDrawer();
+  const isTablet = isSidebarDrawer && !isMobile;
+  const useCardView = isSidebarDrawer; // mobile + tablet use cards; desktop keeps table
+
   const { businessContext } = useBusinessAccess();
   const { approveStock, isApproving, canSendToSupplier } = useStockApprovals();
   const { hidden: costHidden } = useCostVisibility();
