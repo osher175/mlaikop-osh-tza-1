@@ -1,8 +1,9 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
-import { Plus, Download } from 'lucide-react';
+import { Plus, Download, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useCostVisibility } from '@/hooks/useCostVisibility';
 import { exportInventoryToCSV } from '@/utils/exportInventoryCSV';
 import { useToast } from '@/hooks/use-toast';
 import {
