@@ -8,7 +8,7 @@ import { RequestQuotesButton } from '@/components/procurement/RequestQuotesButto
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile, useIsSidebarDrawer } from '@/hooks/use-mobile';
 import { LazyImage } from '@/components/inventory/LazyImage';
 import { StockApprovalDialog } from '@/components/inventory/StockApprovalDialog';
 import { useStockApprovals } from '@/hooks/useStockApprovals';
