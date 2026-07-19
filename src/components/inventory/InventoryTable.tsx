@@ -135,8 +135,9 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
     }
   };
 
-  // Mobile optimized card view
-  if (isMobile) {
+  // Mobile + tablet card view (desktop keeps the table below)
+  if (useCardView) {
+
     return (
       <Card className="w-full">
         <CardHeader className="pb-3">
