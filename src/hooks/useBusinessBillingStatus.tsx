@@ -47,7 +47,7 @@ export const useBusinessBillingStatus = () => {
       }
       return ((data as string) || 'none') as BillingStatus;
     },
-    enabled: !!businessId && !isAdmin,
+    enabled: !!businessId && !isAdmin && !lockDisabled,
     staleTime: 60_000,
   });
 
