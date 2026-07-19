@@ -11,6 +11,7 @@ import { InventoryHeader } from '@/components/inventory/InventoryHeader';
 import { InventoryStats } from '@/components/inventory/InventoryStats';
 import { MobileSearchBar } from '@/components/inventory/MobileSearchBar';
 import { InventoryTable } from '@/components/inventory/InventoryTable';
+import { UndoActionBanner } from '@/components/inventory/UndoActionBanner';
 import { useProducts } from '@/hooks/useProducts';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useNavigate } from 'react-router-dom';
@@ -165,6 +166,7 @@ export const Inventory: React.FC = () => {
           onOpenChange={(open) => !open && setViewingProductImage(null)}
         />
       </div>
+      <UndoActionBanner />
     </MainLayout>
   );
 };

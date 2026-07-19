@@ -13,6 +13,7 @@ import { LazyImage } from '@/components/inventory/LazyImage';
 import { StockApprovalDialog } from '@/components/inventory/StockApprovalDialog';
 import { useStockApprovals } from '@/hooks/useStockApprovals';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
+import { useCostVisibility } from '@/hooks/useCostVisibility';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'] & {
@@ -41,6 +42,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
   const isMobile = useIsMobile();
   const { businessContext } = useBusinessAccess();
   const { approveStock, isApproving, canSendToSupplier } = useStockApprovals();
+  const { hidden: costHidden } = useCostVisibility();
 
   // Only show approval button for business owners
   const canApproveStock = businessContext?.is_owner;
@@ -203,7 +205,9 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                       </div>
                       <div className="truncate">
                         <span className="text-gray-600">עלות: </span>
-                        <span className="font-medium">₪{product.cost || '-'}</span>
+                        <span className="font-medium">
+                          {costHidden ? '₪●●●' : `₪${product.cost || '-'}`}
+                        </span>
                       </div>
                     </div>
                     

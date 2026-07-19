@@ -1,8 +1,9 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
-import { Plus, Download } from 'lucide-react';
+import { Plus, Download, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useCostVisibility } from '@/hooks/useCostVisibility';
 import { exportInventoryToCSV } from '@/utils/exportInventoryCSV';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -39,6 +40,7 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { hidden: costHidden, toggle: toggleCost } = useCostVisibility();
 
   const handleExportCSV = () => {
     if (products.length === 0) {
@@ -75,6 +77,25 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
         </p>
       </div>
       <div className="flex flex-col sm:flex-col md:flex-row gap-2 w-full md:w-auto md:items-center">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-12 min-h-[44px] min-w-[44px]"
+                onClick={toggleCost}
+                aria-label={costHidden ? 'הצג מחיר עלות' : 'הסתר מחיר עלות'}
+                aria-pressed={!costHidden}
+              >
+                {costHidden ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{costHidden ? 'הצג מחיר עלות' : 'הסתר מחיר עלות (מומלץ ליד לקוחות)'}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>

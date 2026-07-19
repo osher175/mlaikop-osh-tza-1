@@ -15,6 +15,7 @@ import { useBusiness } from '@/hooks/useBusiness';
 import { AddProductCategoryDialog } from '@/components/inventory/AddProductCategoryDialog';
 import { SaleModal, SaleData } from '@/components/inventory/SaleModal';
 import { PurchaseModal, PurchaseData } from '@/components/inventory/PurchaseModal';
+import { rememberReversibleAction } from '@/hooks/useReversibleAction';
 import { Plus, Scan } from 'lucide-react';
 import { useCategories } from '@/hooks/useCategories';
 import { useAuth } from '@/hooks/useAuth';
@@ -208,7 +209,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
           const discountIls = listTotal - saleData.saleTotalIls;
           const discountPercent = listTotal > 0 ? (discountIls / listTotal) * 100 : 0;
 
-          const { error: actionError } = await supabase
+          const { data: insertedAction, error: actionError } = await supabase
             .from('inventory_actions')
             .insert({
               business_id: business.id,
@@ -225,11 +226,23 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
               discount_percent: discountPercent > 0 ? discountPercent : 0,
               notes: saleData.notes || `מכירה של ${absQuantity} יחידות`,
               timestamp: new Date().toISOString(),
-            });
+            })
+            .select('id')
+            .single();
 
           if (actionError) {
             console.error('Error logging sale action:', actionError);
             throw actionError;
+          }
+
+          if (insertedAction?.id) {
+            rememberReversibleAction({
+              action_id: insertedAction.id,
+              product_name: product.name,
+              quantity: absQuantity,
+              action_type: 'sale',
+              created_at: new Date().toISOString(),
+            });
           }
         } else if (purchaseData && quantityDiff > 0) {
           // Purchase action
