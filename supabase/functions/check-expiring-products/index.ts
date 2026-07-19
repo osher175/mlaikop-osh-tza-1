@@ -52,9 +52,10 @@ const handler = async (req: Request): Promise<Response> => {
         // Per-business billing skip (cached). Do NOT fail the whole run on one inactive business.
         let isActive = billingCache.get(product.business_id);
         if (isActive === undefined) {
-          const { error: billingError } = await supabaseClient.rpc('require_active_business', {
-            p_business_id: product.business_id,
-          });
+          // Kill-switch: bypass when BILLING_LOCK_ENABLED != 'true'.
+          const billingError = Deno.env.get('BILLING_LOCK_ENABLED') === 'true'
+            ? (await supabaseClient.rpc('require_active_business', { p_business_id: product.business_id })).error
+            : null;
           isActive = !billingError;
           billingCache.set(product.business_id, isActive);
           if (!isActive) {

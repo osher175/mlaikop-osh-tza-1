@@ -48,10 +48,11 @@ const handler = async (req: Request): Promise<Response> => {
     if (businesses && businesses.length > 0) {
       for (const business of businesses) {
         try {
-          // Skip businesses without active billing (read-only mode)
-          const { error: billingError } = await supabaseClient.rpc('require_active_business', {
-            p_business_id: business.id,
-          });
+          // Skip businesses without active billing (read-only mode).
+          // Kill-switch: bypass when BILLING_LOCK_ENABLED != 'true'.
+          const billingError = Deno.env.get('BILLING_LOCK_ENABLED') === 'true'
+            ? (await supabaseClient.rpc('require_active_business', { p_business_id: business.id })).error
+            : null;
           if (billingError) {
             console.log(`Skipping business ${business.name} - billing inactive: ${billingError.message}`);
             try {

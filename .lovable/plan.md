@@ -1,45 +1,55 @@
-## אבחון
 
-זו לא בעיה של גודל גופן במערכת ההפעלה של הטאבלט — זו בעיית **רספונסיביות בקוד שלנו**. הבדיקה הראתה:
+## מטרה
+לוודא שמנגנון "תקופת ניסיון ולאחר מכן חסימת שימוש עד לתשלום" **לא פעיל כרגע**, בלי להסיר או לשנות את הקוד הקפוא (`CODE_FREEZE_SUBSCRIPTION.md`).
 
-1. **הגדרת ה-breakpoints**: יש שני מצבים בלבד — `useIsMobile` (< 768px) ו-`useIsSidebarDrawer` (< 1024px). כל טווח 768–1023px (טאבלטים) נופל למצב "sidebar drawer" אבל בפועל משתמש בסטיילים של מובייל (טקסטים קטנים, padding מצומצם, `text-xs`, כפתורים h-7/h-8).
-2. **תוכן**: הרבה קומפוננטות (כמו `InventoryTable`, `InventoryHeader`, כרטיסי סטטיסטיקה) בודקות רק `isMobile` — ואם זה false, יוצאים למצב "דסקטופ" צפוף שנועד לרוחב 1280+. בטאבלט (768–1023) מוצגת הטבלה הדסקטופית עם 9 עמודות בתוך ~700px useful → הכל נדחס.
-3. **טיפוגרפיה**: אין `text-base md:text-lg` וכד' — הגדלים קבועים ומכוילים למובייל/דסקטופ בלבד.
+## מצב נוכחי (מאומת)
+המנגנון פעיל בשלוש שכבות:
+- **Frontend**: `SubscriptionGuard` עוטף את כל ה-routes העסקיים ב-`App.tsx`; `BillingReadOnlyBanner` ב-`MainLayout`; `useBusinessBillingStatus` + `useRequireCanWriteAction` חוסמים פעולות כתיבה.
+- **Edge Functions**: `requireActiveBusinessOrRespond` + `require_active_business` RPC ב-11+ פונקציות (procurement, meta, log-stock-alert, crons).
+- **DB**: `require_active_business` RPC מחזיר שגיאה למי שלא active/trial; `ensure_trial_subscription` נקרא ב-`useAuth` וב-`useSubscription`.
 
-## תוכנית שיפור טאבלט (768–1023px)
+## גישה: Kill-Switch גלובלי (ללא שינוי לוגיקה קפואה)
+נוסיף דגל אחד `BILLING_LOCK_ENABLED` בשתי נקודות כניסה קפואות מאוד, שכשהוא `false` — כל ההגבלה נעקפת. הקוד עצמו נשאר, אבל לא מפעיל שום חסימה. זה שומר על הכוונה של ה-freeze (לא לשבור את המנגנון) ומאפשר החזרה עתידית בהחלפת דגל אחד.
 
-**עקרון**: לא לגעת בעיצוב מובייל או דסקטופ. רק להוסיף שכבת טאבלט אמצעית.
+### שינויים מוצעים
 
-### שלב 1 — תשתית hook + נקודות שבירה
-- להוסיף `useIsTabletOrSmaller` / להשתמש ב-`useIsTablet` הקיים.
-- להגדיר breakpoint אחיד: `mobile < 768`, `tablet 768–1023`, `desktop ≥ 1024`.
+**1. Frontend flag** — `src/lib/billing/featureFlag.ts` (קובץ חדש)
+```ts
+export const BILLING_LOCK_ENABLED = false;
+```
 
-### שלב 2 — Layout כללי (`MainLayout.tsx`)
-- Padding: `p-3` מובייל → **`p-5`** טאבלט → `p-6/8` דסקטופ.
-- לוגו/header בטאבלט: גובה `h-11`, אייקון תפריט `h-6 w-6`, טקסט "תפריט" `text-base`.
-- Drawer של הסיידבר בטאבלט: רוחב ~360px במקום full (כדי שיהיה נוח לניווט).
+**2. `src/hooks/useBusinessBillingStatus.tsx`** (קובץ קפוא — דורש אישור לפי mandate)
+בראש ה-hook, אם `!BILLING_LOCK_ENABLED` → להחזיר `status: 'active'`, `canWrite: true`, `isReadOnly: false` (בדיוק כמו bypass של admin שכבר קיים שם). זה מנטרל אוטומטית:
+- `SubscriptionGuard` (משתמש ב-hook הזה)
+- `BillingReadOnlyBanner` (משתמש ב-hook הזה)
+- `useRequireCanWriteAction` (משתמש ב-hook הזה)
+- כל כפתור/פעולה שמסתמכת עליהם
 
-### שלב 3 — טבלת מלאי (`InventoryTable.tsx`)
-- הפרדה לשלושה מצבים: mobile-cards / **tablet-cards משופרים** (2 טורים, כרטיסים גדולים יותר, `text-sm`→`text-base`, כפתורי פעולה h-10) / desktop-table.
-- אלטרנטיבה: להשאיר טבלה בטאבלט אבל להסתיר עמודות משניות (ברקוד, מיקום) ולהגדיל padding ל-`p-4` ו-`text-base`.
+**3. `supabase/functions/_shared/billing.ts`** (קובץ קפוא — דורש אישור)
+בראש `requireActiveBusinessOrRespond`, אם `Deno.env.get('BILLING_LOCK_ENABLED') !== 'true'` → `return null` (עובר את השער תמיד). זה מנטרל את כל 11 ה-Edge Functions ואת ה-crons שקוראים ל-RPC דרך helper זה. עבור שתי הפונקציות שקוראות `require_active_business` ישירות (`generate-weekly-stock-summary`, `check-expiring-products`) — או שנרצה לעטוף גם אותן בבדיקת הדגל, או להשאיר (הן crons, לא חוסמות משתמש). אמליץ לעטוף לעקביות.
 
-### שלב 4 — Cards כללי (סטטיסטיקות, דשבורד)
-- InventoryStats, dashboard cards: `grid-cols-2 md:grid-cols-2 lg:grid-cols-4` — כלומר בטאבלט 2 בשורה גדולים, לא 4 קטנים.
-- מספרים גדולים: `text-2xl md:text-3xl`.
+**4. secret** — להוסיף `BILLING_LOCK_ENABLED=false` דרך `add_secret` כדי שה-Edge Functions יקראו אותו. ברירת מחדל אם חסר: מנוטרל (safe default עכשיו).
 
-### שלב 5 — Sidebar עצמו כשהוא פתוח בטאבלט
-- הגדלת פריטי ניווט: `py-3` → `py-4`, `text-base` → `text-lg`, אייקונים `h-5` → `h-6`.
+### מה **לא** משתנה
+- `require_active_business` RPC בבסיס הנתונים — נשאר כפי שהוא.
+- `activate_subscription_on_paid` trigger — נשאר.
+- `ensure_trial_subscription` — נשאר (יוצר trial ברישום, לא חוסם).
+- כל הראוטים, ה-guards, ה-banner components — נשארים, פשוט לא מציגים/חוסמים כלום.
+- מסלול Grow ותשלום — נשאר פעיל למי שירצה להירשם ידנית.
+- `SubscriptionPlans` / `Subscribe.tsx` — נגישים ידנית מהמנוי.
 
-### שלב 6 — כפתורים ו-inputs גלובליים בטאבלט
-- Min height 44px לכל כפתור פעולה (touch target תקין).
-- Inputs `h-11` בטאבלט (במקום h-9 של דסקטופ).
+## אישור freeze נדרש
+לפי `mem://constraints/billing-code-freeze`, שינוי ב-`useBusinessBillingStatus.tsx` וב-`_shared/billing.ts` מחייב:
+1. עצירה + הפניה ל-`CODE_FREEZE_SUBSCRIPTION.md`.
+2. הצגת הקבצים המושפעים: `src/hooks/useBusinessBillingStatus.tsx`, `supabase/functions/_shared/billing.ts`, `src/lib/billing/featureFlag.ts` (חדש).
+3. **אישור מפורש שלך** לבצע את השינוי הזה למרות ה-freeze.
 
-## שאלה לפני יישום
+## אחרי היישום (וידוא)
+- לרענן את האפליקציה — הבאנר הצהוב לא מופיע לאף משתמש.
+- Owner עם `status='none'` יכול לגשת לכל הראוטים העסקיים ולבצע פעולות כתיבה.
+- קריאה ל-Edge Function `procurement-start-outreach` לעסק ללא מנוי — לא מחזירה 402.
 
-איזה היקף אתה רוצה?
+## אופציה חלופית
+אם תעדיף לא לגעת בכלל בקבצים הקפואים — אפשרות מינימלית: להריץ מיגרציה שמחליפה את `require_active_business` שיחזיר תמיד `true`, ולעטוף את `SubscriptionGuard` ו-`BillingReadOnlyBanner` בפידור UI קפוא. זה פחות נקי (מסתיר סיבה בלוגיקה במקום בדגל מפורש) — אמליץ נגד.
 
-- **A. מינימלי מהיר**: רק MainLayout + InventoryTable + InventoryStats (המסך המרכזי) — ~30 דקות עבודה.
-- **B. מלא**: כל הנ"ל + Dashboard + Reports + Suppliers + Procurement + Settings — יסודי, נוגע בהמון קומפוננטות.
-- **C. שיטתי מהיסוד**: להוסיף utility classes סמנטיות ב-`tailwind.config.ts` (`tablet:` prefix) ולהחיל בכל האפליקציה בצורה עקבית.
-
-**הערה חשובה**: אף אחד מהקבצים ב-scope הזה לא נמצא ב-Code Freeze של הבילינג — כל השינויים בטוחים.
+**נא לאשר את הגישה עם ה-Kill-Switch לפני מעבר ל-build.**
