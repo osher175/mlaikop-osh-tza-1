@@ -8,7 +8,7 @@ import { RequestQuotesButton } from '@/components/procurement/RequestQuotesButto
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile, useIsSidebarDrawer } from '@/hooks/use-mobile';
 import { LazyImage } from '@/components/inventory/LazyImage';
 import { StockApprovalDialog } from '@/components/inventory/StockApprovalDialog';
 import { useStockApprovals } from '@/hooks/useStockApprovals';
@@ -40,6 +40,10 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
 }) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const isSidebarDrawer = useIsSidebarDrawer();
+  const isTablet = isSidebarDrawer && !isMobile;
+  const useCardView = isSidebarDrawer; // mobile + tablet use cards; desktop keeps table
+
   const { businessContext } = useBusinessAccess();
   const { approveStock, isApproving, canSendToSupplier } = useStockApprovals();
   const { hidden: costHidden } = useCostVisibility();
@@ -131,8 +135,9 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
     }
   };
 
-  // Mobile optimized card view
-  if (isMobile) {
+  // Mobile + tablet card view (desktop keeps the table below)
+  if (useCardView) {
+
     return (
       <Card className="w-full">
         <CardHeader className="pb-3">
@@ -157,7 +162,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
               )}
             </div>
           ) : (
-            <div className="space-y-2 flex-1 overflow-y-auto">
+            <div className={isTablet ? 'grid grid-cols-2 gap-3 flex-1 overflow-y-auto' : 'space-y-2 flex-1 overflow-y-auto'}>
               {filteredProducts.map((product) => (
                 <Card 
                   key={product.id} 
