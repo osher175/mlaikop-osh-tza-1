@@ -32,6 +32,7 @@ export const useBusinessBillingStatus = () => {
   const { userRole, isLoading: roleLoading } = useUserRole();
   const businessId = businessContext?.business_id as string | undefined;
   const isAdmin = userRole === 'admin';
+  const lockDisabled = !BILLING_LOCK_ENABLED;
 
   const { data, isLoading } = useQuery({
     queryKey: ['business-billing-status', businessId],
