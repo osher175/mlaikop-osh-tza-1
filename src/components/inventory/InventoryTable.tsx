@@ -205,7 +205,9 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                       </div>
                       <div className="truncate">
                         <span className="text-gray-600">עלות: </span>
-                        <span className="font-medium">₪{product.cost || '-'}</span>
+                        <span className="font-medium">
+                          {costHidden ? '₪●●●' : `₪${product.cost || '-'}`}
+                        </span>
                       </div>
                     </div>
                     
