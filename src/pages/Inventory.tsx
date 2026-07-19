@@ -166,6 +166,7 @@ export const Inventory: React.FC = () => {
           onOpenChange={(open) => !open && setViewingProductImage(null)}
         />
       </div>
+      <UndoActionBanner />
     </MainLayout>
   );
 };
