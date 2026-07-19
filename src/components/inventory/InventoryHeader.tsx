@@ -40,6 +40,7 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { hidden: costHidden, toggle: toggleCost } = useCostVisibility();
 
   const handleExportCSV = () => {
     if (products.length === 0) {
