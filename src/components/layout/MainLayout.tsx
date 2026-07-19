@@ -90,7 +90,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
             {/* Main Content - Scrollable */}
             <main className="flex-1 overflow-y-auto w-full">
-              <div className={`${isMobile ? 'p-3' : isSidebarDrawer ? 'p-4' : 'p-4 md:p-6 lg:p-8'} min-h-full w-full max-w-full overflow-x-hidden`}>
+              <div className={`${isMobile ? 'p-3' : isSidebarDrawer ? 'p-5 md:p-6' : 'p-4 md:p-6 lg:p-8'} min-h-full w-full max-w-full overflow-x-hidden`}>
                 {children}
               </div>
             </main>
