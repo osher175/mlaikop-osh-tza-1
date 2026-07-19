@@ -15,6 +15,7 @@ import { useBusiness } from '@/hooks/useBusiness';
 import { AddProductCategoryDialog } from '@/components/inventory/AddProductCategoryDialog';
 import { SaleModal, SaleData } from '@/components/inventory/SaleModal';
 import { PurchaseModal, PurchaseData } from '@/components/inventory/PurchaseModal';
+import { rememberReversibleAction } from '@/hooks/useReversibleAction';
 import { Plus, Scan } from 'lucide-react';
 import { useCategories } from '@/hooks/useCategories';
 import { useAuth } from '@/hooks/useAuth';
