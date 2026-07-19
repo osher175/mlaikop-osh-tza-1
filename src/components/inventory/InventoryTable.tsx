@@ -162,7 +162,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
               )}
             </div>
           ) : (
-            <div className="space-y-2 flex-1 overflow-y-auto">
+            <div className={isTablet ? 'grid grid-cols-2 gap-3 flex-1 overflow-y-auto' : 'space-y-2 flex-1 overflow-y-auto'}>
               {filteredProducts.map((product) => (
                 <Card 
                   key={product.id} 
