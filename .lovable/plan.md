@@ -1,46 +1,74 @@
 
-## Diagnosis
+## מה נבנה
 
-Queried `api_keys` for business **צמיגי פאר** (`0ed7a81d-cd0b-45fe-9ed7-6961412a7f5f`). Existing keys:
+שני שיפורים ממוקדים במסך המלאי, ללא נגיעה בעיצוב, במסלול הביליינג/מנוי או במבנה הכללי.
 
-| Name | Prefix | Scope | Rate/min | Status |
-|---|---|---|---|---|
-| QA Public A | `riq_Z_885A-i` | **public** | 60 | active |
-| QA Retail IQ A | `riq_v-bmneuD` | **retail_iq** | **5** | active (QA only) |
-| Integration-Test | `mlk_ra34mc1Y` | **public** | 60 | active |
-| WorkAgent-Test | `mlk_WBxuAUX4` | public | 60 | revoked |
+---
 
-→ The key configured in Retail IQ is almost certainly `riq_Z_885A-i` (public) or `mlk_ra34mc1Y` (public). The only `retail_iq`-scoped key is the QA one capped at 5 req/min — unsuitable for production.
+### 1. כפתור "ביטול פעולה" למשך 10 דקות אחרי הורדה/מכירה
 
-## Plan
+**הבעיה:** אחרי הורדת מלאי / רישום מכירה אין דרך לתקן טעות. הרשומה נשארת ומזייפת את דוחות ההכנסות והרווח לטווח ארוך.
 
-1. **Mint a new production key** for צמיגי פאר with:
-   - `name = "Retail IQ Production"`
-   - `scope = retail_iq`
-   - `rate_limit_per_min = 120`
-   - `business_id = 0ed7a81d-cd0b-45fe-9ed7-6961412a7f5f`
-   - `expires_at = NULL`
+**הפתרון:** חלון ביטול של 10 דקות מרגע ביצוע הפעולה. הביטול מתבצע כ-**Reversal** (רשומת פעולה נגדית + סימון המקורית כמבוטלת) — לא מחיקה — כדי לשמור על שרשרת אמת מלאה ואודיט.
 
-   Since `key_hash` requires the SHA-256 of the raw token (and the raw token is shown only once), I will mint via a one-off Deno script invoking the same `generateKey()` + `sha256Hex()` logic used by `api-keys-manage`, then INSERT the row directly. The raw `riq_…` token will be returned in chat once and **not** stored anywhere else.
+**איפה מופיע הכפתור:**
+- טוסט הצלחה מיד אחרי מכירה/הורדה → כפתור "בטל" בטוסט עצמו
+- ב"פעילות אחרונה" בדשבורד — ליד כל רשומת `remove`/`sale` שגילה < 10 דק' יופיע ↩️ "בטל פעולה"
+- אחרי 10 דקות הכפתור פשוט נעלם. אם רוצים לתקן אחרי זה — צריך "החזרה" ידנית (return), לא ביטול.
 
-2. **Verify** with `SELECT id, name, key_prefix, scope, rate_limit_per_min FROM api_keys WHERE id = <new>` and confirm `scope='retail_iq'`.
+**מה קורה כשלוחצים "בטל":**
+1. יוצרים `inventory_action` חדש מסוג `reversal` עם `quantity_changed` הפוך.
+2. מסמנים את הפעולה המקורית כ-`reversed_at = now()` + `reversed_by = user`.
+3. מחזירים את הכמות למוצר (`products.quantity`).
+4. שאילתות הדוחות (`reports_aggregate`, BI, YoY, insights) מסננות החוצה פעולות שיש להן `reversed_at IS NOT NULL` ואת רשומות ה-`reversal` עצמן — כך שההכנסות/רווח מתקנים את עצמם מיידית.
+5. מוקפא: `SubscriptionGuard`, RLS של billing, `execute_inventory_transaction` נשאר כפי שהוא — הביטול הוא RPC נפרד חדש (`reverse_inventory_action`).
 
-3. **Smoke-test** the new key against the live endpoint:
-   ```
-   curl -H "x-mlaiko-api-key: <new>" \
-        https://gtakgctmtayalcbpnryg.supabase.co/functions/v1/retail-iq-api/branches
-   ```
-   Expect `200` with the business row (not `401 scope_mismatch`).
+**כללי אבטחה:**
+- ניתן לבטל רק פעולה שביצע אותו משתמש (או OWNER/ADMIN של העסק).
+- לא ניתן לבטל פעולה שכבר בוטלה.
+- לא ניתן לבטל אם עברו > 10 דקות מ-`created_at`.
+- הכל נאכף גם ב-RPC (server-side), לא רק ב-UI.
 
-4. **Hand off** the raw key to you; you paste it into Retail IQ and re-run your connector test. (Optionally revoke `QA Retail IQ A` once production key is in use — will ask before doing so.)
+---
 
-## Files / changes
+### 2. כפתור עין 👁️ להסתרת/הצגת מחיר עלות
 
-- **No source code changes.** No migrations, no edge-function edits.
-- One INSERT into `public.api_keys` (single row).
-- One temporary local script to generate the token + hash; deleted after use.
+**הבעיה:** מחיר עלות מוצג תמיד בטבלת המלאי / כרטיסי מוצר, כולל כשלקוח עומד ליד המסך.
 
-## Out of scope
+**הפתרון:**
+- כפתור עין 👁️ / 👁️‍🗨️ בכותרת מסך המלאי (`InventoryHeader`).
+- לחיצה מחליפה את מצב "הצגת עלות" גלובלית עבור המסך: `InventoryTable`, `ProductCard`, `VirtualizedInventoryTable`.
+- כשההסתרה פעילה: `₪●●●` במקום הסכום. שאר הנתונים (כמות, מחיר מכירה, ספק) נשארים גלויים.
+- המצב **נשמר ב-`localStorage`** לפי משתמש, כך שאחרי רענון הוא נשאר כפי שהיה. ברירת מחדל: מוסתר (בטוח כברירת מחדל, במיוחד ליד לקוחות).
+- אין שינויי DB, אין שינויי הרשאות — זו החלטה ויזואלית בלבד.
+- מודלים פנימיים (SaleModal, PurchaseModal) שממילא ניגשים לעלות לצורך חישוב רווח — לא מושפעים, המידע שם נחוץ לפעולה.
 
-- Rotating or revoking the existing `public`-scoped keys (`riq_Z_885A-i`, `mlk_ra34mc1Y`) — leave untouched unless you ask.
-- Any change to the `retail-iq-api` function itself (it already validates scope correctly, which is exactly why the current request was rejected).
+---
+
+## פרטים טכניים
+
+**שינויי DB (מיגרציה אחת):**
+- `ALTER TABLE inventory_actions ADD COLUMN reversed_at TIMESTAMPTZ, reversed_by UUID, is_reversal BOOLEAN DEFAULT false, reverses_action_id UUID`.
+- CHECK-constraint: extend allowed `action_type` values with `'reversal'` (או להשתמש ב-`is_reversal` בלבד — נבחר בהתאם למגבלת ה-CHECK הקיימת).
+- RPC חדש: `public.reverse_inventory_action(p_action_id uuid)` — SECURITY DEFINER, בודק בעלות, חלון זמן, ומבצע את ההיפוך אטומית.
+- עדכון פונקציות הדוחות שמסתמכות על `action_type IN ('remove','sale')` להוסיף `AND reversed_at IS NULL AND is_reversal = false` (רשימת הקבצים: `reports_aggregate`, ופונקציות ב-`20260203185646`, `20260128171340`, `20260123122427`, `20250704141102`, `20250701210312`).
+
+**שינויי קוד (Frontend):**
+- `src/hooks/useInventoryLogger.tsx` — פונקציית `reverseAction(id)` חדשה שקוראת ל-RPC.
+- `src/hooks/useRecentActivity.tsx` — להחזיר גם `created_at`, `reversed_at`, `user_id` לצורך הצגת הכפתור.
+- קומפוננטה חדשה `UndoActionButton` שמציגה טיימר ספירה לאחור (למשל "בטל (9:42)") ונעלמת בסוף.
+- טוסט אחרי מכירה/הורדה → action `Undo` שקורא לאותו hook.
+- `src/hooks/useCostVisibility.ts` — hook קטן שמנהל את מצב הסתרת העלות ב-localStorage.
+- עדכון `InventoryHeader`, `InventoryTable`, `ProductCard`, `VirtualizedInventoryTable` להציג `₪●●●` כשמוסתר.
+
+**מה לא משתנה:**
+- SubscriptionGuard, billing, RLS של מנויים — קפואים.
+- מבנה `execute_inventory_transaction` — לא נוגעים; הוספת RPC חדש נפרד.
+- העיצוב, הצבעים, הפריסה, הכפתורים הקיימים.
+
+---
+
+## תוצאה מבחינת המשתמש
+
+- הורדת מלאי/מכירה בטעות → יש 10 דקות ללחוץ "בטל" והנתונים מתקנים את עצמם בכל הדוחות.
+- מחיר העלות מוסתר כברירת מחדל. לחיצה על 👁️ מציגה כשצריך; לחיצה נוספת מסתירה מיד.
