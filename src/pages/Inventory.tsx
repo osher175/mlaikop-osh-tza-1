@@ -61,8 +61,9 @@ export const Inventory: React.FC = () => {
     const inStock = products.filter(p => p.quantity > 5).length;
     const lowStock = products.filter(p => p.quantity > 0 && p.quantity <= 5).length;
     const outOfStock = products.filter(p => p.quantity === 0).length;
-    
-    return { inStock, lowStock, outOfStock };
+    const totalUnits = products.reduce((s, p) => s + Math.max(p.quantity || 0, 0), 0);
+
+    return { inStock, lowStock, outOfStock, totalUnits };
   }, [products]);
 
   const handleProductUpdated = React.useCallback(() => {
