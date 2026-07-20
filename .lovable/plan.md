@@ -1,39 +1,27 @@
-## הבעיה
+## Issues confirmed
 
-לחיצה על "בטל" ב-Undo Banner נכשלת עם השגיאה:
-`type "app_role" does not exist`
+1. **Toggle only reflects after refresh** – `useCostVisibility` (`src/hooks/useCostVisibility.tsx`) uses `useState` locally inside each component. `InventoryHeader` and `InventoryTable` each hold an independent copy. When the header toggles, localStorage updates but the table's state doesn't re-render until the component remounts (page refresh).
 
-## שורש הבעיה (מאומת)
+2. **Cost not visible in desktop PC view** – `InventoryTable.tsx` desktop `<table>` (lines 308–405) has columns: תמונה / שם / ברקוד / קטגוריה / כמות / מחיר / מיקום / סטטוס / פעולות. There is **no "עלות" column at all**. The cost cell exists only in the mobile/tablet card view (line 212–216).
 
-הפונקציה `public.reverse_inventory_action` (מיגרציה `20260719122212`) משתמשת ב:
-```sql
-SELECT public.has_role(v_user, 'admin'::app_role) INTO v_is_admin;
-```
+## Fix plan (UI/presentation only — no billing, no business logic)
 
-אבל בפרויקט הזה:
-- אין enum בשם `app_role` — ה-enum הקיים הוא `public.user_role`
-- אין פונקציה `has_role(uuid, app_role)` — הפונקציה הקיימת היא `has_role_or_higher(user_role)`
+### 1. Make `useCostVisibility` a shared store
+Rewrite `src/hooks/useCostVisibility.tsx` to use a small module-level store with subscribers (via `useSyncExternalStore`), keeping the same API (`{ hidden, toggle, maskCost }`) and same localStorage key `mlaiko:hide-cost`. Any component that calls the hook re-renders instantly on toggle — no refresh needed. Also add a `storage` event listener so multiple tabs stay in sync.
 
-לכן ה-RPC נכשל בכל ריצה עבור כל משתמש, ולא רק בבדיקת ההרשאה.
+### 2. Add "עלות" column to the desktop table
+In `src/components/inventory/InventoryTable.tsx`:
+- Add a new `<th>` "עלות" between "מחיר" (line 316) and "מיקום" (line 317), `min-w-[100px]`.
+- Add matching `<td>` rendering `{costHidden ? '₪●●●' : `₪${product.cost || '-'}`}` between the price cell (line 346) and location cell (line 347).
+- Reuse the existing `costHidden` value already destructured on line 49.
 
-## התיקון
+No other files touched. No changes to the header toggle button, no changes to card view, no changes to any billing/subscription code (freeze respected).
 
-מיגרציה יחידה שמחליפה את בדיקת ה-admin ב-`reverse_inventory_action` לשימוש בכלים הקיימים בפרויקט:
+### Files
+- `src/hooks/useCostVisibility.tsx` – rewrite with shared external store.
+- `src/components/inventory/InventoryTable.tsx` – add עלות column (header + cell) in desktop table.
 
-```sql
-CREATE OR REPLACE FUNCTION public.reverse_inventory_action(p_action_id UUID)
--- ... זהה לקיים, למעט השורה של v_is_admin:
-v_is_admin := public.has_role_or_higher('admin'::user_role, v_user);
-```
-
-שאר הלוגיקה (חלון 10 דקות, בדיקת reversal קיים, שחזור מלאי, רישום reversal row, סימון reversed_at) נשארת ללא שינוי.
-
-## היקף השינוי
-
-- מיגרציה אחת שמעדכנת רק את `reverse_inventory_action`.
-- אין שינוי ב-frontend, אין שינוי בסכימה, אין שינוי בפונקציות אחרות.
-- אין נגיעה בקבצי Billing / Subscription (Code Freeze נשמר).
-
-## אימות לאחר הרצה
-
-לאחר אישור המיגרציה: לבצע מכירה/הורדה בטבלת המלאי, ללחוץ "בטל" בבאנר, ולוודא שהמלאי משוחזר ושמופיע toast "הפעולה בוטלה".
+### Verification
+- Toggle "הסתר עלות / הצג עלות" in the header on desktop → the עלות column values switch immediately between `₪●●●` and the actual number, with no page refresh.
+- Same behavior on tablet/mobile card view.
+- Refresh preserves the last chosen state (localStorage).
