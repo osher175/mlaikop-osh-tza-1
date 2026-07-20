@@ -74,7 +74,7 @@ export const Inventory: React.FC = () => {
     refetch();
   }, [refetch]);
 
-  const { inStock, lowStock, outOfStock } = getStatusCounts;
+  const { inStock, lowStock, outOfStock, totalUnits } = getStatusCounts;
 
   // Only block render when we have no data at all. Otherwise show cached data while refetching.
   if ((businessLoading || productsLoading) && products.length === 0) {
@@ -129,6 +129,7 @@ export const Inventory: React.FC = () => {
         {/* סטטיסטיקות המלאי */}
         <InventoryStats
           totalProducts={products.length}
+          totalUnits={totalUnits}
           inStock={inStock}
           lowStock={lowStock}
           outOfStock={outOfStock}

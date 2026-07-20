@@ -1,10 +1,11 @@
 
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Package, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Package, AlertCircle, CheckCircle, XCircle, Boxes } from 'lucide-react';
 
 interface InventoryStatsProps {
   totalProducts: number;
+  totalUnits?: number;
   inStock: number;
   lowStock: number;
   outOfStock: number;
@@ -14,6 +15,7 @@ interface InventoryStatsProps {
 
 export const InventoryStats: React.FC<InventoryStatsProps> = ({
   totalProducts,
+  totalUnits,
   inStock,
   lowStock,
   outOfStock,
@@ -21,16 +23,16 @@ export const InventoryStats: React.FC<InventoryStatsProps> = ({
   setActiveStockFilter,
 }) => {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 w-full">
-      <button 
-        type="button" 
-        onClick={() => setActiveStockFilter('all')} 
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 w-full">
+      <button
+        type="button"
+        onClick={() => setActiveStockFilter('all')}
         className={`focus:outline-none ${
-          activeStockFilter === 'all' 
-            ? 'ring-2 ring-blue-500 border-blue-500' 
+          activeStockFilter === 'all'
+            ? 'ring-2 ring-blue-500 border-blue-500'
             : 'hover:ring-1 hover:ring-blue-300'
         } rounded-lg transition-shadow w-full`}
-      > 
+      >
         <Card className="w-full h-full">
           <CardContent className="p-3 sm:p-4 md:p-5 lg:p-6">
             <div className="flex flex-col xs:flex-row items-start xs:items-center gap-2 xs:gap-4">
@@ -43,6 +45,21 @@ export const InventoryStats: React.FC<InventoryStatsProps> = ({
           </CardContent>
         </Card>
       </button>
+
+      <Card className="w-full h-full">
+        <CardContent className="p-3 sm:p-4 md:p-5 lg:p-6">
+          <div className="flex flex-col xs:flex-row items-start xs:items-center gap-2 xs:gap-4">
+            <Boxes className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-turquoise" />
+            <div>
+              <p className="text-sm sm:text-base font-medium text-gray-600">סה״כ יחידות במלאי</p>
+              <p className="text-xl sm:text-2xl font-bold text-turquoise">
+                {(totalUnits ?? 0).toLocaleString('he-IL')}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       
       <button 
         type="button" 
