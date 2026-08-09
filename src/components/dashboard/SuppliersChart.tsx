@@ -8,6 +8,7 @@ import { AlertCircle, Trophy, Medal, Award } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatCurrency';
 
 interface SupplierRanking {
+  supplierId: string;
   supplierName: string;
   productCount: number;
   totalCost: number;
@@ -22,48 +23,33 @@ export const SuppliersChart: React.FC = () => {
 
   const { data: rankings = [], isLoading } = useQuery({
     queryKey: ['supplier-rankings', businessContext?.business_id, new Date().getMonth(), new Date().getFullYear()],
-    queryFn: async () => {
+    queryFn: async (): Promise<SupplierRanking[]> => {
       if (!businessContext?.business_id) return [];
 
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
 
-      const { data, error } = await supabase
-        .from('inventory_actions')
-        .select('quantity_changed, purchase_total_ils, purchase_unit_ils, supplier_id, products(id, name, cost, supplier_id, suppliers!supplier_id(id, name))')
-        .eq('business_id', businessContext.business_id)
-        .in('action_type', ['add', 'purchase'])
-        .gte('timestamp', monthStart)
-        .lte('timestamp', monthEnd);
+      // Phase A4: server-side aggregation — no row cap, reversals excluded,
+      // identical purchase rules to bi_analytics_yearly.
+      const { data, error } = await supabase.rpc('supplier_purchases_by_period', {
+        p_business_id: businessContext.business_id,
+        p_date_from: monthStart,
+        p_date_to: monthEnd,
+        p_limit: 50,
+      });
 
       if (error) {
         console.error('Error fetching supplier rankings:', error);
         throw error;
       }
 
-      const supplierMap: Record<string, SupplierRanking> = {};
-
-      (data || []).forEach((action: any) => {
-        const product = action.products as any;
-        const supplier = product?.suppliers;
-        const supplierId = action.supplier_id || product?.supplier_id;
-        if (!supplierId) return;
-
-        const supplierName = supplier?.name || 'ספק לא ידוע';
-
-        if (!supplierMap[supplierId]) {
-          supplierMap[supplierId] = { supplierName, productCount: 0, totalCost: 0 };
-        }
-        supplierMap[supplierId].productCount += Math.abs(action.quantity_changed || 0);
-        supplierMap[supplierId].totalCost += Number(action.purchase_total_ils) || (Math.abs(action.quantity_changed || 0) * (Number(action.purchase_unit_ils) || Number(product?.cost) || 0));
-      });
-
-      return Object.values(supplierMap).sort((a, b) => b.productCount - a.productCount);
+      return (Array.isArray(data) ? data : []) as unknown as SupplierRanking[];
     },
     enabled: !!businessContext?.business_id,
     staleTime: 2 * 60 * 1000,
   });
+
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Trophy className="h-5 w-5 text-yellow-500" />;
