@@ -4,7 +4,6 @@
  * Full Hebrew RTL support
  */
 
-import * as XLSX from 'xlsx';
 
 interface ProductForExport {
   name: string;
@@ -22,10 +21,12 @@ interface SupplierMap {
   [key: string]: string;
 }
 
-export const exportInventoryToCSV = (
+export const exportInventoryToCSV = async (
   products: ProductForExport[],
   supplierMap?: SupplierMap
-): void => {
+): Promise<void> => {
+  // Loaded on demand so the ~400kB xlsx library stays out of the initial bundle
+  const XLSX = await import('xlsx');
   // Hebrew headers
   const headers = [
     'שם מוצר',
