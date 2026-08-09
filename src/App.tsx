@@ -74,7 +74,7 @@ function App() {
               
               {/* Authenticated routes share a single MainLayout so Sidebar/Header
                   don't unmount on navigation (huge perceived-performance win). */}
-              <Route element={<MainLayout><Outlet /></MainLayout>}>
+              <Route element={<MainLayout><Suspense fallback={<RouteFallback />}><Outlet /></Suspense></MainLayout>}>
               {/* Routes that must remain accessible even without an active subscription */}
               <Route
                 path="/profile"
