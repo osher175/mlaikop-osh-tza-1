@@ -86,18 +86,25 @@ bypass is purely application-level.
 ## 6. Verification
 
 - Typecheck: PASS
-- Lint: baseline unchanged
-- Production build: PASS
-- Smoke: Dashboard, Inventory, Add Product, Suppliers, Procurement, Reports, Settings
+- Lint: 108 errors / 14 warnings — identical to the pre-change baseline
+- Production build: PASS (13.44s, initial bundle 792.37 kB — unchanged)
+- Smoke (unauthenticated): `/dashboard`, `/inventory`, `/add-product`, `/suppliers`,
+  `/procurement`, `/reports`, `/settings` all redirect to `/auth`, 0 console errors,
+  the blocking subscription card never rendered on any route.
+
+Authenticated scenarios could NOT be executed automatically: this project uses an
+external/unmanaged Supabase (`LOVABLE_BROWSER_AUTH_STATUS=external_unmanaged`), so no
+test session can be injected. The rows below marked *code-verified* were confirmed by
+control-flow analysis, not by a live logged-in run, and should be confirmed manually.
 
 | Scenario | Expected | Result |
 | --- | --- | --- |
-| Authenticated business user, no subscription | Full access | PASS |
-| Authenticated business user, expired trial | Full access | PASS |
-| User with active subscription | Full access | PASS |
-| Unauthenticated user | Redirect to `/auth` | PASS (unchanged) |
-| Cross-tenant access attempt | Denied | PASS (unchanged — RLS) |
-| Platform admin | Unchanged | PASS |
+| Authenticated business user, no subscription | Full access | code-verified (guard returns children before any billing branch) |
+| Authenticated business user, expired trial | Full access | code-verified |
+| User with active subscription | Full access | code-verified |
+| Unauthenticated user | Redirect to `/auth` | PASS — live, unchanged |
+| Cross-tenant access attempt | Denied | unchanged — no RLS/policy/query touched |
+| Platform admin | Unchanged | code-verified (admin path untouched) |
 
 ## 7. Turning Free Access Mode ON
 
