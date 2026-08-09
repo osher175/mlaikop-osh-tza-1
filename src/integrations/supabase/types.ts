@@ -3415,6 +3415,19 @@ export type Database = {
         Args: { curlopt: string; value: string }
         Returns: boolean
       }
+      insights_aggregate: {
+        Args: {
+          p_business_id: string
+          p_cost_increase_percent?: number
+          p_dead_stock_days?: number
+          p_high_discount_percent?: number
+          p_lookback_purchases_days?: number
+          p_lookback_sales_days?: number
+          p_low_margin_percent?: number
+          p_stockout_days_cover?: number
+        }
+        Returns: Json
+      }
       is_business_member: {
         Args: { _business_id: string; _user_id?: string }
         Returns: boolean

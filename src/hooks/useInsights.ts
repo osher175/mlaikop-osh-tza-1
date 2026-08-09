@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBusinessAccess } from './useBusinessAccess';
-import { 
-  InsightsData, 
-  InsightsConfig, 
+import {
+  InsightsData,
+  InsightsConfig,
   DEFAULT_INSIGHTS_CONFIG,
   LowMarginItem,
   HighDiscountItem,
@@ -13,50 +13,53 @@ import {
   BusinessHealthMonth,
   InsightSeverity,
 } from '@/types/insights';
-import {
-  isWithinFinancialTrackingPeriod,
-  isWithinYearFinancialPeriod,
-  calculateNetFromGross,
-  MONTH_NAMES_HE,
-  getEffectiveFinancialStartDate,
-} from '@/lib/financialConfig';
+import { MONTH_NAMES_HE } from '@/lib/financialConfig';
 
-interface InventoryAction {
-  id: string;
-  action_type: string;
-  quantity_changed: number;
-  timestamp: string;
-  sale_total_ils: number | null;
-  discount_ils: number | null;
-  discount_percent: number | null;
-  cost_snapshot_ils: number | null;
-  purchase_unit_ils: number | null;
-  purchase_total_ils: number | null;
-  supplier_id: string | null;
-  products: {
-    id: string;
-    name: string;
-    quantity: number;
-    cost: number | null;
-    suppliers?: {
-      id: string;
-      name: string;
-    } | null;
-  } | null;
-}
+/**
+ * Smart Insights engine.
+ *
+ * Phase A2.S4: every insight is now aggregated inside the database via the
+ * `insights_aggregate` RPC. The previous implementation downloaded 90 days of
+ * raw `inventory_actions` plus the full product list and reduced them in the
+ * browser, which produced several objectively wrong results:
+ *
+ *  1. Sales were matched on `action_type = 'remove'` only. Production records
+ *     every sale as `action_type = 'sale'`, so Low Margin, High Discount,
+ *     Stockout Risk and Business Health were computed over an EMPTY set and
+ *     permanently reported "all clear".
+ *  2. Purchases were matched on `action_type = 'add'` only, covering ~33% of
+ *     real purchase rows, so Cost Spike compared partial data.
+ *  3. Reversed / reversal actions were never excluded, double-counting
+ *     cancelled transactions.
+ *  4. Business Health drew a full calendar year from a 90-day query window, so
+ *     the earliest months could never be populated.
+ *  5. The last-sale lookup shared bug (1), making nearly every in-stock product
+ *     look "never sold" and flooding Dead Stock with actively-selling items.
+ *
+ * The RPC applies the canonical project rules, shared with `reports_aggregate`,
+ * `yoy_financials` and `bi_analytics_yearly`:
+ *   sales     = action_type IN ('remove','sale')  AND sale_total_ils     IS NOT NULL
+ *   purchases = action_type IN ('add','purchase') AND purchase unit/total IS NOT NULL
+ *   reversals excluded, Asia/Jerusalem boundaries, VAT 18%.
+ *
+ * Severity thresholds, titles, summaries and the business-health warning text
+ * remain in the frontend so the UI contract is unchanged.
+ */
 
-interface Product {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number | null;
-  cost: number | null;
+interface InsightsRpcPayload {
+  year: number;
+  lowMargin: LowMarginItem[];
+  highDiscount: HighDiscountItem[];
+  deadStock: DeadStockItem[];
+  stockoutRisk: StockoutRiskItem[];
+  costSpike: CostSpikeItem[];
+  businessHealth: Array<Omit<BusinessHealthMonth, 'month'> & { monthIndex: number }>;
 }
 
 export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) => {
   const { businessContext } = useBusinessAccess();
 
-  // Stringify config for stable queryKey (Fix #2)
+  // Stringify config for stable queryKey
   const configKey = JSON.stringify(config);
 
   const { data: insights, isLoading, error } = useQuery({
@@ -65,188 +68,43 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
       if (!businessContext?.business_id) return null;
 
       const now = new Date();
-      const currentYear = now.getFullYear();
-      
-      // Calculate lookback periods for operational insights (Dead Stock, Stockout - use full history)
-      const thirtyDaysAgo = new Date(now.getTime() - config.lookbackSalesDays * 24 * 60 * 60 * 1000);
-      const ninetyDaysAgo = new Date(now.getTime() - config.lookbackPurchasesDays * 24 * 60 * 60 * 1000);
-      
-      // Get effective financial start date for the current year
-      const financialStartDate = getEffectiveFinancialStartDate(currentYear);
 
-      // Fetch inventory actions for the lookback period (90 days for purchases, 30 for sales)
-      const { data: actions, error: actionsError } = await supabase
-        .from('inventory_actions')
-        .select(`
-          id,
-          action_type,
-          quantity_changed,
-          timestamp,
-          sale_total_ils,
-          discount_ils,
-          discount_percent,
-          cost_snapshot_ils,
-          purchase_unit_ils,
-          purchase_total_ils,
-          supplier_id,
-          products(id, name, quantity, cost, suppliers!supplier_id(id, name))
-        `)
-        .eq('business_id', businessContext.business_id)
-        .gte('timestamp', ninetyDaysAgo.toISOString())
-        .order('timestamp', { ascending: false });
-
-      if (actionsError) {
-        console.error('Error fetching inventory actions for insights:', actionsError);
-        throw actionsError;
-      }
-
-      // Use aggregated RPC to get last sale date per product (prevents PostgREST row-limit truncation)
-      const { data: lastSaleAggregated, error: lastSaleError } = await supabase
-        .rpc('get_last_sale_at_by_product', { p_business_id: businessContext.business_id });
-
-      if (lastSaleError) {
-        console.error('Error fetching last sale dates for dead stock:', lastSaleError);
-        // Continue without breaking - dead stock will show null daysSinceLastSale
-      }
-
-      // Fetch all products for dead stock and stockout analysis
-      const { data: products, error: productsError } = await supabase
-        .from('products')
-        .select('id, name, quantity, price, cost')
-        .eq('business_id', businessContext.business_id);
-
-      if (productsError) {
-        console.error('Error fetching products for insights:', productsError);
-        throw productsError;
-      }
-
-      const typedActions = (actions || []) as unknown as InventoryAction[];
-      const typedProducts = (products || []) as Product[];
-
-      // === FINANCIAL INSIGHTS: Filter by financial tracking period ===
-      // Low Margin, High Discount, Cost Spike, Business Health - use only financial period data
-      
-      // Filter sales (remove) with financial data - only within financial tracking period
-      const financialSales = typedActions.filter(a => 
-        a.action_type === 'remove' && 
-        a.sale_total_ils != null &&
-        isWithinFinancialTrackingPeriod(a.timestamp) &&
-        isWithinYearFinancialPeriod(a.timestamp, currentYear)
-      );
-      
-      // For operational insights (Dead Stock, Stockout), use standard lookback
-      const operationalSales30Days = typedActions.filter(a => 
-        a.action_type === 'remove' && 
-        a.sale_total_ils != null &&
-        new Date(a.timestamp) >= thirtyDaysAgo
-      );
-
-      // Filter purchases (add) with financial data - for cost spike analysis
-      const financialPurchases = typedActions.filter(a => 
-        a.action_type === 'add' && 
-        (a.purchase_unit_ils != null || a.purchase_total_ils != null) &&
-        isWithinFinancialTrackingPeriod(a.timestamp)
-      );
-      
-      // For operational purchase analysis
-      const purchases90Days = typedActions.filter(a => 
-        a.action_type === 'add' && 
-        (a.purchase_unit_ils != null || a.purchase_total_ils != null)
-      );
-
-      // Filter purchases last 30 days for cost spike comparison
-      const purchases30Days = purchases90Days.filter(a => 
-        new Date(a.timestamp) >= thirtyDaysAgo
-      );
-
-      // ============ INSIGHT A: Low Margin / Loss per Product ============
-      // Uses FINANCIAL data only (filtered by financial tracking period)
-      const productProfitability: Record<string, {
-        productId: string;
-        productName: string;
-        unitsSold: number;
-        revenue: number;
-        grossProfit: number;
-      }> = {};
-
-      financialSales.forEach(action => {
-        if (!action.products) return;
-        const productId = action.products.id;
-        const revenue = Number(action.sale_total_ils) || 0;
-        const costPerUnit = Number(action.cost_snapshot_ils) || 0;
-        const quantity = Math.abs(action.quantity_changed);
-        const grossProfit = revenue - (costPerUnit * quantity);
-
-        if (!productProfitability[productId]) {
-          productProfitability[productId] = {
-            productId,
-            productName: action.products.name,
-            unitsSold: 0,
-            revenue: 0,
-            grossProfit: 0,
-          };
-        }
-        productProfitability[productId].unitsSold += quantity;
-        productProfitability[productId].revenue += revenue;
-        productProfitability[productId].grossProfit += grossProfit;
+      const { data, error: rpcError } = await supabase.rpc('insights_aggregate', {
+        p_business_id: businessContext.business_id,
+        p_lookback_sales_days: config.lookbackSalesDays,
+        p_lookback_purchases_days: config.lookbackPurchasesDays,
+        p_stockout_days_cover: config.stockoutDaysCoverThreshold,
+        p_dead_stock_days: config.deadStockDays,
+        p_high_discount_percent: config.highDiscountPercent,
+        p_cost_increase_percent: config.costIncreasePercent,
+        p_low_margin_percent: config.lowMarginPercent,
       });
 
-      const lowMarginItems: LowMarginItem[] = Object.values(productProfitability)
-        .map(p => ({
-          ...p,
-          marginPercent: p.revenue > 0 ? (p.grossProfit / p.revenue) * 100 : 0,
-        }))
-        .filter(p => p.marginPercent < config.lowMarginPercent || p.grossProfit < 0)
-        .sort((a, b) => a.marginPercent - b.marginPercent)
-        .slice(0, 10);
+      if (rpcError) {
+        console.error('Error fetching insights aggregate:', rpcError);
+        throw rpcError;
+      }
 
+      const payload = (data as unknown as InsightsRpcPayload | null) ?? null;
+      if (!payload) return null;
+
+      const lowMarginItems = payload.lowMargin ?? [];
+      const highDiscountItems = payload.highDiscount ?? [];
+      const deadStockItems = payload.deadStock ?? [];
+      const stockoutRiskItems = payload.stockoutRisk ?? [];
+      const costSpikeItems = payload.costSpike ?? [];
+
+      // Hebrew month labels stay in the frontend; the RPC returns indexes only.
+      const businessHealthMonths: BusinessHealthMonth[] = (payload.businessHealth ?? []).map(
+        (m) => ({ ...m, month: MONTH_NAMES_HE[m.monthIndex] }),
+      );
+
+      // ===== Severity thresholds (unchanged) =====
       const getLowMarginSeverity = (margin: number): InsightSeverity => {
         if (margin < 0) return 'high';
         if (margin < config.lowMarginPercent) return 'medium';
         return 'low';
       };
-
-      // ============ INSIGHT B: High Discounts ============
-      // Uses FINANCIAL data only (filtered by financial tracking period)
-      const productDiscounts: Record<string, {
-        productId: string;
-        productName: string;
-        totalDiscountIls: number;
-        totalDiscountPercent: number;
-        salesCount: number;
-      }> = {};
-
-      financialSales.forEach(action => {
-        if (!action.products || action.discount_percent == null) return;
-        const productId = action.products.id;
-        const discountPercent = Number(action.discount_percent) || 0;
-        const discountIls = Number(action.discount_ils) || 0;
-
-        if (!productDiscounts[productId]) {
-          productDiscounts[productId] = {
-            productId,
-            productName: action.products.name,
-            totalDiscountIls: 0,
-            totalDiscountPercent: 0,
-            salesCount: 0,
-          };
-        }
-        productDiscounts[productId].totalDiscountIls += discountIls;
-        productDiscounts[productId].totalDiscountPercent += discountPercent;
-        productDiscounts[productId].salesCount += 1;
-      });
-
-      const highDiscountItems: HighDiscountItem[] = Object.values(productDiscounts)
-        .map(p => ({
-          productId: p.productId,
-          productName: p.productName,
-          avgDiscountPercent: p.salesCount > 0 ? p.totalDiscountPercent / p.salesCount : 0,
-          totalDiscountIls: p.totalDiscountIls,
-          salesCount: p.salesCount,
-        }))
-        .filter(p => p.avgDiscountPercent >= config.highDiscountPercent)
-        .sort((a, b) => b.avgDiscountPercent - a.avgDiscountPercent)
-        .slice(0, 10);
 
       const getHighDiscountSeverity = (avgDiscount: number): InsightSeverity => {
         if (avgDiscount >= 35) return 'high';
@@ -254,145 +112,11 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
         return 'low';
       };
 
-      // ============ INSIGHT C: Dead Stock ============
-      // Use the aggregated RPC data (last sale per product from full history)
-      const productLastSale: Record<string, Date | null> = {};
-      
-      // Build map from aggregated RPC result
-      if (lastSaleAggregated && Array.isArray(lastSaleAggregated)) {
-        lastSaleAggregated.forEach((row: { product_id: string; last_sale_at: string }) => {
-          if (!row.product_id) return;
-          productLastSale[row.product_id] = new Date(row.last_sale_at);
-        });
-      }
-
-      const deadStockItems: DeadStockItem[] = typedProducts
-        .filter(p => p.quantity > 0)
-        .map(product => {
-          const lastSale = productLastSale[product.id];
-          const daysSinceLastSale = lastSale 
-            ? Math.floor((now.getTime() - lastSale.getTime()) / (24 * 60 * 60 * 1000))
-            : null;
-          
-          // FIX #5: Use cost ONLY for estimated value. If cost is missing/0, show 0 (not price)
-          const costValue = Number(product.cost) || 0;
-          const estimatedValue = costValue > 0 ? product.quantity * costValue : 0;
-
-          return {
-            productId: product.id,
-            productName: product.name,
-            quantity: product.quantity,
-            daysSinceLastSale,
-            estimatedValue,
-          };
-        })
-        .filter(p => p.daysSinceLastSale === null || p.daysSinceLastSale >= config.deadStockDays)
-        .sort((a, b) => {
-          // Products never sold come first
-          if (a.daysSinceLastSale === null && b.daysSinceLastSale === null) return 0;
-          if (a.daysSinceLastSale === null) return -1;
-          if (b.daysSinceLastSale === null) return 1;
-          return b.daysSinceLastSale - a.daysSinceLastSale;
-        })
-        .slice(0, 20);
-
-      // ============ INSIGHT D: Stockout Risk ============
-      // Uses OPERATIONAL data (full history) - NOT affected by financial reset
-      // Calculate avg daily sales per product from last 30 days
-      const productSales30Days: Record<string, number> = {};
-      
-      operationalSales30Days.forEach(action => {
-        if (!action.products) return;
-        const productId = action.products.id;
-        const quantity = Math.abs(action.quantity_changed);
-        productSales30Days[productId] = (productSales30Days[productId] || 0) + quantity;
-      });
-
-      const stockoutRiskItems: StockoutRiskItem[] = typedProducts
-        .map(product => {
-          const soldUnits = productSales30Days[product.id] || 0;
-          const avgDailySales = soldUnits / 30;
-          const daysCover = avgDailySales > 0 ? product.quantity / avgDailySales : Infinity;
-
-          return {
-            productId: product.id,
-            productName: product.name,
-            currentQuantity: product.quantity,
-            avgDailySales: Math.round(avgDailySales * 100) / 100,
-            daysCover: daysCover === Infinity ? 999 : Math.round(daysCover * 10) / 10,
-          };
-        })
-        .filter(p => p.avgDailySales > 0 && p.daysCover < config.stockoutDaysCoverThreshold)
-        .sort((a, b) => a.daysCover - b.daysCover)
-        .slice(0, 20);
-
       const getStockoutSeverity = (daysCover: number): InsightSeverity => {
         if (daysCover < 3) return 'high';
         if (daysCover < 7) return 'medium';
         return 'low';
       };
-
-      // ============ INSIGHT E: Cost Spike ============
-      // Calculate avg purchase unit cost per product for 90 days and 30 days
-      const productCosts90: Record<string, { total: number; count: number; supplierName?: string }> = {};
-      const productCosts30: Record<string, { total: number; count: number }> = {};
-      const productNames: Record<string, string> = {};
-
-      purchases90Days.forEach(action => {
-        if (!action.products) return;
-        const productId = action.products.id;
-        const unitCost = Number(action.purchase_unit_ils) || 
-          (action.purchase_total_ils ? Number(action.purchase_total_ils) / Math.abs(action.quantity_changed) : 0);
-        
-        if (unitCost <= 0) return;
-
-        productNames[productId] = action.products.name;
-        
-        if (!productCosts90[productId]) {
-          productCosts90[productId] = { total: 0, count: 0 };
-        }
-        productCosts90[productId].total += unitCost;
-        productCosts90[productId].count += 1;
-        
-        if (action.products.suppliers?.name) {
-          productCosts90[productId].supplierName = action.products.suppliers.name;
-        }
-      });
-
-      purchases30Days.forEach(action => {
-        if (!action.products) return;
-        const productId = action.products.id;
-        const unitCost = Number(action.purchase_unit_ils) || 
-          (action.purchase_total_ils ? Number(action.purchase_total_ils) / Math.abs(action.quantity_changed) : 0);
-        
-        if (unitCost <= 0) return;
-
-        if (!productCosts30[productId]) {
-          productCosts30[productId] = { total: 0, count: 0 };
-        }
-        productCosts30[productId].total += unitCost;
-        productCosts30[productId].count += 1;
-      });
-
-      const costSpikeItems: CostSpikeItem[] = Object.keys(productCosts90)
-        .filter(productId => productCosts30[productId]?.count > 0)
-        .map(productId => {
-          const avg90 = productCosts90[productId].total / productCosts90[productId].count;
-          const avg30 = productCosts30[productId].total / productCosts30[productId].count;
-          const changePercent = ((avg30 - avg90) / avg90) * 100;
-
-          return {
-            productId,
-            productName: productNames[productId],
-            avgCost90Days: Math.round(avg90 * 100) / 100,
-            avgCost30Days: Math.round(avg30 * 100) / 100,
-            changePercent: Math.round(changePercent * 100) / 100,
-            supplierName: productCosts90[productId].supplierName,
-          };
-        })
-        .filter(p => p.changePercent >= config.costIncreasePercent)
-        .sort((a, b) => b.changePercent - a.changePercent)
-        .slice(0, 10);
 
       const getCostSpikeSeverity = (changePercent: number): InsightSeverity => {
         if (changePercent >= 20) return 'high';
@@ -400,75 +124,22 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
         return 'low';
       };
 
-      // ============ INSIGHT F: Business Health Monthly ============
-      // Uses FINANCIAL data only - filtered by financial tracking period
-      
-      // All financial sales this year (filtered by financial tracking period)
-      const allFinancialSalesThisYear = typedActions.filter(a => 
-        a.action_type === 'remove' && 
-        a.sale_total_ils != null &&
-        isWithinYearFinancialPeriod(a.timestamp, currentYear)
-      );
-
-      const businessHealthMonths: BusinessHealthMonth[] = [];
-      
-      for (let month = 0; month < 12; month++) {
-        const monthStart = new Date(currentYear, month, 1);
-        const monthEnd = new Date(currentYear, month + 1, 0, 23, 59, 59);
-        
-        const monthlySales = allFinancialSalesThisYear.filter(a => {
-          const d = new Date(a.timestamp);
-          return d >= monthStart && d <= monthEnd;
-        });
-
-        const totalRevenue = monthlySales.reduce((sum, a) => sum + (Number(a.sale_total_ils) || 0), 0);
-        const totalRevenueNet = calculateNetFromGross(totalRevenue);
-        const totalDiscounts = monthlySales.reduce((sum, a) => sum + (Number(a.discount_ils) || 0), 0);
-        
-        // COGS (already without VAT)
-        const cogs = monthlySales.reduce((sum, a) => {
-          return sum + (Number(a.cost_snapshot_ils) || 0) * Math.abs(a.quantity_changed);
-        }, 0);
-        
-        // Gross profit (mixed - revenue with VAT minus COGS without VAT)
-        const grossProfit = totalRevenue - cogs;
-        
-        // CORRECT: Net profit = revenueNet - COGS (both without VAT)
-        const netProfit = totalRevenueNet - cogs;
-        
-        const discountPercentSum = monthlySales.reduce((sum, a) => sum + (Number(a.discount_percent) || 0), 0);
-        const avgDiscountPercent = monthlySales.length > 0 ? discountPercentSum / monthlySales.length : 0;
-
-        businessHealthMonths.push({
-          month: MONTH_NAMES_HE[month],
-          monthIndex: month,
-          totalRevenue: Math.round(totalRevenue * 100) / 100,
-          totalRevenueNet: Math.round(totalRevenueNet * 100) / 100,
-          totalDiscounts: Math.round(totalDiscounts * 100) / 100,
-          grossProfit: Math.round(grossProfit * 100) / 100,
-          netProfit: Math.round(netProfit * 100) / 100,
-          avgDiscountPercent: Math.round(avgDiscountPercent * 100) / 100,
-        });
-      }
-
-      // FIX #4: Check for warning: last month discounts up AND gross profit down vs previous month
-      // Only compare if we're past February and both months are in the same year
+      // ===== Business health warning (unchanged logic) =====
+      // Compare last completed month vs the one before it, from March onward.
       const currentMonth = now.getMonth();
-      
+
       let businessHealthWarning = false;
       let warningMessage = '';
-      
-      // Only do comparison if we have at least 2 months of data (March or later)
+
       if (currentMonth >= 2) {
         const lastMonthData = businessHealthMonths[currentMonth - 1];
         const prevMonthData = businessHealthMonths[currentMonth - 2];
-        
-        if (lastMonthData && prevMonthData && 
+
+        if (lastMonthData && prevMonthData &&
             lastMonthData.totalRevenue > 0 && prevMonthData.totalRevenue > 0) {
           const discountsUp = lastMonthData.avgDiscountPercent > prevMonthData.avgDiscountPercent;
-          // FIXED: Use netProfit for comparison (both without VAT for accurate comparison)
           const profitDown = lastMonthData.netProfit < prevMonthData.netProfit;
-          
+
           if (discountsUp && profitDown) {
             businessHealthWarning = true;
             warningMessage = `בחודש ${lastMonthData.month} ההנחות עלו והרווח הנטו ירד לעומת ${prevMonthData.month}`;
@@ -476,21 +147,21 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
         }
       }
 
-      // Determine overall severities
-      const lowMarginMaxSeverity: InsightSeverity = lowMarginItems.length > 0 
+      // ===== Overall severities (unchanged) =====
+      const lowMarginMaxSeverity: InsightSeverity = lowMarginItems.length > 0
         ? getLowMarginSeverity(Math.min(...lowMarginItems.map(i => i.marginPercent)))
         : 'low';
-      
+
       const highDiscountMaxSeverity: InsightSeverity = highDiscountItems.length > 0
         ? getHighDiscountSeverity(Math.max(...highDiscountItems.map(i => i.avgDiscountPercent)))
         : 'low';
 
       const deadStockSeverity: InsightSeverity = deadStockItems.length > 5 ? 'high' : deadStockItems.length > 0 ? 'medium' : 'low';
-      
+
       const stockoutMaxSeverity: InsightSeverity = stockoutRiskItems.length > 0
         ? getStockoutSeverity(Math.min(...stockoutRiskItems.map(i => i.daysCover)))
         : 'low';
-      
+
       const costSpikeMaxSeverity: InsightSeverity = costSpikeItems.length > 0
         ? getCostSpikeSeverity(Math.max(...costSpikeItems.map(i => i.changePercent)))
         : 'low';
@@ -501,7 +172,7 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
         lowMargin: {
           type: 'low_margin',
           title: 'רווחיות נמוכה',
-          summary: lowMarginItems.length > 0 
+          summary: lowMarginItems.length > 0
             ? `${lowMarginItems.length} מוצרים עם רווחיות נמוכה או הפסד`
             : 'כל המוצרים ברווחיות תקינה',
           severity: lowMarginMaxSeverity,
