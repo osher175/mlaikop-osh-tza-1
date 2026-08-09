@@ -5,33 +5,47 @@ import { useBusinessAccess } from './useBusinessAccess';
 import { useAuth } from './useAuth';
 
 /**
- * Performance note (Phase A1):
+ * Performance note (Phase A1 + A5.1):
  * This hook used to re-fetch the FULL products table every 60s from every
  * authenticated page (the dropdown lives in the header), which was the single
  * most expensive DB workload in the system.
  *
  * Changes:
- *  - the products scan now runs on mount and every 15 minutes, foreground only
- *  - it only runs when the business actually has low-stock / expiration
- *    notifications enabled
- *  - the "does a notification already exist" check is now ONE batched query
- *    instead of two round-trips per product (N+1 removal)
+ *  - Phase A1: the scan runs on mount and every 15 minutes, foreground only,
+ *    only when notifications are enabled, and the "does a notification already
+ *    exist" check is ONE batched query instead of two round-trips per product.
+ *  - Phase A5.1: the browser no longer reads the product table at all. The
+ *    `products_needing_notifications` RPC returns ONLY the products that can
+ *    actually trigger an alert (effective per-product low-stock threshold, or
+ *    expiry within the configured warning window), capped server-side.
  *
  * Behaviour is unchanged: the same notifications are created, with the same
- * 24h de-duplication window. Stock-driven notifications are additionally
- * created server-side by the existing `check_product_notifications` trigger,
- * so a lower client poll frequency does not lose events.
+ * thresholds, types and 24h de-duplication window. Stock-driven notifications
+ * are additionally created server-side by the existing
+ * `check_product_notifications` trigger.
  */
 
-const CHECK_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes (was 60 seconds)
+const CHECK_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 const DAY_MS = 24 * 60 * 60 * 1000;
+const CANDIDATE_LIMIT = 200;
+
+interface NotificationCandidate {
+  id: string;
+  name: string;
+  quantity: number;
+  expiration_date: string | null;
+  business_id: string;
+  low_stock_threshold: number;
+  needs_low_stock: boolean;
+  needs_expiration: boolean;
+}
 
 export const useNotificationChecker = () => {
   const { user } = useAuth();
   const { businessContext } = useBusinessAccess();
   const businessId = businessContext?.business_id;
 
-  // Get notification settings first — the expensive product scan depends on it
+  // Notification settings drive the DB-side candidate query
   const { data: notificationSettings } = useQuery({
     queryKey: ['notification-settings', businessId],
     queryFn: async () => {
@@ -58,60 +72,34 @@ export const useNotificationChecker = () => {
     !!notificationSettings &&
     (notificationSettings.low_stock_enabled || notificationSettings.expiration_enabled);
 
-  // Get notification settings first — they drive the DB-side candidate query
-first — the expensive product scan depends on it
-  const { data: notificationSettings } = useQuery({
-    queryKey: ['notification-settings', businessId],
-    queryFn: async () => {
-      if (!businessId) return null;
-
-      const { data, error } = await supabase
-        .from('notification_settings')
-        .select('*')
-        .eq('business_id', businessId)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching notification settings:', error);
-        return null;
-      }
-
-      return data;
-    },
-    enabled: !!businessId,
-  });
-
-  const checksEnabled =
-    !!businessId &&
-    !!notificationSettings &&
-    (notificationSettings.low_stock_enabled || notificationSettings.expiration_enabled);
-
-  // Check for products that need notifications
+  // Bounded, DB-side candidate set — never the full catalog
   const { data: productsNeedingNotifications } = useQuery({
-    queryKey: ['products-needing-notifications', businessId],
-    queryFn: async () => {
-      if (!businessId) return [];
+    queryKey: [
+      'products-needing-notifications',
+      businessId,
+      notificationSettings?.low_stock_enabled,
+      notificationSettings?.low_stock_threshold,
+      notificationSettings?.expiration_enabled,
+      notificationSettings?.expiration_days_warning,
+    ],
+    queryFn: async (): Promise<NotificationCandidate[]> => {
+      if (!businessId || !notificationSettings) return [];
 
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          quantity,
-          expiration_date,
-          business_id,
-          product_thresholds (
-            low_stock_threshold
-          )
-        `)
-        .eq('business_id', businessId);
+      const { data, error } = await supabase.rpc('products_needing_notifications', {
+        p_business_id: businessId,
+        p_low_stock_enabled: !!notificationSettings.low_stock_enabled,
+        p_default_low_threshold: notificationSettings.low_stock_threshold ?? 5,
+        p_expiration_enabled: !!notificationSettings.expiration_enabled,
+        p_expiration_days: notificationSettings.expiration_days_warning ?? 0,
+        p_limit: CANDIDATE_LIMIT,
+      });
 
       if (error) {
         console.error('Error fetching products for notifications:', error);
         return [];
       }
 
-      return data || [];
+      return (data || []) as NotificationCandidate[];
     },
     enabled: checksEnabled,
     staleTime: CHECK_INTERVAL_MS,
@@ -125,48 +113,33 @@ first — the expensive product scan depends on it
   // Guard so the same dataset is never processed twice (e.g. re-renders)
   const lastProcessedRef = useRef<string | null>(null);
 
-  // Auto-create notifications for products that need them
   useEffect(() => {
     if (!productsNeedingNotifications || !notificationSettings || !user?.id || !businessId) {
       return;
     }
 
-    const runToken = `${businessId}:${productsNeedingNotifications.length}:${
-      productsNeedingNotifications.map((p) => `${p.id}:${p.quantity}:${p.expiration_date ?? ''}`).join('|')
-    }`;
+    const runToken = `${businessId}:${productsNeedingNotifications.length}:${productsNeedingNotifications
+      .map((p) => `${p.id}:${p.quantity}:${p.expiration_date ?? ''}`)
+      .join('|')}`;
     if (lastProcessedRef.current === runToken) return;
     lastProcessedRef.current = runToken;
 
     const checkAndCreateNotifications = async () => {
       const now = Date.now();
       const today = new Date();
-      const warningDate = new Date();
-      warningDate.setDate(today.getDate() + (notificationSettings.expiration_days_warning ?? 0));
 
-      // 1. Determine candidates locally (no DB calls)
-      const lowStockCandidates: typeof productsNeedingNotifications = [];
-      const expirationCandidates: typeof productsNeedingNotifications = [];
-
-      for (const product of productsNeedingNotifications) {
-        if (notificationSettings.low_stock_enabled) {
-          const threshold =
-            product.product_thresholds?.[0]?.low_stock_threshold ??
-            notificationSettings.low_stock_threshold;
-          if (product.quantity <= threshold) lowStockCandidates.push(product);
-        }
-
-        if (notificationSettings.expiration_enabled && product.expiration_date) {
-          if (new Date(product.expiration_date) <= warningDate) expirationCandidates.push(product);
-        }
-      }
+      // Candidate classification already happened in the database
+      const lowStockCandidates = productsNeedingNotifications.filter((p) => p.needs_low_stock);
+      const expirationCandidates = productsNeedingNotifications.filter(
+        (p) => p.needs_expiration && p.expiration_date
+      );
 
       const candidateIds = Array.from(
         new Set([...lowStockCandidates, ...expirationCandidates].map((p) => p.id))
       );
       if (candidateIds.length === 0) return;
 
-      // 2. ONE batched lookup of existing notifications in the last 24h
-      //    (previously: two round-trips per product)
+      // ONE batched lookup of existing notifications in the last 24h
       const since = new Date(now - DAY_MS).toISOString();
       const existingKeys = new Set<string>();
 
@@ -188,7 +161,6 @@ first — the expensive product scan depends on it
         (data || []).forEach((n) => existingKeys.add(`${n.product_id}:${n.type}`));
       }
 
-      // 3. Build the rows that still need to be created
       const rows: Array<{
         business_id: string;
         user_id: string;
@@ -228,7 +200,6 @@ first — the expensive product scan depends on it
 
       if (rows.length === 0) return;
 
-      // 4. Batched inserts (previously: one insert per product)
       for (let i = 0; i < rows.length; i += 40) {
         const { error } = await supabase.from('notifications').insert(rows.slice(i, i + 40));
         if (error) console.error('Error creating notifications:', error);
