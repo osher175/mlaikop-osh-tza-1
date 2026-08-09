@@ -3524,6 +3524,15 @@ export type Database = {
           user_id: string
         }[]
       }
+      supplier_purchases_by_period: {
+        Args: {
+          p_business_id: string
+          p_date_from: string
+          p_date_to: string
+          p_limit?: number
+        }
+        Returns: Json
+      }
       text_to_bytea: { Args: { data: string }; Returns: string }
       toggle_user_active_status: {
         Args: { target_user_id: string }
