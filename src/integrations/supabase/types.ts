@@ -3133,6 +3133,10 @@ export type Database = {
       }
     }
     Functions: {
+      bi_analytics_yearly: {
+        Args: { p_business_id: string; p_year: number }
+        Returns: Json
+      }
       business_billing_status: {
         Args: { p_business_id: string }
         Returns: string
