@@ -1,14 +1,27 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBusinessAccess } from './useBusinessAccess';
-import { 
-  getRelevantFinancialYears,
-  getEffectiveFinancialStartDate,
-  getYearEnd,
-  calculateNetFromGross,
-  MONTH_NAMES_HE,
-  YearlyFinancialData,
-} from '@/lib/financialConfig';
+import { MONTH_NAMES_HE, YearlyFinancialData } from '@/lib/financialConfig';
+
+/**
+ * Phase A2.S2 — Year-over-Year is aggregated server-side.
+ *
+ * Previously this hook downloaded every `inventory_actions` row for the last three
+ * years and summed them in the browser. That was subject to the PostgREST row cap,
+ * so the totals were computed from a truncated result set, and it used a stale
+ * action_type rule set that missed all `sale` rows.
+ *
+ * It now calls `public.yoy_financials(p_business_id, p_years)`, which returns a
+ * single small aggregate payload. The business rules live in the RPC and are
+ * aligned with `reports_aggregate`:
+ *   sales     : action_type IN ('remove','sale')  AND sale_total_ils IS NOT NULL
+ *   purchases : action_type IN ('add','purchase') AND purchase_total_ils IS NOT NULL
+ *   reversals : excluded
+ *   VAT       : revenueNet = revenue / 1.18, netProfit = revenueNet - COGS
+ *   boundaries: calendar year/month in Asia/Jerusalem
+ */
+
+const YEARS_BACK = 3;
 
 interface MonthlyFinancialData {
   month: string;
@@ -22,19 +35,28 @@ interface MonthlyFinancialData {
   transactionCount: number;
 }
 
+interface YearOverYearComparisons {
+  currentYear: number;
+  previousYear: number;
+  revenueChange: number;
+  revenueChangePercent: number;
+  profitChange: number;
+  profitChangePercent: number;
+  discountChange: number;
+  discountChangePercent: number;
+}
+
 interface YearOverYearData {
   years: YearlyFinancialData[];
   monthlyByYear: Record<number, MonthlyFinancialData[]>;
-  comparisons: {
-    currentYear: number;
-    previousYear: number;
-    revenueChange: number;
-    revenueChangePercent: number;
-    profitChange: number;
-    profitChangePercent: number;
-    discountChange: number;
-    discountChangePercent: number;
-  } | null;
+  comparisons: YearOverYearComparisons | null;
+}
+
+/** Shape returned by the yoy_financials RPC (month labels are applied client-side). */
+interface YoyRpcPayload {
+  years: YearlyFinancialData[];
+  monthlyByYear: Record<string, Omit<MonthlyFinancialData, 'month'>[]>;
+  comparisons: YearOverYearComparisons | null;
 }
 
 export const useYearOverYear = () => {
@@ -45,189 +67,32 @@ export const useYearOverYear = () => {
     queryFn: async (): Promise<YearOverYearData | null> => {
       if (!businessContext?.business_id) return null;
 
-      // Get last 3 years for comparison (more practical than all years from 2020)
-      const availableYears = getRelevantFinancialYears(3);
-      const currentYear = new Date().getFullYear();
+      const { data: payload, error: rpcError } = await supabase.rpc('yoy_financials', {
+        p_business_id: businessContext.business_id,
+        p_years: YEARS_BACK,
+      });
 
-      // For multi-year comparison, filter by the earliest relevant year
-      const earliestYear = Math.min(...availableYears);
-      const earliestStart = getEffectiveFinancialStartDate(earliestYear);
-      const latestEnd = getYearEnd(currentYear);
-
-      // Server-side filtering for better performance
-      const { data: inventoryActions, error: actionsError } = await supabase
-        .from('inventory_actions')
-        .select(`
-          id,
-          action_type,
-          quantity_changed,
-          timestamp,
-          sale_total_ils,
-          discount_ils,
-          discount_percent,
-          cost_snapshot_ils,
-          purchase_total_ils
-        `)
-        .eq('business_id', businessContext.business_id)
-        .gte('timestamp', earliestStart.toISOString())
-        .lte('timestamp', latestEnd.toISOString())
-        .order('timestamp', { ascending: false });
-
-      if (actionsError) {
-        console.error('Error fetching inventory actions for YoY:', actionsError);
-        throw actionsError;
+      if (rpcError) {
+        console.error('Error fetching year-over-year aggregate:', rpcError);
+        throw rpcError;
       }
 
-      const years: YearlyFinancialData[] = [];
+      const result = (payload as unknown as YoyRpcPayload | null) ?? null;
+      if (!result) return null;
+
+      // Attach Hebrew month labels in the client so i18n stays in the frontend.
       const monthlyByYear: Record<number, MonthlyFinancialData[]> = {};
-
-      for (const year of availableYears) {
-        const effectiveStart = getEffectiveFinancialStartDate(year);
-        const yearEnd = getYearEnd(year);
-
-        // Filter actions for this year
-        const yearActions = inventoryActions?.filter(action => {
-          const actionDate = new Date(action.timestamp);
-          return actionDate >= effectiveStart && actionDate <= yearEnd;
-        }) || [];
-
-        // Sales (remove actions)
-        const salesActions = yearActions.filter(a => 
-          a.action_type === 'remove' && a.sale_total_ils != null
-        );
-
-        // Purchases (add actions)
-        const purchaseActions = yearActions.filter(a => 
-          a.action_type === 'add' && a.purchase_total_ils != null
-        );
-
-        // Calculate yearly totals
-        const totalRevenue = salesActions.reduce((sum, a) => sum + (Number(a.sale_total_ils) || 0), 0);
-        const totalRevenueNet = calculateNetFromGross(totalRevenue);
-        const totalPurchases = purchaseActions.reduce((sum, a) => sum + (Number(a.purchase_total_ils) || 0), 0);
-        const totalDiscounts = salesActions.reduce((sum, a) => sum + (Number(a.discount_ils) || 0), 0);
-        
-        // COGS (already without VAT)
-        const totalCogs = salesActions.reduce((sum, a) => {
-          return sum + (Number(a.cost_snapshot_ils) || 0) * Math.abs(a.quantity_changed);
-        }, 0);
-        
-        // Gross profit (mixed - revenue with VAT minus COGS without VAT)
-        const grossProfit = totalRevenue - totalCogs;
-        
-        // CORRECT: Net profit = revenueNet - COGS (both without VAT)
-        const netProfit = totalRevenueNet - totalCogs;
-
-        years.push({
-          year,
-          totalRevenue: Math.round(totalRevenue * 100) / 100,
-          totalRevenueNet: Math.round(totalRevenueNet * 100) / 100,
-          totalPurchases: Math.round(totalPurchases * 100) / 100,
-          grossProfit: Math.round(grossProfit * 100) / 100,
-          netProfit: Math.round(netProfit * 100) / 100,
-          totalDiscounts: Math.round(totalDiscounts * 100) / 100,
-          transactionCount: salesActions.length,
-        });
-
-        // Calculate monthly data for this year
-        const monthlyData: MonthlyFinancialData[] = [];
-        
-        for (let month = 0; month < 12; month++) {
-          const monthStart = new Date(year, month, 1);
-          const monthEnd = new Date(year, month + 1, 0, 23, 59, 59);
-
-          // Only include months that are within the effective financial period
-          if (monthEnd < effectiveStart) {
-            monthlyData.push({
-              month: MONTH_NAMES_HE[month],
-              monthIndex: month,
-              revenue: 0,
-              revenueNet: 0,
-              purchases: 0,
-              grossProfit: 0,
-              netProfit: 0,
-              discounts: 0,
-              transactionCount: 0,
-            });
-            continue;
-          }
-
-          const monthSales = salesActions.filter(a => {
-            const d = new Date(a.timestamp);
-            return d >= monthStart && d <= monthEnd;
-          });
-
-          const monthPurchases = purchaseActions.filter(a => {
-            const d = new Date(a.timestamp);
-            return d >= monthStart && d <= monthEnd;
-          });
-
-          const monthRevenue = monthSales.reduce((sum, a) => sum + (Number(a.sale_total_ils) || 0), 0);
-          const monthRevenueNet = calculateNetFromGross(monthRevenue);
-          const monthPurchaseTotal = monthPurchases.reduce((sum, a) => sum + (Number(a.purchase_total_ils) || 0), 0);
-          const monthDiscounts = monthSales.reduce((sum, a) => sum + (Number(a.discount_ils) || 0), 0);
-          
-          // COGS for the month (already without VAT)
-          const monthCogs = monthSales.reduce((sum, a) => {
-            return sum + (Number(a.cost_snapshot_ils) || 0) * Math.abs(a.quantity_changed);
-          }, 0);
-          
-          const monthGrossProfit = monthRevenue - monthCogs;
-          
-          // CORRECT: Net profit = revenueNet - COGS
-          const monthNetProfit = monthRevenueNet - monthCogs;
-
-          monthlyData.push({
-            month: MONTH_NAMES_HE[month],
-            monthIndex: month,
-            revenue: Math.round(monthRevenue * 100) / 100,
-            revenueNet: Math.round(monthRevenueNet * 100) / 100,
-            purchases: Math.round(monthPurchaseTotal * 100) / 100,
-            grossProfit: Math.round(monthGrossProfit * 100) / 100,
-            netProfit: Math.round(monthNetProfit * 100) / 100,
-            discounts: Math.round(monthDiscounts * 100) / 100,
-            transactionCount: monthSales.length,
-          });
-        }
-
-        monthlyByYear[year] = monthlyData;
-      }
-
-      // Calculate YoY comparison
-      let comparisons = null;
-      const currentYearData = years.find(y => y.year === currentYear);
-      const previousYearData = years.find(y => y.year === currentYear - 1);
-
-      if (currentYearData && previousYearData && previousYearData.totalRevenue > 0) {
-        const revenueChange = currentYearData.totalRevenue - previousYearData.totalRevenue;
-        const revenueChangePercent = (revenueChange / previousYearData.totalRevenue) * 100;
-        
-        const profitChange = currentYearData.netProfit - previousYearData.netProfit;
-        const profitChangePercent = previousYearData.netProfit !== 0 
-          ? (profitChange / Math.abs(previousYearData.netProfit)) * 100 
-          : 0;
-        
-        const discountChange = currentYearData.totalDiscounts - previousYearData.totalDiscounts;
-        const discountChangePercent = previousYearData.totalDiscounts !== 0
-          ? (discountChange / previousYearData.totalDiscounts) * 100
-          : 0;
-
-        comparisons = {
-          currentYear,
-          previousYear: currentYear - 1,
-          revenueChange: Math.round(revenueChange * 100) / 100,
-          revenueChangePercent: Math.round(revenueChangePercent * 100) / 100,
-          profitChange: Math.round(profitChange * 100) / 100,
-          profitChangePercent: Math.round(profitChangePercent * 100) / 100,
-          discountChange: Math.round(discountChange * 100) / 100,
-          discountChangePercent: Math.round(discountChangePercent * 100) / 100,
-        };
+      for (const [year, months] of Object.entries(result.monthlyByYear ?? {})) {
+        monthlyByYear[Number(year)] = (months ?? []).map((m) => ({
+          ...m,
+          month: MONTH_NAMES_HE[m.monthIndex],
+        }));
       }
 
       return {
-        years,
+        years: result.years ?? [],
         monthlyByYear,
-        comparisons,
+        comparisons: result.comparisons ?? null,
       };
     },
     enabled: !!businessContext?.business_id,
