@@ -3428,6 +3428,17 @@ export type Database = {
         }
         Returns: Json
       }
+      inventory_products_page: {
+        Args: {
+          p_business_id: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_stock_filter?: string
+        }
+        Returns: Json
+      }
+      inventory_stock_counts: { Args: { p_business_id: string }; Returns: Json }
       is_business_member: {
         Args: { _business_id: string; _user_id?: string }
         Returns: boolean
@@ -3478,6 +3489,26 @@ export type Database = {
       map_provider_status: {
         Args: { p_provider: string; p_provider_status: string }
         Returns: string
+      }
+      products_needing_notifications: {
+        Args: {
+          p_business_id: string
+          p_default_low_threshold: number
+          p_expiration_days: number
+          p_expiration_enabled: boolean
+          p_limit?: number
+          p_low_stock_enabled: boolean
+        }
+        Returns: {
+          business_id: string
+          expiration_date: string
+          id: string
+          low_stock_threshold: number
+          name: string
+          needs_expiration: boolean
+          needs_low_stock: boolean
+          quantity: number
+        }[]
       }
       reports_aggregate: {
         Args: { business_id: string; date_from: string; date_to: string }

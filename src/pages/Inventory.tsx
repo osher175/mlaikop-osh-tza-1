@@ -12,7 +12,7 @@ import { InventoryStats } from '@/components/inventory/InventoryStats';
 import { MobileSearchBar } from '@/components/inventory/MobileSearchBar';
 import { InventoryTable } from '@/components/inventory/InventoryTable';
 import { UndoActionBanner } from '@/components/inventory/UndoActionBanner';
-import { useProducts } from '@/hooks/useProducts';
+import { useInventoryProductsPage, useInventoryStockCounts, type StockFilter } from '@/hooks/useInventoryProductsPage';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useNavigate } from 'react-router-dom';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -25,71 +25,54 @@ type Product = Database['public']['Tables']['products']['Row'] & {
 };
 
 export const Inventory: React.FC = () => {
+  const PAGE_SIZE = 50;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [viewingProductImage, setViewingProductImage] = useState<Product | null>(null);
-  const [activeStockFilter, setActiveStockFilter] = useState<'all' | 'inStock' | 'lowStock' | 'outOfStock'>('all');
+  const [activeStockFilter, setActiveStockFilter] = useState<StockFilter>('all');
+  const [page, setPage] = useState(1);
   const navigate = useNavigate();
 
-  // Keep typing instant while the (expensive) filtering pass runs debounced
+  // Keep typing instant while the server-side query runs debounced
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const { businessContext, isLoading: businessLoading } = useBusinessAccess();
-  const { products, isLoading: productsLoading, refetch } = useProducts();
 
-  // SINGLE filtering pass for the whole page (search + stock status).
-  // The result is shared by the header (CSV export) and the table, so the
-  // list is no longer filtered twice per keystroke.
-  const filteredProducts = React.useMemo(() => {
-    const term = debouncedSearchTerm.trim().toLowerCase();
+  // Phase A5.1 — bounded server-side page (search + filter + ordering in Postgres)
+  const {
+    products,
+    total: matchingCount,
+    isLoading: productsLoading,
+    isFetching,
+    refetch,
+  } = useInventoryProductsPage(debouncedSearchTerm, activeStockFilter, page, PAGE_SIZE);
 
-    return products.filter(product => {
-      const matchesSearch =
-        term === '' ||
-        product.name.toLowerCase().includes(term) ||
-        product.barcode?.toLowerCase().includes(term) ||
-        product.location?.toLowerCase().includes(term);
+  // Global counters over the whole catalog (never derived from the loaded page)
+  const { counts, refetch: refetchCounts } = useInventoryStockCounts();
 
-      if (!matchesSearch) return false;
-
-      const quantity = product.quantity;
-      const threshold = product.product_thresholds?.low_stock_threshold || 5;
-
-      switch (activeStockFilter) {
-        case 'inStock':
-          return quantity > threshold;
-        case 'lowStock':
-          return quantity > 0 && quantity <= threshold;
-        case 'outOfStock':
-          return quantity === 0;
-        default:
-          return true;
-      }
-    });
-  }, [products, debouncedSearchTerm, activeStockFilter]);
-
-  const getStatusCounts = React.useMemo(() => {
-    const inStock = products.filter(p => p.quantity > 5).length;
-    const lowStock = products.filter(p => p.quantity > 0 && p.quantity <= 5).length;
-    const outOfStock = products.filter(p => p.quantity === 0).length;
-    const totalUnits = products.reduce((s, p) => s + Math.max(p.quantity || 0, 0), 0);
-
-    return { inStock, lowStock, outOfStock, totalUnits };
-  }, [products]);
+  // Reset to the first page whenever the query changes
+  React.useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchTerm, activeStockFilter]);
 
   const handleProductUpdated = React.useCallback(() => {
     refetch();
-  }, [refetch]);
+    refetchCounts();
+  }, [refetch, refetchCounts]);
 
   const handleProductDeleted = React.useCallback(() => {
     refetch();
-  }, [refetch]);
+    refetchCounts();
+  }, [refetch, refetchCounts]);
 
-  const { inStock, lowStock, outOfStock, totalUnits } = getStatusCounts;
+  const totalPages = Math.max(1, Math.ceil(matchingCount / PAGE_SIZE));
+  const { inStock, lowStock, outOfStock, totalUnits, total: totalProducts } = counts;
+
 
   // Only block render when we have no data at all. Otherwise show cached data while refetching.
-  if ((businessLoading || productsLoading) && products.length === 0) {
+  if ((businessLoading || productsLoading) && products.length === 0 && page === 1 && !debouncedSearchTerm) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center min-h-[50vh]">
@@ -126,7 +109,12 @@ export const Inventory: React.FC = () => {
           businessName={businessContext.business_name}
           userRole={businessContext.user_role}
           isOwner={businessContext.is_owner}
-          products={filteredProducts}
+          exportContext={{
+            businessId: businessContext.business_id,
+            search: debouncedSearchTerm,
+            stockFilter: activeStockFilter,
+            matchingCount,
+          }}
         />
 
         {/* התראות תפוגה */}
@@ -140,7 +128,7 @@ export const Inventory: React.FC = () => {
 
         {/* סטטיסטיקות המלאי */}
         <InventoryStats
-          totalProducts={products.length}
+          totalProducts={totalProducts}
           totalUnits={totalUnits}
           inStock={inStock}
           lowStock={lowStock}
@@ -151,13 +139,43 @@ export const Inventory: React.FC = () => {
 
         {/* טבלת המוצרים — מקבלת רשימה שכבר סוננה (מעבר סינון יחיד) */}
         <InventoryTable
-          products={filteredProducts}
+          products={products as unknown as Product[]}
           searchTerm={debouncedSearchTerm}
           onEditProduct={setEditingProduct}
           onDeleteProduct={setDeletingProduct}
           onViewProductImage={setViewingProductImage}
           activeStockFilter={activeStockFilter}
         />
+
+        {/* עימוד — הדפדפן מרנדר עמוד אחד בכל רגע נתון */}
+        <div className="flex items-center justify-between gap-2 pt-2">
+          <p className="text-sm text-gray-600">
+            {matchingCount === 0
+              ? 'לא נמצאו מוצרים'
+              : `מציג ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, matchingCount)} מתוך ${matchingCount} מוצרים`}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1 || isFetching}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              הקודם
+            </Button>
+            <span className="text-sm text-gray-600">
+              עמוד {page} מתוך {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages || isFetching}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              הבא
+            </Button>
+          </div>
+        </div>
 
         {/* דיאלוגים */}
         <EditProductDialog
