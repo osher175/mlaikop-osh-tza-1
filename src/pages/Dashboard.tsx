@@ -1,19 +1,41 @@
 
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { SummaryGrid } from '@/components/dashboard/SummaryGrid';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { QuickActions } from '@/components/dashboard/QuickActions';
-import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { TopSalesByDimension } from '@/components/dashboard/TopSalesByDimension';
 import { SuppliersChart } from '@/components/dashboard/SuppliersChart';
-import { MonthlyPurchasesChart } from '@/components/dashboard/MonthlyPurchasesChart';
 import { NotificationPanel } from '@/components/dashboard/NotificationPanel';
 import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useRealtimeDashboard } from '@/hooks/useRealtimeDashboard';
+
+/* Phase A3: the two recharts-based cards are the only consumers of the
+   charting library on this screen. Loading them lazily keeps recharts out of
+   the initial bundle; data, formulas and appearance are unchanged. */
+const RevenueChart = lazy(() =>
+  import('@/components/dashboard/RevenueChart').then(m => ({ default: m.RevenueChart }))
+);
+const MonthlyPurchasesChart = lazy(() =>
+  import('@/components/dashboard/MonthlyPurchasesChart').then(m => ({ default: m.MonthlyPurchasesChart }))
+);
+
+const ChartSkeleton: React.FC = () => (
+  <Card>
+    <CardHeader>
+      <Skeleton className="h-5 w-40" />
+    </CardHeader>
+    <CardContent>
+      <Skeleton className="h-64 w-full" />
+    </CardContent>
+  </Card>
+);
 
 export const Dashboard: React.FC = () => {
   useRealtimeDashboard();
+
   return (
     <MainLayout>
       <div className="space-y-4 md:space-y-5 lg:space-y-6 w-full max-w-full overflow-x-hidden" dir="rtl">
@@ -37,7 +59,9 @@ export const Dashboard: React.FC = () => {
         {/* BI Analytics Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5 lg:gap-6 w-full">
           <div className="w-full min-w-0">
-            <RevenueChart />
+            <Suspense fallback={<ChartSkeleton />}>
+              <RevenueChart />
+            </Suspense>
           </div>
           <div className="w-full min-w-0">
             <TopSalesByDimension />
@@ -49,8 +73,11 @@ export const Dashboard: React.FC = () => {
             <SuppliersChart />
           </div>
           <div className="w-full min-w-0">
-            <MonthlyPurchasesChart />
+            <Suspense fallback={<ChartSkeleton />}>
+              <MonthlyPurchasesChart />
+            </Suspense>
           </div>
+
         </div>
 
         {/* Additional Dashboard Components */}
