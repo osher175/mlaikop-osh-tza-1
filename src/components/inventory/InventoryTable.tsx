@@ -66,10 +66,20 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
     enabled: !!businessContext?.business_id,
   });
 
-  const getActiveRequestId = (productId: string) => {
-    const req = activeProcurementRequests.find((r: any) => r.product_id === productId);
-    return req?.id;
-  };
+  // O(1) lookup instead of a linear scan per rendered row
+  const activeRequestByProduct = React.useMemo(() => {
+    const map = new Map<string, string>();
+    (activeProcurementRequests as Array<{ id: string; product_id: string }>).forEach((r) => {
+      if (r.product_id && !map.has(r.product_id)) map.set(r.product_id, r.id);
+    });
+    return map;
+  }, [activeProcurementRequests]);
+
+  const getActiveRequestId = React.useCallback(
+    (productId: string) => activeRequestByProduct.get(productId),
+    [activeRequestByProduct]
+  );
+
   const getStatusBadge = (product: Product) => {
     const quantity = product.quantity;
     const threshold = product.product_thresholds?.low_stock_threshold || 5;
@@ -96,30 +106,9 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
     return product.product_categories?.name || '-';
   };
 
-  // Filter products by search term first
-  const searchFilteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (product.barcode && product.barcode.includes(searchTerm)) ||
-    (product.location && product.location.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  // Then filter by stock status
-  const filteredProducts = searchFilteredProducts.filter(product => {
-    const quantity = product.quantity;
-    const threshold = product.product_thresholds?.low_stock_threshold || 5;
-    
-    switch (activeStockFilter) {
-      case 'inStock':
-        return quantity > threshold;
-      case 'lowStock':
-        return quantity > 0 && quantity <= threshold;
-      case 'outOfStock':
-        return quantity === 0;
-      case 'all':
-      default:
-        return true;
-    }
-  });
+  // NOTE (Phase A1): filtering by search term + stock status now happens once,
+  // in `src/pages/Inventory.tsx`. `products` arrives already filtered.
+  const filteredProducts = products;
 
   const getFilterTitle = () => {
     switch (activeStockFilter) {

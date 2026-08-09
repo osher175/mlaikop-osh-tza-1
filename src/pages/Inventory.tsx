@@ -15,6 +15,7 @@ import { UndoActionBanner } from '@/components/inventory/UndoActionBanner';
 import { useProducts } from '@/hooks/useProducts';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useNavigate } from 'react-router-dom';
+import { useDebounce } from '@/hooks/use-debounce';
 import type { Database } from '@/integrations/supabase/types';
 
 // Use the database type directly - this matches what useProducts returns
@@ -30,32 +31,43 @@ export const Inventory: React.FC = () => {
   const [viewingProductImage, setViewingProductImage] = useState<Product | null>(null);
   const [activeStockFilter, setActiveStockFilter] = useState<'all' | 'inStock' | 'lowStock' | 'outOfStock'>('all');
   const navigate = useNavigate();
-  
+
+  // Keep typing instant while the (expensive) filtering pass runs debounced
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   const { businessContext, isLoading: businessLoading } = useBusinessAccess();
   const { products, isLoading: productsLoading, refetch } = useProducts();
 
-  // Filter products based on search and stock filter
+  // SINGLE filtering pass for the whole page (search + stock status).
+  // The result is shared by the header (CSV export) and the table, so the
+  // list is no longer filtered twice per keystroke.
   const filteredProducts = React.useMemo(() => {
+    const term = debouncedSearchTerm.trim().toLowerCase();
+
     return products.filter(product => {
-      // Search filter
-      const matchesSearch = searchTerm === '' || 
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.barcode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.location?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      // Stock filter
-      let matchesStockFilter = true;
-      if (activeStockFilter === 'inStock') {
-        matchesStockFilter = product.quantity > 5;
-      } else if (activeStockFilter === 'lowStock') {
-        matchesStockFilter = product.quantity > 0 && product.quantity <= 5;
-      } else if (activeStockFilter === 'outOfStock') {
-        matchesStockFilter = product.quantity === 0;
+      const matchesSearch =
+        term === '' ||
+        product.name.toLowerCase().includes(term) ||
+        product.barcode?.toLowerCase().includes(term) ||
+        product.location?.toLowerCase().includes(term);
+
+      if (!matchesSearch) return false;
+
+      const quantity = product.quantity;
+      const threshold = product.product_thresholds?.low_stock_threshold || 5;
+
+      switch (activeStockFilter) {
+        case 'inStock':
+          return quantity > threshold;
+        case 'lowStock':
+          return quantity > 0 && quantity <= threshold;
+        case 'outOfStock':
+          return quantity === 0;
+        default:
+          return true;
       }
-      
-      return matchesSearch && matchesStockFilter;
     });
-  }, [products, searchTerm, activeStockFilter]);
+  }, [products, debouncedSearchTerm, activeStockFilter]);
 
   const getStatusCounts = React.useMemo(() => {
     const inStock = products.filter(p => p.quantity > 5).length;
@@ -137,10 +149,10 @@ export const Inventory: React.FC = () => {
           setActiveStockFilter={setActiveStockFilter}
         />
 
-        {/* טבלת המוצרים */}
+        {/* טבלת המוצרים — מקבלת רשימה שכבר סוננה (מעבר סינון יחיד) */}
         <InventoryTable
-          products={products}
-          searchTerm={searchTerm}
+          products={filteredProducts}
+          searchTerm={debouncedSearchTerm}
           onEditProduct={setEditingProduct}
           onDeleteProduct={setDeletingProduct}
           onViewProductImage={setViewingProductImage}
