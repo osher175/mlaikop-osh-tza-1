@@ -27,8 +27,6 @@ interface InventoryAction {
   quantity_changed: number;
   timestamp: string;
   sale_total_ils: number | null;
-  sale_unit_ils: number | null;
-  list_unit_ils: number | null;
   discount_ils: number | null;
   discount_percent: number | null;
   cost_snapshot_ils: number | null;
@@ -39,9 +37,7 @@ interface InventoryAction {
     id: string;
     name: string;
     quantity: number;
-    price: number | null;
     cost: number | null;
-    supplier_id: string | null;
     suppliers?: {
       id: string;
       name: string;
@@ -87,15 +83,13 @@ export const useInsights = (config: InsightsConfig = DEFAULT_INSIGHTS_CONFIG) =>
           quantity_changed,
           timestamp,
           sale_total_ils,
-          sale_unit_ils,
-          list_unit_ils,
           discount_ils,
           discount_percent,
           cost_snapshot_ils,
           purchase_unit_ils,
           purchase_total_ils,
           supplier_id,
-          products(id, name, quantity, price, cost, supplier_id, suppliers!supplier_id(id, name))
+          products(id, name, quantity, cost, suppliers!supplier_id(id, name))
         `)
         .eq('business_id', businessContext.business_id)
         .gte('timestamp', ninetyDaysAgo.toISOString())
