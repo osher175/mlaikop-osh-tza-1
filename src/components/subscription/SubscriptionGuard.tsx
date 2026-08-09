@@ -50,8 +50,11 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
   const isOwner = !!businessContext?.is_owner;
 
   // Auto-create trial for new business OWNERS only (employees should not create trials).
+  // Skipped while FREE_ACCESS_MODE is on: no subscription rows are created or
+  // mutated while enforcement is suspended. Resumes automatically when the flag is off.
   useEffect(() => {
     if (
+      !FREE_ACCESS_MODE &&
       user &&
       isOwner &&
       !subLoading &&
@@ -66,7 +69,15 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
     }
   }, [user, isOwner, subscription, subLoading, requiresSubscription, createTrialSubscription, isCreatingTrial]);
 
+  // FREE ACCESS MODE — subscription/payment enforcement is suspended.
+  // Authentication (ProtectedRoute), business membership, roles, tenant
+  // isolation and RLS are unaffected and still enforced downstream.
+  if (FREE_ACCESS_MODE) {
+    return <>{children}</>;
+  }
+
   // Loading
+
   if (ctxLoading || billingLoading || isCreatingTrial || (isOwner && subLoading)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
