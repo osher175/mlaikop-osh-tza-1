@@ -58,6 +58,34 @@ export const useNotificationChecker = () => {
     !!notificationSettings &&
     (notificationSettings.low_stock_enabled || notificationSettings.expiration_enabled);
 
+  // Get notification settings first — they drive the DB-side candidate query
+first — the expensive product scan depends on it
+  const { data: notificationSettings } = useQuery({
+    queryKey: ['notification-settings', businessId],
+    queryFn: async () => {
+      if (!businessId) return null;
+
+      const { data, error } = await supabase
+        .from('notification_settings')
+        .select('*')
+        .eq('business_id', businessId)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching notification settings:', error);
+        return null;
+      }
+
+      return data;
+    },
+    enabled: !!businessId,
+  });
+
+  const checksEnabled =
+    !!businessId &&
+    !!notificationSettings &&
+    (notificationSettings.low_stock_enabled || notificationSettings.expiration_enabled);
+
   // Check for products that need notifications
   const { data: productsNeedingNotifications } = useQuery({
     queryKey: ['products-needing-notifications', businessId],
