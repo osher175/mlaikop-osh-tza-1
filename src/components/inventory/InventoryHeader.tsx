@@ -42,7 +42,7 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
   const { toast } = useToast();
   const { hidden: costHidden, toggle: toggleCost } = useCostVisibility();
 
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
     if (products.length === 0) {
       toast({
         title: 'אין מוצרים לייצוא',
@@ -53,7 +53,7 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
     }
 
     try {
-      exportInventoryToCSV(products);
+      await exportInventoryToCSV(products);
       toast({
         title: 'הקובץ יורד',
         description: `יוצאו ${products.length} מוצרים לקובץ Excel`,
