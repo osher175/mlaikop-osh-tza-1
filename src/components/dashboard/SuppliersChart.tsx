@@ -95,7 +95,7 @@ export const SuppliersChart: React.FC = () => {
               <tbody>
                 {rankings.map((supplier, index) => (
                   <tr
-                    key={supplier.supplierName}
+                    key={supplier.supplierId ?? supplier.supplierName}
                     className="border-b border-border/50 last:border-0 hover:bg-muted/50 transition-colors"
                   >
                     <td className="py-2.5 px-2">
