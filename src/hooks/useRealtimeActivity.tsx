@@ -1,61 +1,47 @@
-
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBusinessAccess } from './useBusinessAccess';
 
+/**
+ * Realtime feed for the "Recent activity" widget.
+ *
+ * Phase A3: the previous implementation also opened a second subscription on
+ * `products` and invalidated the very same query key. Every product change
+ * therefore triggered two refetches of `recent-activity` — once here and once
+ * from `useRealtimeDashboard`, which already invalidates `recent-activity` on
+ * both `products` and `inventory_actions` events. That duplicate channel is
+ * removed; the observable refresh behavior is unchanged.
+ */
 export const useRealtimeActivity = () => {
   const queryClient = useQueryClient();
   const { businessContext } = useBusinessAccess();
 
   useEffect(() => {
-    if (!businessContext?.business_id) return;
+    const businessId = businessContext?.business_id;
+    if (!businessId) return;
 
-    // Subscribe to recent_activity table changes
     const channel = supabase
-      .channel('recent-activity-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
-          schema: 'public',
-          table: 'recent_activity',
-          filter: `business_id=eq.${businessContext.business_id}`
-        },
-        (payload) => {
-          console.log('Real-time recent activity update:', payload);
-          // Invalidate and refetch the recent activity query
-          queryClient.invalidateQueries({ 
-            queryKey: ['recent-activity', businessContext.business_id] 
-          });
-        }
-      )
-      .subscribe();
-
-    // Also subscribe to products table changes to update activity when products change
-    const productsChannel = supabase
-      .channel('products-activity-changes')
+      .channel(`recent-activity-changes-${businessId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'products',
-          filter: `business_id=eq.${businessContext.business_id}`
+          table: 'recent_activity',
+          filter: `business_id=eq.${businessId}`,
         },
         (payload) => {
-          console.log('Real-time product update affecting activity:', payload);
-          // Invalidate and refetch the recent activity query when products change
-          queryClient.invalidateQueries({ 
-            queryKey: ['recent-activity', businessContext.business_id] 
-          });
+          if (import.meta.env.DEV) {
+            console.log('Real-time recent activity update:', payload.eventType);
+          }
+          queryClient.invalidateQueries({ queryKey: ['recent-activity', businessId] });
         }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
-      supabase.removeChannel(productsChannel);
     };
   }, [businessContext?.business_id, queryClient]);
 };

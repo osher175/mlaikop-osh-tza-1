@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImageUpload } from '@/components/ui/image-upload';
-import { BarcodeScanner } from '@/components/ui/barcode-scanner';
+import { LazyBarcodeScanner } from '@/components/ui/lazy-barcode-scanner';
 import { useToast } from '@/hooks/use-toast';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
@@ -360,7 +360,7 @@ export const AddProduct: React.FC = () => {
         </Card>
 
         {/* Dialogs */}
-        <BarcodeScanner
+        <LazyBarcodeScanner
           open={showBarcodeScanner}
           onClose={() => setShowBarcodeScanner(false)}
           onBarcodeScanned={handleBarcodeScanned}
