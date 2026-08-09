@@ -3138,6 +3138,10 @@ export type Database = {
         Returns: string
       }
       bytea_to_text: { Args: { data: string }; Returns: string }
+      can_access_business_analytics: {
+        Args: { _business_id: string; _user_id?: string }
+        Returns: boolean
+      }
       can_business_write: { Args: { p_business_id: string }; Returns: boolean }
       can_view_business_financials: {
         Args: { business_uuid: string }
