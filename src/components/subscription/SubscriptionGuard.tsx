@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Crown, Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { FREE_ACCESS_MODE } from '@/lib/billing/featureFlag';
+
 
 interface SubscriptionGuardProps {
   children: React.ReactNode;
