@@ -3546,6 +3546,10 @@ export type Database = {
         Args: { user_uuid?: string }
         Returns: boolean
       }
+      yoy_financials: {
+        Args: { p_business_id: string; p_years?: number }
+        Returns: Json
+      }
     }
     Enums: {
       support_level: "basic" | "standard" | "advanced" | "vip"
