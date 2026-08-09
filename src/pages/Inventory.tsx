@@ -149,10 +149,10 @@ export const Inventory: React.FC = () => {
           setActiveStockFilter={setActiveStockFilter}
         />
 
-        {/* טבלת המוצרים */}
+        {/* טבלת המוצרים — מקבלת רשימה שכבר סוננה (מעבר סינון יחיד) */}
         <InventoryTable
-          products={products}
-          searchTerm={searchTerm}
+          products={filteredProducts}
+          searchTerm={debouncedSearchTerm}
           onEditProduct={setEditingProduct}
           onDeleteProduct={setDeletingProduct}
           onViewProductImage={setViewingProductImage}
