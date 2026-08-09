@@ -1,15 +1,26 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBusinessAccess } from './useBusinessAccess';
-import { 
-  calculateNetFromGross,
-  MONTH_NAMES_HE,
-  getEffectiveFinancialStartDate,
-  getYearEnd,
-} from '@/lib/financialConfig';
+import { MONTH_NAMES_HE } from '@/lib/financialConfig';
+
+/**
+ * BI analytics for the current financial (calendar) year.
+ *
+ * Phase A2.S3: all aggregation happens inside the database via the
+ * `bi_analytics_yearly` RPC. Previously this hook downloaded every
+ * `inventory_actions` row of the year and summed them in the browser, which
+ * exceeded the PostgREST row cap (2,003 rows in the current year) and silently
+ * truncated the oldest months to zero. The RPC also excludes reversed actions,
+ * which the client-side version double-counted.
+ *
+ * Business rules are shared with `reports_aggregate` and `yoy_financials`:
+ *   sales     = action_type IN ('remove','sale')  AND sale_total_ils IS NOT NULL
+ *   purchases = action_type IN ('add','purchase') AND purchase_total_ils IS NOT NULL
+ *   reversals excluded, Asia/Jerusalem month boundaries, VAT 18%.
+ */
 
 interface SalesData {
-  month: string;
+  month: string;          // תווית חודש בעברית
   revenue: number;        // הכנסות ברוטו (כולל מע״מ)
   revenueNet: number;     // הכנסות נטו (ללא מע״מ)
   purchases: number;      // הוצאות מ-purchase_total_ils
@@ -53,6 +64,24 @@ interface AnalyticsMetrics {
   avgDiscountPercent: number;
 }
 
+/** Raw shape returned by the `bi_analytics_yearly` RPC (month labels resolved client-side). */
+interface BiRpcPayload {
+  year: number;
+  salesData: Array<Omit<SalesData, 'month'> & { monthIndex: number }>;
+  topProducts: TopProduct[];
+  supplierData: Array<Omit<SupplierData, 'supplierName'> & { supplierName: string | null }>;
+  monthlyPurchases: Array<Omit<MonthlyPurchase, 'month' | 'productName'> & {
+    monthIndex: number;
+    productName: string | null;
+  }>;
+  metrics: AnalyticsMetrics;
+  hasSaleData: boolean;
+  hasPurchaseData: boolean;
+}
+
+const UNKNOWN_SUPPLIER_HE = 'ספק לא ידוע';
+const NO_DATA_HE = 'אין נתונים';
+
 export const useBIAnalytics = () => {
   const { businessContext } = useBusinessAccess();
 
@@ -62,272 +91,52 @@ export const useBIAnalytics = () => {
       if (!businessContext?.business_id) return null;
 
       const currentYear = new Date().getFullYear();
-      const effectiveStart = getEffectiveFinancialStartDate(currentYear);
-      const yearEnd = getYearEnd(currentYear);
-      
-      console.log('Fetching REAL BI analytics for business:', businessContext.business_id, 
-        'Year:', currentYear, 
-        'From:', effectiveStart.toISOString(), 
-        'To:', yearEnd.toISOString());
 
-      // Server-side filtering for better performance
-      const { data: inventoryActions, error: actionsError } = await supabase
-        .from('inventory_actions')
-        .select(`
-          action_type,
-          quantity_changed,
-          timestamp,
-          sale_total_ils,
-          discount_ils,
-          discount_percent,
-          cost_snapshot_ils,
-          purchase_total_ils,
-          supplier_id,
-          products(id, name, suppliers!supplier_id(id, name))
-        `)
-        .eq('business_id', businessContext.business_id)
-        .gte('timestamp', effectiveStart.toISOString())
-        .lte('timestamp', yearEnd.toISOString())
-        .order('timestamp', { ascending: false });
-
-      if (actionsError) {
-        console.error('Error fetching inventory actions:', actionsError);
-        throw actionsError;
-      }
-
-      const financialActions = inventoryActions || [];
-      console.log('Financial actions fetched (server-side filtered):', financialActions.length);
-
-      // Check if we have any REAL sale/purchase data (with financial info)
-      // Support both 'remove' and 'sale' action types for sales
-      const hasSaleData = financialActions.some(a => 
-        (a.action_type === 'remove' || a.action_type === 'sale') && a.sale_total_ils != null
-      );
-      const hasPurchaseData = financialActions.some(a => (a.action_type === 'add' || a.action_type === 'purchase') && a.purchase_total_ils != null);
-      const hasRealData = hasSaleData || hasPurchaseData;
-
-      // Calculate monthly data from REAL transactions only
-      const salesData: SalesData[] = [];
-      
-      for (let month = 0; month < 12; month++) {
-        const monthStart = new Date(currentYear, month, 1);
-        const monthEnd = new Date(currentYear, month + 1, 0, 23, 59, 59);
-        
-        // Filter sales for current month (action_type = 'remove' or 'sale')
-        const monthlySales = financialActions.filter(action => {
-          if ((action.action_type !== 'remove' && action.action_type !== 'sale') || action.sale_total_ils == null) return false;
-          const actionDate = new Date(action.timestamp);
-          return actionDate >= monthStart && actionDate <= monthEnd;
-        });
-
-        // Filter purchases for current month (action_type = 'add')
-        const monthlyPurchasesData = financialActions.filter(action => {
-          if ((action.action_type !== 'add' && action.action_type !== 'purchase') || action.purchase_total_ils == null) return false;
-          const actionDate = new Date(action.timestamp);
-          return actionDate >= monthStart && actionDate <= monthEnd;
-        });
-
-        // Calculate revenue from actual sales (gross - includes VAT)
-        const revenue = monthlySales.reduce((sum, action) => {
-          return sum + (Number(action.sale_total_ils) || 0);
-        }, 0);
-
-        // CORRECT: Calculate net revenue (without VAT) = revenue / 1.18
-        const revenueNet = calculateNetFromGross(revenue);
-
-        // Calculate purchases from actual data
-        const purchases = monthlyPurchasesData.reduce((sum, action) => {
-          return sum + (Number(action.purchase_total_ils) || 0);
-        }, 0);
-
-        // COGS (Cost of Goods Sold) - already without VAT
-        const cogs = monthlySales.reduce((sum, action) => {
-          return sum + (Number(action.cost_snapshot_ils) || 0) * Math.abs(action.quantity_changed || 0);
-        }, 0);
-
-        // Gross profit (mixed - revenue with VAT minus COGS without VAT)
-        const grossProfit = revenue - cogs;
-
-        // CORRECT: Net profit = revenueNet - COGS (both without VAT)
-        const netProfit = revenueNet - cogs;
-
-        // Calculate total discounts
-        const discounts = monthlySales.reduce((sum, action) => {
-          return sum + (Number(action.discount_ils) || 0);
-        }, 0);
-
-        salesData.push({
-          month: MONTH_NAMES_HE[month],
-          revenue: Math.round(revenue * 100) / 100,
-          revenueNet: Math.round(revenueNet * 100) / 100,
-          purchases: Math.round(purchases * 100) / 100,
-          grossProfit: Math.round(grossProfit * 100) / 100,
-          netProfit: Math.round(netProfit * 100) / 100,
-          discounts: Math.round(discounts * 100) / 100,
-        });
-      }
-
-      // Top products by actual sales revenue
-      const productSales: Record<string, { 
-        name: string; 
-        quantity: number; 
-        revenue: number; 
-        cogs: number;
-      }> = {};
-      
-      financialActions.forEach(action => {
-        if ((action.action_type === 'remove' || action.action_type === 'sale') && action.sale_total_ils != null) {
-          const product = action.products as any;
-          if (product) {
-            const productId = product.id;
-            const revenue = Number(action.sale_total_ils) || 0;
-            const cost = (Number(action.cost_snapshot_ils) || 0) * Math.abs(action.quantity_changed || 0);
-            
-            if (!productSales[productId]) {
-              productSales[productId] = { name: product.name, quantity: 0, revenue: 0, cogs: 0 };
-            }
-            productSales[productId].quantity += Math.abs(action.quantity_changed || 0);
-            productSales[productId].revenue += revenue;
-            productSales[productId].cogs += cost;
-          }
-        }
+      const { data, error } = await supabase.rpc('bi_analytics_yearly', {
+        p_business_id: businessContext.business_id,
+        p_year: currentYear,
       });
 
-      const topProducts: TopProduct[] = Object.entries(productSales)
-        .map(([productId, data]) => {
-          const revenueNet = calculateNetFromGross(data.revenue);
-          const profit = data.revenue - data.cogs; // gross profit (mixed)
-          const profitNet = revenueNet - data.cogs; // net profit (correct)
-          
-          return {
-            productId,
-            productName: data.name,
-            quantity: data.quantity,
-            revenue: Math.round(data.revenue * 100) / 100,
-            revenueNet: Math.round(revenueNet * 100) / 100,
-            profit: Math.round(profit * 100) / 100,
-            profitNet: Math.round(profitNet * 100) / 100,
-          };
-        })
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 5);
-
-      // Supplier purchase data from actual purchases
-      const supplierPurchases: Record<string, { 
-        name: string; 
-        volume: number; 
-        total: number;
-      }> = {};
-      
-      financialActions.forEach(action => {
-        if ((action.action_type === 'add' || action.action_type === 'purchase') && action.purchase_total_ils != null) {
-          const product = action.products as any;
-          const supplier = product?.suppliers || (action.supplier_id ? { id: action.supplier_id, name: 'ספק לא ידוע' } : null);
-          
-          if (supplier) {
-            const supplierId = supplier.id;
-            const volume = action.quantity_changed || 0;
-            const total = Number(action.purchase_total_ils) || 0;
-            
-            if (!supplierPurchases[supplierId]) {
-              supplierPurchases[supplierId] = { name: supplier.name || 'ספק לא ידוע', volume: 0, total: 0 };
-            }
-            supplierPurchases[supplierId].volume += volume;
-            supplierPurchases[supplierId].total += total;
-          }
-        }
-      });
-
-      const totalPurchaseVolume = Object.values(supplierPurchases).reduce((sum, s) => sum + s.volume, 0);
-      
-      const supplierData: SupplierData[] = Object.entries(supplierPurchases)
-        .map(([supplierId, data]) => ({
-          supplierId,
-          supplierName: data.name,
-          purchaseVolume: data.volume,
-          purchaseTotal: Math.round(data.total * 100) / 100,
-          percentage: totalPurchaseVolume > 0 ? Math.round((data.volume / totalPurchaseVolume) * 100) : 0,
-        }))
-        .sort((a, b) => b.purchaseTotal - a.purchaseTotal);
-
-      // Monthly purchases by product
-      const monthlyPurchases: MonthlyPurchase[] = [];
-      
-      for (let month = 0; month < 12; month++) {
-        const monthStart = new Date(currentYear, month, 1);
-        const monthEnd = new Date(currentYear, month + 1, 0, 23, 59, 59);
-        
-        const monthlyAdditions = financialActions.filter(action => {
-          if ((action.action_type !== 'add' && action.action_type !== 'purchase') || action.purchase_total_ils == null) return false;
-          const actionDate = new Date(action.timestamp);
-          return actionDate >= monthStart && actionDate <= monthEnd;
-        });
-
-        const productPurchasesMap: Record<string, { name: string; quantity: number; total: number }> = {};
-        
-        monthlyAdditions.forEach(action => {
-          const product = action.products as any;
-          if (product && action.quantity_changed) {
-            const productId = product.id;
-            const quantity = action.quantity_changed;
-            const total = Number(action.purchase_total_ils) || 0;
-            
-            if (!productPurchasesMap[productId]) {
-              productPurchasesMap[productId] = { name: product.name, quantity: 0, total: 0 };
-            }
-            productPurchasesMap[productId].quantity += quantity;
-            productPurchasesMap[productId].total += total;
-          }
-        });
-
-        const topMonthlyProduct = Object.entries(productPurchasesMap)
-          .sort(([,a], [,b]) => b.total - a.total)[0];
-
-        monthlyPurchases.push({
-          month: MONTH_NAMES_HE[month],
-          productName: topMonthlyProduct?.[1]?.name || 'אין נתונים',
-          quantity: topMonthlyProduct?.[1]?.quantity || 0,
-          totalCost: topMonthlyProduct?.[1]?.total || 0,
-        });
+      if (error) {
+        console.error('Error fetching BI analytics aggregate:', error);
+        throw error;
       }
 
-      // Calculate overall metrics
-      const totalRevenue = salesData.reduce((sum, m) => sum + m.revenue, 0);
-      const totalRevenueNet = salesData.reduce((sum, m) => sum + m.revenueNet, 0);
-      const totalPurchases = salesData.reduce((sum, m) => sum + m.purchases, 0);
-      const grossProfit = salesData.reduce((sum, m) => sum + m.grossProfit, 0);
-      const netProfit = salesData.reduce((sum, m) => sum + m.netProfit, 0);
-      const totalDiscounts = salesData.reduce((sum, m) => sum + m.discounts, 0);
-      
-      // Calculate average discount percent from actual sales
-      const salesWithDiscount = financialActions.filter(a => 
-        (a.action_type === 'remove' || a.action_type === 'sale') && a.discount_percent != null && a.discount_percent > 0
-      );
-      const avgDiscountPercent = salesWithDiscount.length > 0
-        ? salesWithDiscount.reduce((sum, a) => sum + (Number(a.discount_percent) || 0), 0) / salesWithDiscount.length
-        : 0;
+      const payload = (data as unknown as BiRpcPayload | null) ?? null;
+      if (!payload) return null;
 
-      const metrics: AnalyticsMetrics = {
-        totalRevenue: Math.round(totalRevenue * 100) / 100,
-        totalRevenueNet: Math.round(totalRevenueNet * 100) / 100,
-        totalPurchases: Math.round(totalPurchases * 100) / 100,
-        grossProfit: Math.round(grossProfit * 100) / 100,
-        netProfit: Math.round(netProfit * 100) / 100,
-        totalDiscounts: Math.round(totalDiscounts * 100) / 100,
-        avgDiscountPercent: Math.round(avgDiscountPercent * 100) / 100,
-      };
+      // Hebrew labels stay in the frontend; the RPC only returns month indexes.
+      const salesData: SalesData[] = (payload.salesData ?? []).map(({ monthIndex, ...rest }) => ({
+        ...rest,
+        month: MONTH_NAMES_HE[monthIndex],
+      }));
+
+      const monthlyPurchases: MonthlyPurchase[] = (payload.monthlyPurchases ?? []).map(
+        ({ monthIndex, productName, ...rest }) => ({
+          ...rest,
+          month: MONTH_NAMES_HE[monthIndex],
+          productName: productName ?? NO_DATA_HE,
+        }),
+      );
+
+      const supplierData: SupplierData[] = (payload.supplierData ?? []).map((s) => ({
+        ...s,
+        supplierName: s.supplierName ?? UNKNOWN_SUPPLIER_HE,
+      }));
+
+      const hasSaleData = payload.hasSaleData ?? false;
+      const hasPurchaseData = payload.hasPurchaseData ?? false;
 
       return {
         salesData,
-        topProducts,
+        topProducts: payload.topProducts ?? [],
         supplierData,
         monthlyPurchases,
-        metrics,
-        hasData: hasRealData,
+        metrics: payload.metrics,
+        hasData: hasSaleData || hasPurchaseData,
         hasSaleData,
         hasPurchaseData,
         currentYear,
-        financialActions,
       };
     },
     enabled: !!businessContext?.business_id,
