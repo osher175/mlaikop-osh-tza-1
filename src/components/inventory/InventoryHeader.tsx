@@ -5,6 +5,7 @@ import { Plus, Download, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCostVisibility } from '@/hooks/useCostVisibility';
 import { exportInventoryToCSV } from '@/utils/exportInventoryCSV';
+import { fetchAllMatchingProducts, type StockFilter } from '@/hooks/useInventoryProductsPage';
 import { useToast } from '@/hooks/use-toast';
 import {
   Tooltip,
@@ -25,11 +26,23 @@ interface ProductForExport {
   updated_at?: string | null;
 }
 
+interface InventoryExportContext {
+  businessId: string;
+  search: string;
+  stockFilter: StockFilter;
+  matchingCount: number;
+}
+
 interface InventoryHeaderProps {
   businessName: string;
   userRole: string;
   isOwner: boolean;
   products?: ProductForExport[];
+  /**
+   * Phase A5.1 — when provided, the export pulls *all* matching products from
+   * the database in bounded batches instead of exporting the loaded page only.
+   */
+  exportContext?: InventoryExportContext;
 }
 
 export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
@@ -37,12 +50,49 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
   userRole,
   isOwner,
   products = [],
+  exportContext,
 }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { hidden: costHidden, toggle: toggleCost } = useCostVisibility();
 
+  const [isExporting, setIsExporting] = React.useState(false);
+
   const handleExportCSV = async () => {
+    if (exportContext) {
+      if (exportContext.matchingCount === 0) {
+        toast({
+          title: 'אין מוצרים לייצוא',
+          description: 'הוסף מוצרים למלאי לפני ייצוא',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setIsExporting(true);
+      try {
+        const rows = await fetchAllMatchingProducts(
+          exportContext.businessId,
+          exportContext.search,
+          exportContext.stockFilter
+        );
+        await exportInventoryToCSV(rows as unknown as ProductForExport[]);
+        toast({
+          title: 'הקובץ יורד',
+          description: `יוצאו ${rows.length} מוצרים לקובץ Excel`,
+        });
+      } catch (error) {
+        toast({
+          title: 'שגיאה בייצוא',
+          description: 'אירעה שגיאה בעת יצירת הקובץ',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsExporting(false);
+      }
+      return;
+    }
+
     if (products.length === 0) {
       toast({
         title: 'אין מוצרים לייצוא',
@@ -103,6 +153,7 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
                 variant="outline"
                 className="h-12 min-h-[44px] min-w-[44px] w-full md:w-auto"
                 onClick={handleExportCSV}
+                disabled={isExporting}
               >
                 <Download className="w-5 h-5 ml-2" />
                 📤 ייצוא לאקסל
