@@ -74,22 +74,16 @@ export const useBIAnalytics = () => {
       const { data: inventoryActions, error: actionsError } = await supabase
         .from('inventory_actions')
         .select(`
-          id,
           action_type,
           quantity_changed,
           timestamp,
-          notes,
-          currency,
           sale_total_ils,
-          sale_unit_ils,
-          list_unit_ils,
           discount_ils,
           discount_percent,
           cost_snapshot_ils,
-          purchase_unit_ils,
           purchase_total_ils,
           supplier_id,
-          products(id, name, price, cost, supplier_id, suppliers!supplier_id(id, name))
+          products(id, name, suppliers!supplier_id(id, name))
         `)
         .eq('business_id', businessContext.business_id)
         .gte('timestamp', effectiveStart.toISOString())
