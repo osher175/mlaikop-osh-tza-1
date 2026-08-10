@@ -43,6 +43,8 @@ const Procurement = lazy(() => import("@/pages/Procurement").then(m => ({ defaul
 const ProcurementDetail = lazy(() => import("@/pages/ProcurementDetail").then(m => ({ default: m.ProcurementDetail })));
 const WhatsAppSettings = lazy(() => import("@/pages/WhatsAppSettings").then(m => ({ default: m.WhatsAppSettings })));
 const SettingsApi = lazy(() => import("@/pages/SettingsApi"));
+const ImportCenter = lazy(() => import("@/pages/ImportCenter").then(m => ({ default: m.ImportCenter })));
+const ImportOrderDetail = lazy(() => import("@/pages/ImportOrderDetail").then(m => ({ default: m.ImportOrderDetail })));
 
 const RouteFallback = () => (
   <div className="flex items-center justify-center min-h-[50vh]" dir="rtl">
@@ -165,6 +167,22 @@ function App() {
                   element={
                     <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
                       <ProcurementDetail />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/import"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                      <ImportCenter />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/import/:id"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                      <ImportOrderDetail />
                     </ProtectedRoute>
                   }
                 />
