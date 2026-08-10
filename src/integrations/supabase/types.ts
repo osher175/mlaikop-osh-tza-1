@@ -652,13 +652,23 @@ export type Database = {
           created_by: string
           currency_code: string
           description: string | null
+          effective_amount_ils: number | null
           exchange_rate_to_ils: number | null
+          final_amount: number | null
+          final_amount_ils: number | null
+          final_cost_date: string | null
+          final_exchange_rate_to_ils: number | null
+          final_invoice_reference: string | null
+          finalized_at: string | null
+          finalized_by: string | null
           id: string
           import_order_id: string
           invoice_reference: string | null
           notes: string | null
           service_provider_supplier_id: string | null
           updated_at: string
+          variance_ils: number | null
+          variance_percent: number | null
         }
         Insert: {
           amount: number
@@ -671,13 +681,23 @@ export type Database = {
           created_by?: string
           currency_code?: string
           description?: string | null
+          effective_amount_ils?: number | null
           exchange_rate_to_ils?: number | null
+          final_amount?: number | null
+          final_amount_ils?: number | null
+          final_cost_date?: string | null
+          final_exchange_rate_to_ils?: number | null
+          final_invoice_reference?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
           id?: string
           import_order_id: string
           invoice_reference?: string | null
           notes?: string | null
           service_provider_supplier_id?: string | null
           updated_at?: string
+          variance_ils?: number | null
+          variance_percent?: number | null
         }
         Update: {
           amount?: number
@@ -690,13 +710,23 @@ export type Database = {
           created_by?: string
           currency_code?: string
           description?: string | null
+          effective_amount_ils?: number | null
           exchange_rate_to_ils?: number | null
+          final_amount?: number | null
+          final_amount_ils?: number | null
+          final_cost_date?: string | null
+          final_exchange_rate_to_ils?: number | null
+          final_invoice_reference?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
           id?: string
           import_order_id?: string
           invoice_reference?: string | null
           notes?: string | null
           service_provider_supplier_id?: string | null
           updated_at?: string
+          variance_ils?: number | null
+          variance_percent?: number | null
         }
         Relationships: [
           {
@@ -4009,6 +4039,18 @@ export type Database = {
       http_set_curlopt: {
         Args: { curlopt: string; value: string }
         Returns: boolean
+      }
+      import_order_cost_summary: {
+        Args: { p_import_order_id: string }
+        Returns: {
+          effective_total_ils: number
+          estimated_total_ils: number
+          final_total_ils: number
+          finalized_lines: number
+          lines: number
+          variance_ils: number
+          variance_percent: number
+        }[]
       }
       import_order_landed_cost: {
         Args: { p_import_order_id: string }
