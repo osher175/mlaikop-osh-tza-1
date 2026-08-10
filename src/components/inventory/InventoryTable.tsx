@@ -14,6 +14,8 @@ import { StockApprovalDialog } from '@/components/inventory/StockApprovalDialog'
 import { useStockApprovals } from '@/hooks/useStockApprovals';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useCostVisibility } from '@/hooks/useCostVisibility';
+import { useInTransitQuantities } from '@/hooks/useInTransitQuantities';
+
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'] & {
