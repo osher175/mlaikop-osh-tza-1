@@ -490,8 +490,8 @@ const ImportOrderDetailContent: React.FC = () => {
                   <TableRow>
                     <TableHead className="text-right">פריט</TableHead>
                     <TableHead className="text-right">כמות</TableHead>
-                    <TableHead className="text-right">עלות סחורה</TableHead>
-                    <TableHead className="text-right">עלויות יבוא מוקצות</TableHead>
+                    <TableHead className="text-right">עלות סחורה ליחידה</TableHead>
+                    <TableHead className="text-right">עלויות יבוא ליחידה</TableHead>
                     <TableHead className="text-right">עלות נחיתה ליחידה</TableHead>
                     <TableHead className="text-right">מחיר מכירה</TableHead>
                     <TableHead className="text-right">רווח ליחידה</TableHead>
@@ -500,15 +500,15 @@ const ImportOrderDetailContent: React.FC = () => {
                 </TableHeader>
                 <TableBody>
                   {landed.map((r: any) => (
-                    <TableRow key={r.import_order_item_id}>
+                    <TableRow key={r.item_id}>
                       <TableCell>{r.product_description}</TableCell>
-                      <TableCell>{r.quantity}</TableCell>
-                      <TableCell>{formatCurrency(Number(r.goods_cost_ils ?? 0))}</TableCell>
-                      <TableCell>{formatCurrency(Number(r.allocated_overhead_ils ?? 0))}</TableCell>
-                      <TableCell>{formatCurrency(Number(r.landed_unit_cost_ils ?? 0))}</TableCell>
+                      <TableCell>{r.ordered_quantity}</TableCell>
+                      <TableCell>{formatCurrency(Number(r.unit_purchase_cost_ils ?? 0))}</TableCell>
+                      <TableCell>{r.overhead_per_unit_ils != null ? formatCurrency(Number(r.overhead_per_unit_ils)) : '—'}</TableCell>
+                      <TableCell>{r.expected_landed_unit_cost_ils != null ? formatCurrency(Number(r.expected_landed_unit_cost_ils)) : '—'}</TableCell>
                       <TableCell>{r.planned_sale_price_ils ? formatCurrency(Number(r.planned_sale_price_ils)) : '—'}</TableCell>
-                      <TableCell>{r.planned_unit_margin_ils != null ? formatCurrency(Number(r.planned_unit_margin_ils)) : '—'}</TableCell>
-                      <TableCell>{r.planned_margin_percent != null ? `${Number(r.planned_margin_percent).toFixed(1)}%` : '—'}</TableCell>
+                      <TableCell>{r.expected_gross_profit_per_unit_ils != null ? formatCurrency(Number(r.expected_gross_profit_per_unit_ils)) : '—'}</TableCell>
+                      <TableCell>{r.expected_gross_margin_percent != null ? `${Number(r.expected_gross_margin_percent).toFixed(1)}%` : '—'}</TableCell>
                     </TableRow>
                   ))}
                   {landed.length === 0 && (
