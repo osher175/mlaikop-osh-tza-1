@@ -14,6 +14,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { ImportPinGate } from '@/components/import/ImportPinGate';
+import { ReceivingPanel } from '@/components/import/ReceivingPanel';
+
 import { useImportOrder, COST_CATEGORY_LABELS, PAYMENT_TYPE_LABELS, DOCUMENT_TYPE_LABELS, EVENT_TYPE_LABELS } from '@/hooks/useImportOrder';
 import { IMPORT_STATUSES, IMPORT_STATUS_LABELS, PURCHASE_TYPE_LABELS } from '@/hooks/useImportOrders';
 import { formatCurrency } from '@/lib/formatCurrency';
