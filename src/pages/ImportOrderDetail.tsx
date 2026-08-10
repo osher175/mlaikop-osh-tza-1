@@ -31,8 +31,8 @@ const ImportOrderDetailContent: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const {
-    order, items, costs, payments, documents, events, landedCost,
-    updateStatus, addItem, addCost, addPayment, uploadDocument, openDocument,
+    order, items, costs, payments, documents, events, landedCost, costSummary,
+    updateStatus, addItem, addCost, finalizeCost, addPayment, uploadDocument, openDocument,
   } = useImportOrder(id);
 
   const [itemForm, setItemForm] = useState({
@@ -41,8 +41,10 @@ const ImportOrderDetailContent: React.FC = () => {
   });
   const [costForm, setCostForm] = useState({
     category: 'international_freight', description: '', amount: '',
-    currency_code: 'ILS', exchange_rate_to_ils: '', cost_state: 'estimated',
+    currency_code: 'ILS', exchange_rate_to_ils: '',
   });
+  // Per-cost-line draft of the final amount (keyed by cost id).
+  const [finalDrafts, setFinalDrafts] = useState<Record<string, string>>({});
   const [paymentForm, setPaymentForm] = useState({
     payment_type: 'deposit', amount: '', currency_code: 'ILS',
     exchange_rate_to_ils: '', payment_date: new Date().toISOString().slice(0, 10),
