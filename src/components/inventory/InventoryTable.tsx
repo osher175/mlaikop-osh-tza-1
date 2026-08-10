@@ -14,6 +14,8 @@ import { StockApprovalDialog } from '@/components/inventory/StockApprovalDialog'
 import { useStockApprovals } from '@/hooks/useStockApprovals';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useCostVisibility } from '@/hooks/useCostVisibility';
+import { useInTransitQuantities } from '@/hooks/useInTransitQuantities';
+
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'] & {
@@ -47,6 +49,14 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
   const { businessContext } = useBusinessAccess();
   const { approveStock, isApproving, canSendToSupplier } = useStockApprovals();
   const { hidden: costHidden } = useCostVisibility();
+
+  // Page-bounded "in transit" overlay (import orders). Only the products on the
+  // current page are aggregated server side — no full-catalog scan.
+  const productIds = React.useMemo(() => products.map((p) => p.id), [products]);
+  const inTransitByProduct = useInTransitQuantities(productIds);
+  const getInTransit = (productId: string) => inTransitByProduct.get(productId) ?? 0;
+
+
 
   // Only show approval button for business owners
   const canApproveStock = businessContext?.is_owner;
@@ -188,7 +198,13 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                       <div className="truncate">
                         <span className="text-gray-600">כמות: </span>
                         <span className="font-medium">{product.quantity}</span>
+                        {getInTransit(product.id) > 0 && (
+                          <span className="text-blue-600 mr-1" title="כמות בדרך מהזמנות יבוא פתוחות">
+                            (בדרך: {getInTransit(product.id)})
+                          </span>
+                        )}
                       </div>
+
                       <div className="truncate">
                         <span className="text-gray-600">מחיר: </span>
                         <span className="font-medium">₪{product.price || '-'}</span>
@@ -332,7 +348,15 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                     </td>
                     <td className="p-3 text-gray-600 text-sm max-w-[100px] min-w-[120px] truncate hidden md:table-cell">{product.barcode || '-'}</td>
                     <td className="p-3 text-gray-600 text-sm max-w-[100px] min-w-[120px] truncate">{getCategoryName(product)}</td>
-                    <td className="p-3 font-medium text-sm min-w-[80px]">{product.quantity}</td>
+                    <td className="p-3 font-medium text-sm min-w-[80px]">
+                      {product.quantity}
+                      {getInTransit(product.id) > 0 && (
+                        <div className="text-xs font-normal text-blue-600" title="כמות בדרך מהזמנות יבוא פתוחות">
+                          בדרך: {getInTransit(product.id)}
+                        </div>
+                      )}
+                    </td>
+
                     <td className="p-3 text-sm min-w-[100px]">₪{product.price || '-'}</td>
                     <td className="p-3 text-sm min-w-[100px]">{costHidden ? '₪●●●' : `₪${product.cost || '-'}`}</td>
                     <td className="p-3 text-sm max-w-[100px] min-w-[120px] truncate hidden md:table-cell">{product.location || '-'}</td>
