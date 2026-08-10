@@ -640,6 +640,593 @@ export type Database = {
         }
         Relationships: []
       }
+      import_costs: {
+        Row: {
+          amount: number
+          amount_ils: number | null
+          business_id: string
+          category: string
+          cost_date: string | null
+          cost_state: string
+          created_at: string
+          created_by: string
+          currency_code: string
+          description: string | null
+          exchange_rate_to_ils: number | null
+          id: string
+          import_order_id: string
+          invoice_reference: string | null
+          notes: string | null
+          service_provider_supplier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          amount_ils?: number | null
+          business_id: string
+          category: string
+          cost_date?: string | null
+          cost_state?: string
+          created_at?: string
+          created_by?: string
+          currency_code?: string
+          description?: string | null
+          exchange_rate_to_ils?: number | null
+          id?: string
+          import_order_id: string
+          invoice_reference?: string | null
+          notes?: string | null
+          service_provider_supplier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          amount_ils?: number | null
+          business_id?: string
+          category?: string
+          cost_date?: string | null
+          cost_state?: string
+          created_at?: string
+          created_by?: string
+          currency_code?: string
+          description?: string | null
+          exchange_rate_to_ils?: number | null
+          id?: string
+          import_order_id?: string
+          invoice_reference?: string | null
+          notes?: string | null
+          service_provider_supplier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_costs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_costs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_costs_import_order_id_fkey"
+            columns: ["import_order_id"]
+            isOneToOne: false
+            referencedRelation: "import_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_costs_service_provider_supplier_id_fkey"
+            columns: ["service_provider_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_costs_service_provider_supplier_id_fkey"
+            columns: ["service_provider_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_documents: {
+        Row: {
+          business_id: string
+          created_at: string
+          document_type: string
+          file_size: number | null
+          id: string
+          import_order_id: string
+          mime_type: string | null
+          original_filename: string
+          storage_path: string
+          uploaded_by: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          document_type: string
+          file_size?: number | null
+          id?: string
+          import_order_id: string
+          mime_type?: string | null
+          original_filename: string
+          storage_path: string
+          uploaded_by?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          document_type?: string
+          file_size?: number | null
+          id?: string
+          import_order_id?: string
+          mime_type?: string | null
+          original_filename?: string
+          storage_path?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_documents_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_documents_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_documents_import_order_id_fkey"
+            columns: ["import_order_id"]
+            isOneToOne: false
+            referencedRelation: "import_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_events: {
+        Row: {
+          actor_user_id: string | null
+          business_id: string
+          created_at: string
+          event_type: string
+          id: string
+          import_order_id: string
+          metadata: Json
+        }
+        Insert: {
+          actor_user_id?: string | null
+          business_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          import_order_id: string
+          metadata?: Json
+        }
+        Update: {
+          actor_user_id?: string | null
+          business_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          import_order_id?: string
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_events_import_order_id_fkey"
+            columns: ["import_order_id"]
+            isOneToOne: false
+            referencedRelation: "import_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_order_items: {
+        Row: {
+          brand_id: string | null
+          business_id: string
+          created_at: string
+          currency_code: string
+          expected_unit_cost_ils: number | null
+          id: string
+          import_order_id: string
+          item_status: string
+          manufacturer_name: string | null
+          ordered_quantity: number
+          planned_sale_price_ils: number | null
+          product_description: string
+          product_id: string | null
+          received_quantity: number
+          supplier_sku: string | null
+          supplier_unit_cost: number
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          business_id: string
+          created_at?: string
+          currency_code?: string
+          expected_unit_cost_ils?: number | null
+          id?: string
+          import_order_id: string
+          item_status?: string
+          manufacturer_name?: string | null
+          ordered_quantity: number
+          planned_sale_price_ils?: number | null
+          product_description: string
+          product_id?: string | null
+          received_quantity?: number
+          supplier_sku?: string | null
+          supplier_unit_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          business_id?: string
+          created_at?: string
+          currency_code?: string
+          expected_unit_cost_ils?: number | null
+          id?: string
+          import_order_id?: string
+          item_status?: string
+          manufacturer_name?: string | null
+          ordered_quantity?: number
+          planned_sale_price_ils?: number | null
+          product_description?: string
+          product_id?: string | null
+          received_quantity?: number
+          supplier_sku?: string | null
+          supplier_unit_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_order_items_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_order_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_order_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_order_items_import_order_id_fkey"
+            columns: ["import_order_id"]
+            isOneToOne: false
+            referencedRelation: "import_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_orders: {
+        Row: {
+          business_id: string
+          closed_at: string | null
+          created_at: string
+          created_by: string
+          currency_code: string
+          estimated_arrival_date: string | null
+          id: string
+          import_number: string
+          notes: string | null
+          order_date: string
+          purchase_type: string
+          status: string
+          supplier_country: string | null
+          supplier_id: string | null
+          supplier_order_reference: string | null
+          updated_at: string
+          working_exchange_rate_to_ils: number | null
+        }
+        Insert: {
+          business_id: string
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string
+          currency_code?: string
+          estimated_arrival_date?: string | null
+          id?: string
+          import_number: string
+          notes?: string | null
+          order_date?: string
+          purchase_type?: string
+          status?: string
+          supplier_country?: string | null
+          supplier_id?: string | null
+          supplier_order_reference?: string | null
+          updated_at?: string
+          working_exchange_rate_to_ils?: number | null
+        }
+        Update: {
+          business_id?: string
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string
+          currency_code?: string
+          estimated_arrival_date?: string | null
+          id?: string
+          import_number?: string
+          notes?: string | null
+          order_date?: string
+          purchase_type?: string
+          status?: string
+          supplier_country?: string | null
+          supplier_id?: string | null
+          supplier_order_reference?: string | null
+          updated_at?: string
+          working_exchange_rate_to_ils?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_orders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_orders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_payments: {
+        Row: {
+          amount: number
+          amount_ils: number | null
+          business_id: string
+          created_at: string
+          created_by: string
+          currency_code: string
+          exchange_rate_to_ils: number | null
+          id: string
+          import_cost_id: string | null
+          import_order_id: string
+          notes: string | null
+          payee_supplier_id: string | null
+          payment_date: string
+          payment_status: string
+          payment_type: string
+          reference: string | null
+        }
+        Insert: {
+          amount: number
+          amount_ils?: number | null
+          business_id: string
+          created_at?: string
+          created_by?: string
+          currency_code?: string
+          exchange_rate_to_ils?: number | null
+          id?: string
+          import_cost_id?: string | null
+          import_order_id: string
+          notes?: string | null
+          payee_supplier_id?: string | null
+          payment_date?: string
+          payment_status?: string
+          payment_type: string
+          reference?: string | null
+        }
+        Update: {
+          amount?: number
+          amount_ils?: number | null
+          business_id?: string
+          created_at?: string
+          created_by?: string
+          currency_code?: string
+          exchange_rate_to_ils?: number | null
+          id?: string
+          import_cost_id?: string | null
+          import_order_id?: string
+          notes?: string | null
+          payee_supplier_id?: string | null
+          payment_date?: string
+          payment_status?: string
+          payment_type?: string
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_payments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_payments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_payments_import_cost_id_fkey"
+            columns: ["import_cost_id"]
+            isOneToOne: false
+            referencedRelation: "import_costs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_payments_import_order_id_fkey"
+            columns: ["import_order_id"]
+            isOneToOne: false
+            referencedRelation: "import_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_payments_payee_supplier_id_fkey"
+            columns: ["payee_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_payments_payee_supplier_id_fkey"
+            columns: ["payee_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_pin_sessions: {
+        Row: {
+          business_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          last_activity_at: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_activity_at?: string
+          token?: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_activity_at?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_pin_sessions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_pin_sessions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_pin_settings: {
+        Row: {
+          business_id: string
+          created_at: string
+          failed_attempts: number
+          last_success_at: string | null
+          locked_until: string | null
+          pin_hash: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          failed_attempts?: number
+          last_success_at?: string | null
+          locked_until?: string | null
+          pin_hash: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          failed_attempts?: number
+          last_success_at?: string | null
+          locked_until?: string | null
+          pin_hash?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_pin_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_pin_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_actions: {
         Row: {
           action_type: string
@@ -3147,6 +3734,10 @@ export type Database = {
         Returns: boolean
       }
       can_business_write: { Args: { p_business_id: string }; Returns: boolean }
+      can_manage_business_imports: {
+        Args: { _business_id: string; _user_id?: string }
+        Returns: boolean
+      }
       can_view_business_financials: {
         Args: { business_uuid: string }
         Returns: boolean
@@ -3418,6 +4009,96 @@ export type Database = {
       http_set_curlopt: {
         Args: { curlopt: string; value: string }
         Returns: boolean
+      }
+      import_order_landed_cost: {
+        Args: { p_import_order_id: string }
+        Returns: {
+          expected_gross_margin_percent: number
+          expected_gross_profit_per_unit_ils: number
+          expected_landed_unit_cost_ils: number
+          item_id: string
+          ordered_quantity: number
+          overhead_per_unit_ils: number
+          planned_sale_price_ils: number
+          product_description: string
+          product_id: string
+          received_quantity: number
+          unit_purchase_cost_ils: number
+        }[]
+      }
+      import_orders_page: {
+        Args: {
+          p_business_id: string
+          p_limit?: number
+          p_offset?: number
+          p_scope?: string
+          p_search?: string
+          p_status?: string
+        }
+        Returns: {
+          currency_code: string
+          estimated_arrival_date: string
+          estimated_total_cost_ils: number
+          goods_cost_ils: number
+          id: string
+          import_costs_ils: number
+          import_number: string
+          order_date: string
+          ordered_units: number
+          paid_ils: number
+          purchase_type: string
+          received_units: number
+          remaining_payment_ils: number
+          status: string
+          supplier_id: string
+          supplier_name: string
+          total_count: number
+        }[]
+      }
+      import_pin_lock: {
+        Args: { p_business_id: string; p_token?: string }
+        Returns: boolean
+      }
+      import_pin_session_touch: {
+        Args: { p_business_id: string; p_token: string }
+        Returns: {
+          expires_at: string
+          valid: boolean
+        }[]
+      }
+      import_pin_set: {
+        Args: {
+          p_business_id: string
+          p_current_pin?: string
+          p_new_pin: string
+        }
+        Returns: boolean
+      }
+      import_pin_status: {
+        Args: { p_business_id: string }
+        Returns: {
+          failed_attempts: number
+          is_configured: boolean
+          is_locked: boolean
+          locked_until: string
+        }[]
+      }
+      import_pin_verify: {
+        Args: { p_business_id: string; p_pin: string }
+        Returns: {
+          attempts_left: number
+          expires_at: string
+          locked_until: string
+          success: boolean
+          token: string
+        }[]
+      }
+      import_quantity_in_transit: {
+        Args: { p_business_id: string; p_product_ids: string[] }
+        Returns: {
+          product_id: string
+          quantity_in_transit: number
+        }[]
       }
       insights_aggregate: {
         Args: {
