@@ -348,7 +348,15 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                     </td>
                     <td className="p-3 text-gray-600 text-sm max-w-[100px] min-w-[120px] truncate hidden md:table-cell">{product.barcode || '-'}</td>
                     <td className="p-3 text-gray-600 text-sm max-w-[100px] min-w-[120px] truncate">{getCategoryName(product)}</td>
-                    <td className="p-3 font-medium text-sm min-w-[80px]">{product.quantity}</td>
+                    <td className="p-3 font-medium text-sm min-w-[80px]">
+                      {product.quantity}
+                      {getInTransit(product.id) > 0 && (
+                        <div className="text-xs font-normal text-blue-600" title="כמות בדרך מהזמנות יבוא פתוחות">
+                          בדרך: {getInTransit(product.id)}
+                        </div>
+                      )}
+                    </td>
+
                     <td className="p-3 text-sm min-w-[100px]">₪{product.price || '-'}</td>
                     <td className="p-3 text-sm min-w-[100px]">{costHidden ? '₪●●●' : `₪${product.cost || '-'}`}</td>
                     <td className="p-3 text-sm max-w-[100px] min-w-[120px] truncate hidden md:table-cell">{product.location || '-'}</td>
