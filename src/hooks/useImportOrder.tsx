@@ -233,6 +233,43 @@ export const useImportOrder = (orderId?: string) => {
     onError: (e: any) => toast({ title: 'שגיאה', description: e.message, variant: 'destructive' }),
   });
 
+  /**
+   * Records the FINAL amount on an existing cost line. The original estimate
+   * (`amount`) is preserved; the final value simply replaces it in the landed
+   * cost. Passing `finalAmount: null` reverts the line back to estimate-only.
+   */
+  const finalizeCost = useMutation({
+    mutationFn: async ({
+      costId,
+      finalAmount,
+      finalExchangeRate,
+      invoiceReference,
+      costDate,
+    }: {
+      costId: string;
+      finalAmount: number | null;
+      finalExchangeRate?: number | null;
+      invoiceReference?: string | null;
+      costDate?: string | null;
+    }) => {
+      const { error } = await supabase
+        .from('import_costs')
+        .update({
+          final_amount: finalAmount,
+          final_exchange_rate_to_ils: finalAmount === null ? null : finalExchangeRate ?? null,
+          final_invoice_reference: finalAmount === null ? null : invoiceReference ?? null,
+          final_cost_date: finalAmount === null ? null : costDate ?? null,
+        } as never)
+        .eq('id', costId);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      invalidate(['import-order-costs']);
+      toast({ title: vars.finalAmount === null ? 'הוחזר לסכום משוער' : 'הסכום הסופי נשמר' });
+    },
+    onError: (e: any) => toast({ title: 'שגיאה', description: e.message, variant: 'destructive' }),
+  });
+
   const addPayment = useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
       const { error } = await supabase
