@@ -54,23 +54,22 @@ export const useImportReceiving = (orderId?: string) => {
 
   const draft = ((receipts.data as any[]) ?? []).find((r) => r.status === 'draft') ?? null;
 
+  const receiptIds = ((receipts.data as any[]) ?? []).map((r) => r.id);
+
   const receiptLines = useQuery({
-    queryKey: ['import-receipt-lines', orderId],
+    queryKey: ['import-receipt-lines', orderId, receiptIds.join(',')],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('import_receipt_items')
-        .select('*, import_receipts!inner(id, status, receipt_number, confirmed_at)')
-        .eq('business_id', (receipts.data as any[])?.[0]?.business_id ?? '')
-        .in(
-          'import_receipt_id',
-          ((receipts.data as any[]) ?? []).map((r) => r.id)
-        )
+        .select('*')
+        .in('import_receipt_id', receiptIds)
         .limit(1000);
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!orderId && ((receipts.data as any[]) ?? []).length > 0,
+    enabled: !!orderId && receiptIds.length > 0,
   });
+
 
   const draftLines = ((receiptLines.data as any[]) ?? []).filter(
     (l) => draft && l.import_receipt_id === draft.id
