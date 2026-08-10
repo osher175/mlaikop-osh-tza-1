@@ -215,7 +215,7 @@ const ImportOrderDetailContent: React.FC = () => {
         {/* Costs */}
         <TabsContent value="costs" className="space-y-4">
           <Card>
-            <CardHeader><CardTitle className="text-base">הוספת עלות יבוא</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">הוספת שורת עלות (סכום משוער)</CardTitle></CardHeader>
             <CardContent>
               <form
                 className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end"
@@ -227,7 +227,6 @@ const ImportOrderDetailContent: React.FC = () => {
                     amount: Number(costForm.amount),
                     currency_code: costForm.currency_code,
                     exchange_rate_to_ils: costForm.exchange_rate_to_ils ? Number(costForm.exchange_rate_to_ils) : null,
-                    cost_state: costForm.cost_state,
                   });
                   setCostForm({ ...costForm, description: '', amount: '' });
                 }}
@@ -248,7 +247,7 @@ const ImportOrderDetailContent: React.FC = () => {
                   <Input value={costForm.description} onChange={(e) => setCostForm({ ...costForm, description: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>סכום</Label>
+                  <Label>סכום משוער</Label>
                   <Input type="number" step="0.01" min="0" required value={costForm.amount}
                     onChange={(e) => setCostForm({ ...costForm, amount: e.target.value })} />
                 </div>
@@ -266,22 +265,31 @@ const ImportOrderDetailContent: React.FC = () => {
                   <Input type="number" step="0.0001" min="0" value={costForm.exchange_rate_to_ils}
                     onChange={(e) => setCostForm({ ...costForm, exchange_rate_to_ils: e.target.value })} />
                 </div>
-                <div className="space-y-2">
-                  <Label>מצב עלות</Label>
-                  <Select value={costForm.cost_state} onValueChange={(v) => setCostForm({ ...costForm, cost_state: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="estimated">משוער</SelectItem>
-                      <SelectItem value="final">סופי</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
                 <Button type="submit" disabled={addCost.isPending}>
                   <Plus className="w-4 h-4 ml-2" />הוספה
                 </Button>
               </form>
+              <p className="text-xs text-muted-foreground mt-3">
+                כל הוצאה נרשמת כשורה אחת. כשמתקבלת חשבונית — מזינים את הסכום הסופי באותה שורה,
+                והוא מחליף את ההערכה בחישוב עלות הנחיתה (הערכה וסופי לעולם לא נסכמים יחד).
+              </p>
             </CardContent>
           </Card>
+
+          {summary && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <SummaryCard label="סה״כ משוער" value={formatCurrency(Number(summary.estimated_total_ils ?? 0))} />
+              <SummaryCard label="סה״כ סופי (שורות שנסגרו)" value={formatCurrency(Number(summary.final_total_ils ?? 0))} />
+              <SummaryCard label="עלות אפקטיבית לחישוב" value={formatCurrency(Number(summary.effective_total_ils ?? 0))} />
+              <SummaryCard
+                label="סטייה מההערכה"
+                value={`${formatCurrency(Number(summary.variance_ils ?? 0))}${
+                  summary.variance_percent != null ? ` (${Number(summary.variance_percent).toFixed(2)}%)` : ''
+                }`}
+              />
+            </div>
+          )}
+
           <Card>
             <CardContent className="pt-6 overflow-x-auto">
               <Table>
@@ -289,33 +297,84 @@ const ImportOrderDetailContent: React.FC = () => {
                   <TableRow>
                     <TableHead className="text-right">קטגוריה</TableHead>
                     <TableHead className="text-right">תיאור</TableHead>
-                    <TableHead className="text-right">סכום</TableHead>
-                    <TableHead className="text-right">סכום בש״ח</TableHead>
-                    <TableHead className="text-right">מצב</TableHead>
+                    <TableHead className="text-right">משוער (ש״ח)</TableHead>
+                    <TableHead className="text-right">סופי (ש״ח)</TableHead>
+                    <TableHead className="text-right">סטייה</TableHead>
+                    <TableHead className="text-right">אפקטיבי</TableHead>
+                    <TableHead className="text-right">סכום סופי</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {(costs.data ?? []).map((c: any) => (
                     <TableRow key={c.id}>
-                      <TableCell>{COST_CATEGORY_LABELS[c.category] ?? c.category}</TableCell>
-                      <TableCell>{c.description ?? '—'}</TableCell>
-                      <TableCell>{Number(c.amount).toFixed(2)} {c.currency_code}</TableCell>
-                      <TableCell>{formatCurrency(Number(c.amount_ils ?? 0))}</TableCell>
                       <TableCell>
-                        <Badge variant={c.cost_state === 'final' ? 'secondary' : 'outline'}>
-                          {c.cost_state === 'final' ? 'סופי' : 'משוער'}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          {COST_CATEGORY_LABELS[c.category] ?? c.category}
+                          <Badge variant={c.cost_state === 'final' ? 'secondary' : 'outline'}>
+                            {c.cost_state === 'final' ? 'סופי' : 'משוער'}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>{c.description ?? '—'}</TableCell>
+                      <TableCell>
+                        {formatCurrency(Number(c.amount_ils ?? 0))}
+                        <span className="text-xs text-muted-foreground block">
+                          {Number(c.amount).toFixed(2)} {c.currency_code}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {c.final_amount_ils != null ? formatCurrency(Number(c.final_amount_ils)) : '—'}
+                      </TableCell>
+                      <TableCell>
+                        {c.variance_ils != null ? (
+                          <span className={Number(c.variance_ils) > 0 ? 'text-destructive' : 'text-emerald-600'}>
+                            {Number(c.variance_ils) > 0 ? '+' : ''}{formatCurrency(Number(c.variance_ils))}
+                            {c.variance_percent != null && ` (${Number(c.variance_percent) > 0 ? '+' : ''}${Number(c.variance_percent).toFixed(2)}%)`}
+                          </span>
+                        ) : '—'}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {formatCurrency(Number(c.effective_amount_ils ?? 0))}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className="w-28"
+                            placeholder={`${c.currency_code}`}
+                            value={finalDrafts[c.id] ?? (c.final_amount != null ? String(c.final_amount) : '')}
+                            onChange={(e) => setFinalDrafts({ ...finalDrafts, [c.id]: e.target.value })}
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={finalizeCost.isPending}
+                            onClick={() => {
+                              const raw = finalDrafts[c.id] ?? (c.final_amount != null ? String(c.final_amount) : '');
+                              finalizeCost.mutate({
+                                costId: c.id,
+                                finalAmount: raw === '' ? null : Number(raw),
+                                finalExchangeRate: c.exchange_rate_to_ils ?? null,
+                              });
+                            }}
+                          >
+                            שמירה
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
                   {(costs.data ?? []).length === 0 && (
-                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">אין עלויות</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">אין עלויות</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
         </TabsContent>
+
 
         {/* Payments */}
         <TabsContent value="payments" className="space-y-4">
