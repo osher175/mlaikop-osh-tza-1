@@ -112,9 +112,12 @@ export const useCreateImportOrder = () => {
     mutationFn: async (input: CreateImportOrderInput) => {
       const businessId = requireBusinessId();
       if (!businessId) throw new Error('missing business');
+      // `import_number` is assigned server-side by the numbering trigger, so it
+      // is intentionally omitted from the payload (the generated Insert type
+      // still marks it required).
       const { data, error } = await supabase
         .from('import_orders')
-        .insert({ ...input, business_id: businessId })
+        .insert({ ...input, business_id: businessId } as never)
         .select('id, import_number')
         .single();
       if (error) throw error;
