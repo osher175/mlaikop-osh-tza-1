@@ -3167,6 +3167,10 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: boolean
       }
+      create_brand_if_missing: {
+        Args: { p_business_id: string; p_name: string; p_tier?: string }
+        Returns: string
+      }
       create_business_for_new_user: {
         Args: { p_business_name: string; p_phone?: string }
         Returns: string
@@ -3439,6 +3443,10 @@ export type Database = {
         Returns: Json
       }
       inventory_stock_counts: { Args: { p_business_id: string }; Returns: Json }
+      is_active_business_actor: {
+        Args: { _business_id: string; _user_id?: string }
+        Returns: boolean
+      }
       is_business_member: {
         Args: { _business_id: string; _user_id?: string }
         Returns: boolean
