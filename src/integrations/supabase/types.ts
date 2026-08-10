@@ -890,11 +890,16 @@ export type Database = {
           import_order_id: string
           item_status: string
           manufacturer_name: string | null
+          not_arriving_quantity: number
           ordered_quantity: number
           planned_sale_price_ils: number | null
           product_description: string
           product_id: string | null
           received_quantity: number
+          shortage_notes: string | null
+          shortage_resolution: string
+          shortage_resolved_at: string | null
+          shortage_resolved_by: string | null
           supplier_sku: string | null
           supplier_unit_cost: number
           updated_at: string
@@ -909,11 +914,16 @@ export type Database = {
           import_order_id: string
           item_status?: string
           manufacturer_name?: string | null
+          not_arriving_quantity?: number
           ordered_quantity: number
           planned_sale_price_ils?: number | null
           product_description: string
           product_id?: string | null
           received_quantity?: number
+          shortage_notes?: string | null
+          shortage_resolution?: string
+          shortage_resolved_at?: string | null
+          shortage_resolved_by?: string | null
           supplier_sku?: string | null
           supplier_unit_cost?: number
           updated_at?: string
@@ -928,11 +938,16 @@ export type Database = {
           import_order_id?: string
           item_status?: string
           manufacturer_name?: string | null
+          not_arriving_quantity?: number
           ordered_quantity?: number
           planned_sale_price_ils?: number | null
           product_description?: string
           product_id?: string | null
           received_quantity?: number
+          shortage_notes?: string | null
+          shortage_resolution?: string
+          shortage_resolved_at?: string | null
+          shortage_resolved_by?: string | null
           supplier_sku?: string | null
           supplier_unit_cost?: number
           updated_at?: string
@@ -1257,6 +1272,250 @@ export type Database = {
           },
         ]
       }
+      import_receipt_corrections: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string
+          id: string
+          import_order_id: string
+          import_receipt_id: string
+          import_receipt_item_id: string
+          inventory_action_id: string | null
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          import_order_id: string
+          import_receipt_id: string
+          import_receipt_item_id: string
+          inventory_action_id?: string | null
+          product_id: string
+          quantity_delta: number
+          reason: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          import_order_id?: string
+          import_receipt_id?: string
+          import_receipt_item_id?: string
+          inventory_action_id?: string | null
+          product_id?: string
+          quantity_delta?: number
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_receipt_corrections_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_receipt_corrections_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_receipt_corrections_import_order_id_fkey"
+            columns: ["import_order_id"]
+            isOneToOne: false
+            referencedRelation: "import_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_receipt_corrections_import_receipt_id_fkey"
+            columns: ["import_receipt_id"]
+            isOneToOne: false
+            referencedRelation: "import_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_receipt_corrections_import_receipt_item_id_fkey"
+            columns: ["import_receipt_item_id"]
+            isOneToOne: false
+            referencedRelation: "import_receipt_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_receipt_corrections_inventory_action_id_fkey"
+            columns: ["inventory_action_id"]
+            isOneToOne: true
+            referencedRelation: "inventory_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_receipt_corrections_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_receipt_items: {
+        Row: {
+          applied_at: string | null
+          business_id: string
+          created_at: string
+          id: string
+          import_order_item_id: string
+          import_receipt_id: string
+          inventory_action_id: string | null
+          notes: string | null
+          product_id: string | null
+          received_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          applied_at?: string | null
+          business_id: string
+          created_at?: string
+          id?: string
+          import_order_item_id: string
+          import_receipt_id: string
+          inventory_action_id?: string | null
+          notes?: string | null
+          product_id?: string | null
+          received_quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          applied_at?: string | null
+          business_id?: string
+          created_at?: string
+          id?: string
+          import_order_item_id?: string
+          import_receipt_id?: string
+          inventory_action_id?: string | null
+          notes?: string | null
+          product_id?: string | null
+          received_quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_receipt_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_receipt_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_receipt_items_import_order_item_id_fkey"
+            columns: ["import_order_item_id"]
+            isOneToOne: false
+            referencedRelation: "import_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_receipt_items_import_receipt_id_fkey"
+            columns: ["import_receipt_id"]
+            isOneToOne: false
+            referencedRelation: "import_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_receipt_items_inventory_action_id_fkey"
+            columns: ["inventory_action_id"]
+            isOneToOne: true
+            referencedRelation: "inventory_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_receipt_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_receipts: {
+        Row: {
+          business_id: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          created_by: string
+          id: string
+          import_order_id: string
+          notes: string | null
+          receipt_number: string
+          receiving_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          import_order_id: string
+          notes?: string | null
+          receipt_number: string
+          receiving_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          import_order_id?: string
+          notes?: string | null
+          receipt_number?: string
+          receiving_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_receipts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_receipts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_receipts_import_order_id_fkey"
+            columns: ["import_order_id"]
+            isOneToOne: false
+            referencedRelation: "import_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_actions: {
         Row: {
           action_type: string
@@ -1273,11 +1532,15 @@ export type Database = {
           purchase_total_ils: number | null
           purchase_unit_ils: number | null
           quantity_changed: number
+          reference_id: string | null
+          reference_meta: Json | null
+          reference_type: string | null
           reversed_at: string | null
           reversed_by: string | null
           reverses_action_id: string | null
           sale_total_ils: number | null
           sale_unit_ils: number | null
+          source: string | null
           supplier_id: string | null
           timestamp: string | null
           user_id: string
@@ -1297,11 +1560,15 @@ export type Database = {
           purchase_total_ils?: number | null
           purchase_unit_ils?: number | null
           quantity_changed: number
+          reference_id?: string | null
+          reference_meta?: Json | null
+          reference_type?: string | null
           reversed_at?: string | null
           reversed_by?: string | null
           reverses_action_id?: string | null
           sale_total_ils?: number | null
           sale_unit_ils?: number | null
+          source?: string | null
           supplier_id?: string | null
           timestamp?: string | null
           user_id: string
@@ -1321,11 +1588,15 @@ export type Database = {
           purchase_total_ils?: number | null
           purchase_unit_ils?: number | null
           quantity_changed?: number
+          reference_id?: string | null
+          reference_meta?: Json | null
+          reference_type?: string | null
           reversed_at?: string | null
           reversed_by?: string | null
           reverses_action_id?: string | null
           sale_total_ils?: number | null
           sale_unit_ils?: number | null
+          source?: string | null
           supplier_id?: string | null
           timestamp?: string | null
           user_id?: string
@@ -3818,8 +4089,12 @@ export type Database = {
           p_purchase_total_ils?: number
           p_purchase_unit_ils?: number
           p_quantity_changed: number
+          p_reference_id?: string
+          p_reference_meta?: Json
+          p_reference_type?: string
           p_sale_total_ils?: number
           p_sale_unit_ils?: number
+          p_source?: string
           p_supplier_id?: string
           p_user_id: string
         }
@@ -4040,6 +4315,15 @@ export type Database = {
         Args: { curlopt: string; value: string }
         Returns: boolean
       }
+      import_item_resolve_shortage: {
+        Args: {
+          p_item_id: string
+          p_notes?: string
+          p_quantity?: number
+          p_resolution: string
+        }
+        Returns: Json
+      }
       import_order_cost_summary: {
         Args: { p_import_order_id: string }
         Returns: {
@@ -4141,6 +4425,27 @@ export type Database = {
           product_id: string
           quantity_in_transit: number
         }[]
+      }
+      import_receipt_cancel_draft: {
+        Args: { p_receipt_id: string }
+        Returns: undefined
+      }
+      import_receipt_confirm: { Args: { p_receipt_id: string }; Returns: Json }
+      import_receipt_correct: {
+        Args: {
+          p_quantity_delta: number
+          p_reason: string
+          p_receipt_item_id: string
+        }
+        Returns: Json
+      }
+      import_receipt_save_draft: {
+        Args: { p_lines: Json; p_receipt_id: string }
+        Returns: Json
+      }
+      import_receipt_start: {
+        Args: { p_import_order_id: string }
+        Returns: string
       }
       insights_aggregate: {
         Args: {
