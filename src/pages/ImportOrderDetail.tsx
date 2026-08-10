@@ -63,13 +63,17 @@ const ImportOrderDetailContent: React.FC = () => {
 
   const o = order.data as any;
   const landed = (landedCost.data as any[]) ?? [];
+  const summary = costSummary.data as any;
   const totals = landed.reduce(
-    (acc, r) => ({
-      goods: acc.goods + Number(r.goods_cost_ils ?? 0),
-      overhead: acc.overhead + Number(r.allocated_overhead_ils ?? 0),
-      landedTotal: acc.landedTotal + Number(r.landed_total_ils ?? 0),
-      revenue: acc.revenue + Number(r.planned_revenue_ils ?? 0),
-    }),
+    (acc, r) => {
+      const qty = Number(r.ordered_quantity ?? 0);
+      return {
+        goods: acc.goods + Number(r.unit_purchase_cost_ils ?? 0) * qty,
+        overhead: acc.overhead + Number(r.overhead_per_unit_ils ?? 0) * qty,
+        landedTotal: acc.landedTotal + Number(r.expected_landed_unit_cost_ils ?? 0) * qty,
+        revenue: acc.revenue + Number(r.planned_sale_price_ils ?? 0) * qty,
+      };
+    },
     { goods: 0, overhead: 0, landedTotal: 0, revenue: 0 }
   );
   const plannedMargin = totals.revenue - totals.landedTotal;
