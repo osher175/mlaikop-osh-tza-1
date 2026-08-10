@@ -44,6 +44,7 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   eta_changed: 'תאריך הגעה משוער עודכן',
   cost_added: 'עלות נוספה',
   cost_updated: 'עלות עודכנה',
+  cost_finalized: 'עלות סופית נקבעה',
   payment_added: 'תשלום נרשם',
   document_uploaded: 'מסמך הועלה',
   receiving_started: 'קליטה החלה',
@@ -160,11 +161,30 @@ export const useImportOrder = (orderId?: string) => {
     enabled: !!orderId,
   });
 
+  /**
+   * Estimated vs final vs effective totals for the order.
+   * `effective_total_ils` is the only figure landed cost consumes: per cost line
+   * it is the final amount when one exists, otherwise the estimate — an estimate
+   * and its own final value are never summed.
+   */
+  const costSummary = useQuery({
+    queryKey: ['import-order-cost-summary', orderId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('import_order_cost_summary', {
+        p_import_order_id: orderId!,
+      });
+      if (error) throw error;
+      return (data as any[])?.[0] ?? null;
+    },
+    enabled: !!orderId,
+  });
+
   const invalidate = (keys: string[]) => {
     keys.forEach((k) => queryClient.invalidateQueries({ queryKey: [k, orderId] }));
     queryClient.invalidateQueries({ queryKey: ['import-orders-page'] });
     queryClient.invalidateQueries({ queryKey: ['import-order-events', orderId] });
     queryClient.invalidateQueries({ queryKey: ['import-order-landed-cost', orderId] });
+    queryClient.invalidateQueries({ queryKey: ['import-order-cost-summary', orderId] });
   };
 
   const updateStatus = useMutation({
