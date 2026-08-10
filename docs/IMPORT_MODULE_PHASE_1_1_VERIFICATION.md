@@ -192,11 +192,10 @@ Additional checks:
 - Cancelled items are excluded from the unit base but still listed.
 - Nothing is written to `products.cost`.
 
-**Open finding (P1, not fixed — needs a product decision):** the overhead pool sums **all** rows in
-`import_costs` regardless of `cost_state`, so an `estimated` row and its later `final` row are added
-together and inflate the landed cost. Options: (a) prefer `final` and ignore `estimated` when any
-final cost exists in the same category, (b) require superseding an estimate by updating the row
-in place. Must be resolved before landed cost is written into `products.cost` in Phase 2.
+**Finding (P1) — RESOLVED in Phase 1.2:** the overhead pool summed **all** rows in `import_costs`
+regardless of `cost_state`, so an `estimated` row and its later `final` row were added together and
+inflated the landed cost. Resolved by the single-row estimate/final model and the
+`effective_amount_ils` rule — see `docs/IMPORT_MODULE_PHASE_1_2_LANDED_COST_POLICY.md`.
 
 ---
 
@@ -278,8 +277,8 @@ append-only from the application's perspective.
 **P0:** none.
 
 **P1**
-1. Landed cost mixes `estimated` and `final` cost rows (§7). Must be decided before Phase 2 writes
-   landed cost into `products.cost`.
+1. ~~Landed cost mixes `estimated` and `final` cost rows (§7).~~ **Resolved in Phase 1.2** —
+   see `docs/IMPORT_MODULE_PHASE_1_2_LANDED_COST_POLICY.md`.
 
 **P2**
 1. Missing FX rate silently defaults to 1.0 — surface a UI warning.

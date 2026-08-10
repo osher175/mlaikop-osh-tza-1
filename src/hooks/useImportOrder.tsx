@@ -44,6 +44,7 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   eta_changed: 'תאריך הגעה משוער עודכן',
   cost_added: 'עלות נוספה',
   cost_updated: 'עלות עודכנה',
+  cost_finalized: 'עלות סופית נקבעה',
   payment_added: 'תשלום נרשם',
   document_uploaded: 'מסמך הועלה',
   receiving_started: 'קליטה החלה',
@@ -160,11 +161,30 @@ export const useImportOrder = (orderId?: string) => {
     enabled: !!orderId,
   });
 
+  /**
+   * Estimated vs final vs effective totals for the order.
+   * `effective_total_ils` is the only figure landed cost consumes: per cost line
+   * it is the final amount when one exists, otherwise the estimate — an estimate
+   * and its own final value are never summed.
+   */
+  const costSummary = useQuery({
+    queryKey: ['import-order-cost-summary', orderId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('import_order_cost_summary', {
+        p_import_order_id: orderId!,
+      });
+      if (error) throw error;
+      return (data as any[])?.[0] ?? null;
+    },
+    enabled: !!orderId,
+  });
+
   const invalidate = (keys: string[]) => {
     keys.forEach((k) => queryClient.invalidateQueries({ queryKey: [k, orderId] }));
     queryClient.invalidateQueries({ queryKey: ['import-orders-page'] });
     queryClient.invalidateQueries({ queryKey: ['import-order-events', orderId] });
     queryClient.invalidateQueries({ queryKey: ['import-order-landed-cost', orderId] });
+    queryClient.invalidateQueries({ queryKey: ['import-order-cost-summary', orderId] });
   };
 
   const updateStatus = useMutation({
@@ -209,6 +229,43 @@ export const useImportOrder = (orderId?: string) => {
     onSuccess: () => {
       invalidate(['import-order-costs']);
       toast({ title: 'העלות נוספה' });
+    },
+    onError: (e: any) => toast({ title: 'שגיאה', description: e.message, variant: 'destructive' }),
+  });
+
+  /**
+   * Records the FINAL amount on an existing cost line. The original estimate
+   * (`amount`) is preserved; the final value simply replaces it in the landed
+   * cost. Passing `finalAmount: null` reverts the line back to estimate-only.
+   */
+  const finalizeCost = useMutation({
+    mutationFn: async ({
+      costId,
+      finalAmount,
+      finalExchangeRate,
+      invoiceReference,
+      costDate,
+    }: {
+      costId: string;
+      finalAmount: number | null;
+      finalExchangeRate?: number | null;
+      invoiceReference?: string | null;
+      costDate?: string | null;
+    }) => {
+      const { error } = await supabase
+        .from('import_costs')
+        .update({
+          final_amount: finalAmount,
+          final_exchange_rate_to_ils: finalAmount === null ? null : finalExchangeRate ?? null,
+          final_invoice_reference: finalAmount === null ? null : invoiceReference ?? null,
+          final_cost_date: finalAmount === null ? null : costDate ?? null,
+        } as never)
+        .eq('id', costId);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      invalidate(['import-order-costs']);
+      toast({ title: vars.finalAmount === null ? 'הוחזר לסכום משוער' : 'הסכום הסופי נשמר' });
     },
     onError: (e: any) => toast({ title: 'שגיאה', description: e.message, variant: 'destructive' }),
   });
@@ -274,9 +331,11 @@ export const useImportOrder = (orderId?: string) => {
     documents,
     events,
     landedCost,
+    costSummary,
     updateStatus,
     addItem,
     addCost,
+    finalizeCost,
     addPayment,
     uploadDocument,
     openDocument,
