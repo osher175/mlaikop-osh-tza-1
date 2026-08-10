@@ -117,12 +117,24 @@ const ImportOrderDetailContent: React.FC = () => {
       <Tabs defaultValue="items">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="items">פריטים</TabsTrigger>
+          <TabsTrigger value="receiving">קליטת סחורה</TabsTrigger>
           <TabsTrigger value="costs">עלויות</TabsTrigger>
           <TabsTrigger value="payments">תשלומים</TabsTrigger>
           <TabsTrigger value="landed">עלות נחיתה</TabsTrigger>
           <TabsTrigger value="documents">מסמכים</TabsTrigger>
           <TabsTrigger value="events">היסטוריה</TabsTrigger>
         </TabsList>
+
+        {/* Receiving — the only place in the module that can move real stock */}
+        <TabsContent value="receiving">
+          <ReceivingPanel
+            orderId={id!}
+            businessId={o.business_id}
+            items={(items.data as any[]) ?? []}
+            isReadOnly={o.status === 'cancelled'}
+          />
+        </TabsContent>
+
 
         {/* Items */}
         <TabsContent value="items" className="space-y-4">
