@@ -14,6 +14,7 @@ import {
   Truck,
   HardDrive,
   ShoppingCart,
+  Ship,
   KeyRound
 } from 'lucide-react';
 import mlaikoLogo from '@/assets/mlaiko-logo-full.png';
@@ -118,6 +119,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNavigate, isMobileDrawer }) 
       icon: <ShoppingCart className="w-5 h-5" />,
       label: 'רכש חכם',
       show: !permissions.isPlatformAdmin && permissions.canEditProducts
+    },
+    {
+      to: '/import',
+      icon: <Ship className="w-5 h-5" />,
+      label: 'יבוא',
+      show: !permissions.isPlatformAdmin && permissions.canManageSettings
     },
     {
       to: '/add-product',
