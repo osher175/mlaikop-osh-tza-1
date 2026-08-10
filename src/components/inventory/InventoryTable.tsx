@@ -50,6 +50,14 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
   const { approveStock, isApproving, canSendToSupplier } = useStockApprovals();
   const { hidden: costHidden } = useCostVisibility();
 
+  // Page-bounded "in transit" overlay (import orders). Only the products on the
+  // current page are aggregated server side — no full-catalog scan.
+  const productIds = React.useMemo(() => products.map((p) => p.id), [products]);
+  const inTransitByProduct = useInTransitQuantities(productIds);
+  const getInTransit = (productId: string) => inTransitByProduct.get(productId) ?? 0;
+
+
+
   // Only show approval button for business owners
   const canApproveStock = businessContext?.is_owner;
 
