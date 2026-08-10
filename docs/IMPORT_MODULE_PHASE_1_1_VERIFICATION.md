@@ -277,8 +277,8 @@ append-only from the application's perspective.
 **P0:** none.
 
 **P1**
-1. Landed cost mixes `estimated` and `final` cost rows (§7). Must be decided before Phase 2 writes
-   landed cost into `products.cost`.
+1. ~~Landed cost mixes `estimated` and `final` cost rows (§7).~~ **Resolved in Phase 1.2** —
+   see `docs/IMPORT_MODULE_PHASE_1_2_LANDED_COST_POLICY.md`.
 
 **P2**
 1. Missing FX rate silently defaults to 1.0 — surface a UI warning.
