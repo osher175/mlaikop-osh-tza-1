@@ -198,7 +198,13 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                       <div className="truncate">
                         <span className="text-gray-600">כמות: </span>
                         <span className="font-medium">{product.quantity}</span>
+                        {getInTransit(product.id) > 0 && (
+                          <span className="text-blue-600 mr-1" title="כמות בדרך מהזמנות יבוא פתוחות">
+                            (בדרך: {getInTransit(product.id)})
+                          </span>
+                        )}
                       </div>
+
                       <div className="truncate">
                         <span className="text-gray-600">מחיר: </span>
                         <span className="font-medium">₪{product.price || '-'}</span>
