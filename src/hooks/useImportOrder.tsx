@@ -378,7 +378,11 @@ export const useImportOrder = (orderId?: string) => {
     landedCost,
     costSummary,
     updateStatus,
+    updateOrder,
     addItem,
+    updateItem,
+    deleteItem,
+
     addCost,
     finalizeCost,
     addPayment,
