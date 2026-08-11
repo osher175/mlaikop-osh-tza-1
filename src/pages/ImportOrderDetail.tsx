@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { ImportPinGate } from '@/components/import/ImportPinGate';
 import { ReceivingPanel } from '@/components/import/ReceivingPanel';
+import { ClosurePanel } from '@/components/import/ClosurePanel';
 
 import { useImportOrder, COST_CATEGORY_LABELS, PAYMENT_TYPE_LABELS, DOCUMENT_TYPE_LABELS, EVENT_TYPE_LABELS } from '@/hooks/useImportOrder';
 import { IMPORT_STATUSES, IMPORT_STATUS_LABELS, PURCHASE_TYPE_LABELS } from '@/hooks/useImportOrders';
@@ -103,7 +104,9 @@ const ImportOrderDetailContent: React.FC = () => {
           <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             {IMPORT_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>{IMPORT_STATUS_LABELS[s]}</SelectItem>
+              <SelectItem key={s} value={s} disabled={s === 'completed' && o.status !== 'completed'}>
+                {IMPORT_STATUS_LABELS[s]}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -123,9 +126,15 @@ const ImportOrderDetailContent: React.FC = () => {
           <TabsTrigger value="costs">עלויות</TabsTrigger>
           <TabsTrigger value="payments">תשלומים</TabsTrigger>
           <TabsTrigger value="landed">עלות נחיתה</TabsTrigger>
+          <TabsTrigger value="closure">סגירת יבוא</TabsTrigger>
           <TabsTrigger value="documents">מסמכים</TabsTrigger>
           <TabsTrigger value="events">היסטוריה</TabsTrigger>
         </TabsList>
+
+        {/* Closure — cost-only final landed cost posting */}
+        <TabsContent value="closure">
+          <ClosurePanel orderId={id!} />
+        </TabsContent>
 
         {/* Receiving — the only place in the module that can move real stock */}
         <TabsContent value="receiving">
