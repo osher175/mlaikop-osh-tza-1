@@ -211,6 +211,19 @@ export const useImportOrder = (orderId?: string) => {
     onError: (e: any) => toast({ title: 'שגיאה', description: e.message, variant: 'destructive' }),
   });
 
+  /** Order-level header fields (step 1). Pure metadata — never touches stock. */
+  const updateOrder = useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      const { error } = await supabase.from('import_orders').update(payload as never).eq('id', orderId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidate(['import-order']);
+      toast({ title: 'פרטי ההזמנה נשמרו' });
+    },
+    onError: (e: any) => toast({ title: 'שגיאה', description: e.message, variant: 'destructive' }),
+  });
+
   const addItem = useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
       const { error } = await supabase
@@ -224,6 +237,32 @@ export const useImportOrder = (orderId?: string) => {
     },
     onError: (e: any) => toast({ title: 'שגיאה', description: e.message, variant: 'destructive' }),
   });
+
+  /** Edits an ordered line. Server triggers still block unsafe changes after receiving. */
+  const updateItem = useMutation({
+    mutationFn: async ({ itemId, payload }: { itemId: string; payload: Record<string, unknown> }) => {
+      const { error } = await supabase.from('import_order_items').update(payload as never).eq('id', itemId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidate(['import-order-items']);
+      toast({ title: 'הפריט עודכן' });
+    },
+    onError: (e: any) => toast({ title: 'שגיאה', description: e.message, variant: 'destructive' }),
+  });
+
+  const deleteItem = useMutation({
+    mutationFn: async (itemId: string) => {
+      const { error } = await supabase.from('import_order_items').delete().eq('id', itemId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidate(['import-order-items']);
+      toast({ title: 'הפריט הוסר' });
+    },
+    onError: (e: any) => toast({ title: 'שגיאה', description: e.message, variant: 'destructive' }),
+  });
+
 
   const addCost = useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
