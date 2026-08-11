@@ -250,6 +250,13 @@ export const StepCosts: React.FC<Props> = ({
         </CardContent>
       </Card>
 
+      <DocumentsCard
+        documents={documents}
+        uploadDocument={uploadDocument}
+        openDocument={openDocument}
+        isReadOnly={isReadOnly}
+      />
+
       <div className="flex justify-start">
         <Button className="min-h-[44px]" onClick={onNext}>
           שמור והמשך לקליטת סחורה
