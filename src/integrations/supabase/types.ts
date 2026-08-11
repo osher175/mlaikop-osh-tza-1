@@ -991,7 +991,9 @@ export type Database = {
           id: string
           import_order_id: string
           item_status: string
+          local_alternative_unit_cost_ils: number | null
           manufacturer_name: string | null
+          model_name: string | null
           not_arriving_quantity: number
           ordered_quantity: number
           planned_sale_price_ils: number | null
@@ -1002,6 +1004,7 @@ export type Database = {
           shortage_resolution: string
           shortage_resolved_at: string | null
           shortage_resolved_by: string | null
+          size_label: string | null
           supplier_sku: string | null
           supplier_unit_cost: number
           updated_at: string
@@ -1015,7 +1018,9 @@ export type Database = {
           id?: string
           import_order_id: string
           item_status?: string
+          local_alternative_unit_cost_ils?: number | null
           manufacturer_name?: string | null
+          model_name?: string | null
           not_arriving_quantity?: number
           ordered_quantity: number
           planned_sale_price_ils?: number | null
@@ -1026,6 +1031,7 @@ export type Database = {
           shortage_resolution?: string
           shortage_resolved_at?: string | null
           shortage_resolved_by?: string | null
+          size_label?: string | null
           supplier_sku?: string | null
           supplier_unit_cost?: number
           updated_at?: string
@@ -1039,7 +1045,9 @@ export type Database = {
           id?: string
           import_order_id?: string
           item_status?: string
+          local_alternative_unit_cost_ils?: number | null
           manufacturer_name?: string | null
+          model_name?: string | null
           not_arriving_quantity?: number
           ordered_quantity?: number
           planned_sale_price_ils?: number | null
@@ -1050,6 +1058,7 @@ export type Database = {
           shortage_resolution?: string
           shortage_resolved_at?: string | null
           shortage_resolved_by?: string | null
+          size_label?: string | null
           supplier_sku?: string | null
           supplier_unit_cost?: number
           updated_at?: string
