@@ -640,6 +640,108 @@ export type Database = {
         }
         Relationships: []
       }
+      import_cost_adjustments: {
+        Row: {
+          actor_user_id: string | null
+          applied_amount_ils: number
+          business_id: string
+          created_at: string
+          final_unit_cost_ils: number
+          id: string
+          import_order_id: string
+          import_order_item_id: string
+          product_cost_after_ils: number
+          product_cost_before_ils: number
+          product_id: string
+          provisional_unit_cost_ils: number
+          quantity_applied: number
+          quantity_on_hand_at_close: number
+          reason: string
+          received_quantity: number
+          total_variance_ils: number
+          unabsorbed_amount_ils: number
+          unit_variance_ils: number
+        }
+        Insert: {
+          actor_user_id?: string | null
+          applied_amount_ils: number
+          business_id: string
+          created_at?: string
+          final_unit_cost_ils: number
+          id?: string
+          import_order_id: string
+          import_order_item_id: string
+          product_cost_after_ils: number
+          product_cost_before_ils: number
+          product_id: string
+          provisional_unit_cost_ils: number
+          quantity_applied: number
+          quantity_on_hand_at_close: number
+          reason?: string
+          received_quantity: number
+          total_variance_ils: number
+          unabsorbed_amount_ils: number
+          unit_variance_ils: number
+        }
+        Update: {
+          actor_user_id?: string | null
+          applied_amount_ils?: number
+          business_id?: string
+          created_at?: string
+          final_unit_cost_ils?: number
+          id?: string
+          import_order_id?: string
+          import_order_item_id?: string
+          product_cost_after_ils?: number
+          product_cost_before_ils?: number
+          product_id?: string
+          provisional_unit_cost_ils?: number
+          quantity_applied?: number
+          quantity_on_hand_at_close?: number
+          reason?: string
+          received_quantity?: number
+          total_variance_ils?: number
+          unabsorbed_amount_ils?: number
+          unit_variance_ils?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_cost_adjustments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_cost_adjustments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_cost_adjustments_import_order_id_fkey"
+            columns: ["import_order_id"]
+            isOneToOne: false
+            referencedRelation: "import_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_cost_adjustments_import_order_item_id_fkey"
+            columns: ["import_order_item_id"]
+            isOneToOne: false
+            referencedRelation: "import_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_cost_adjustments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_costs: {
         Row: {
           amount: number
@@ -4315,12 +4417,24 @@ export type Database = {
         Args: { curlopt: string; value: string }
         Returns: boolean
       }
+      import_closure_readiness: {
+        Args: { p_import_order_id: string }
+        Returns: Json
+      }
       import_item_resolve_shortage: {
         Args: {
           p_item_id: string
           p_notes?: string
           p_quantity?: number
           p_resolution: string
+        }
+        Returns: Json
+      }
+      import_order_close: {
+        Args: {
+          p_import_order_id: string
+          p_pin_token?: string
+          p_price_updates?: Json
         }
         Returns: Json
       }
@@ -4351,6 +4465,10 @@ export type Database = {
           received_quantity: number
           unit_purchase_cost_ils: number
         }[]
+      }
+      import_order_summary: {
+        Args: { p_import_order_id: string }
+        Returns: Json
       }
       import_orders_page: {
         Args: {

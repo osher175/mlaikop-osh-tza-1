@@ -50,6 +50,12 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   receiving_started: 'קליטה החלה',
   receipt_confirmed: 'קליטה אושרה',
   receipt_corrected: 'קליטה תוקנה',
+  closure_started: 'סגירת יבוא החלה',
+  final_cost_calculated: 'עלות סופית חושבה',
+  cost_adjustment_posted: 'התאמת עלות נרשמה',
+  sale_price_updated: 'מחיר מכירה עודכן',
+  import_closed: 'היבוא נסגר',
+  shortage_resolved: 'חוסר נסגר',
   order_closed: 'הזמנה נסגרה',
   order_reopened: 'הזמנה נפתחה מחדש',
 };
