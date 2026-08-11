@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Plus } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { COST_CATEGORY_LABELS, PAYMENT_TYPE_LABELS } from '@/hooks/useImportOrder';
+import { DocumentsCard } from './DocumentsCard';
 
 const CURRENCIES = ['ILS', 'USD', 'EUR', 'CNY', 'GBP'];
 
@@ -17,9 +18,12 @@ interface Props {
   payments: any[];
   landed: any[];
   costSummary: any;
+  documents: any[];
   addCost: any;
   finalizeCost: any;
   addPayment: any;
+  uploadDocument: any;
+  openDocument: (path: string) => void;
   isReadOnly?: boolean;
   onNext: () => void;
 }
