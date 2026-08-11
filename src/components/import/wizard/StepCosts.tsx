@@ -41,7 +41,8 @@ const Stat: React.FC<{ label: string; value: string; strong?: boolean }> = ({ la
  * finalization mechanism verbatim.
  */
 export const StepCosts: React.FC<Props> = ({
-  order, costs, payments, landed, costSummary, addCost, finalizeCost, addPayment, isReadOnly, onNext,
+  order, costs, payments, landed, costSummary, documents, addCost, finalizeCost, addPayment,
+  uploadDocument, openDocument, isReadOnly, onNext,
 }) => {
   const [costForm, setCostForm] = React.useState({
     category: 'international_freight', description: '', amount: '',
