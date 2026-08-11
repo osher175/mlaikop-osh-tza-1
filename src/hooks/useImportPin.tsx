@@ -126,6 +126,12 @@ export const useImportPin = () => {
     });
   }, [activeBusinessId]);
 
+  /** Opaque server-issued unlock token, for RPCs that require step-up. */
+  const getToken = useCallback(
+    () => (activeBusinessId ? sessionStorage.getItem(tokenKey(activeBusinessId)) : null),
+    [activeBusinessId]
+  );
+
   return {
     pinState,
     unlocked,
@@ -133,5 +139,6 @@ export const useImportPin = () => {
     verifyPin,
     setPin,
     lock,
+    getToken,
   };
 };
