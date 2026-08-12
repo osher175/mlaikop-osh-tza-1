@@ -210,6 +210,74 @@ export const useImportReceiving = (orderId?: string) => {
     onError: (e: any) => toast({ title: 'שגיאה', description: e.message, variant: 'destructive' }),
   });
 
+  /**
+   * Creates a NEW tenant-owned product from an import line and links it.
+   * The product is created with quantity 0 on purpose — stock only ever enters
+   * through the atomic `import_receipt_confirm` RPC.
+   */
+  const createAndLinkProduct = useMutation({
+    mutationFn: async ({
+      item,
+      name,
+      barcode,
+      price,
+    }: {
+      item: any;
+      name: string;
+      barcode?: string | null;
+      price?: number | null;
+    }) => {
+      const cleanName = name.trim();
+      if (!cleanName) throw new Error('נדרש שם מוצר');
+
+      const { data: userRes } = await supabase.auth.getUser();
+      const userId = userRes?.user?.id;
+      if (!userId) throw new Error('משתמש לא מזוהה');
+
+      // Uniqueness guard — never create a duplicate name inside the same business.
+      const { data: existing, error: existingError } = await supabase
+        .from('products')
+        .select('id')
+        .eq('business_id', item.business_id)
+        .ilike('name', cleanName)
+        .limit(1);
+      if (existingError) throw existingError;
+      if (existing && existing.length > 0) {
+        throw new Error('כבר קיים מוצר בשם זה — יש לקשר אליו במקום ליצור חדש');
+      }
+
+      const { data: product, error } = await supabase
+        .from('products')
+        .insert({
+          name: cleanName,
+          barcode: barcode?.trim() ? barcode.trim() : null,
+          quantity: 0,
+          cost: item.expected_unit_cost_ils ?? item.supplier_unit_cost ?? null,
+          price: price ?? item.planned_sale_price_ils ?? null,
+          brand_id: item.brand_id ?? null,
+          business_id: item.business_id,
+          created_by: userId,
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+
+      const { error: linkError } = await supabase
+        .from('import_order_items')
+        .update({ product_id: product.id })
+        .eq('id', item.id);
+      if (linkError) throw linkError;
+
+      return product.id as string;
+    },
+    onSuccess: () => {
+      invalidate();
+      invalidateInventory();
+      toast({ title: 'המוצר נוצר במלאי וקושר לפריט', description: 'הכמות תיכנס רק באישור הקליטה' });
+    },
+    onError: (e: any) => toast({ title: 'שגיאה', description: e.message, variant: 'destructive' }),
+  });
+
   /** Links an import line to an existing tenant-owned product. */
   const linkProduct = useMutation({
     mutationFn: async ({ itemId, productId }: { itemId: string; productId: string }) => {
@@ -238,5 +306,6 @@ export const useImportReceiving = (orderId?: string) => {
     correctReceipt,
     resolveShortage,
     linkProduct,
+    createAndLinkProduct,
   };
 };

@@ -58,6 +58,7 @@ export const ReceivingPanel: React.FC<ReceivingPanelProps> = ({
     correctReceipt,
     resolveShortage,
     linkProduct,
+    createAndLinkProduct,
   } = useImportReceiving(orderId);
 
   const [quantities, setQuantities] = React.useState<Record<string, string>>({});
@@ -425,7 +426,15 @@ export const ReceivingPanel: React.FC<ReceivingPanelProps> = ({
         onOpenChange={(o) => !o && setLinkItem(null)}
         businessId={businessId}
         suggestedName={linkItem ? itemLabel(linkItem) : ''}
+        suggestedPrice={linkItem?.planned_sale_price_ils ?? null}
         isLinking={linkProduct.isPending}
+        isCreating={createAndLinkProduct.isPending}
+        onCreate={(values) =>
+          createAndLinkProduct.mutate(
+            { item: linkItem, ...values },
+            { onSuccess: () => setLinkItem(null) }
+          )
+        }
         onSelect={(productId) =>
           linkProduct.mutate(
             { itemId: linkItem.id, productId },

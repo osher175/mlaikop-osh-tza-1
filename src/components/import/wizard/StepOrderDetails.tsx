@@ -22,6 +22,7 @@ interface Props {
   updateItem: any;
   deleteItem: any;
   linkProduct: any;
+  createAndLinkProduct?: any;
   isReadOnly?: boolean;
   onNext: () => void;
 }
@@ -38,7 +39,7 @@ const emptyItem = {
 
 /** STEP 1 — order header + "מה הזמנתי?" lines. Nothing here touches stock. */
 export const StepOrderDetails: React.FC<Props> = ({
-  order, items, updateOrder, addItem, updateItem, deleteItem, linkProduct, isReadOnly, onNext,
+  order, items, updateOrder, addItem, updateItem, deleteItem, linkProduct, createAndLinkProduct, isReadOnly, onNext,
 }) => {
   const { suppliers = [] } = useSuppliers() as any;
   const [header, setHeader] = React.useState({
@@ -297,7 +298,18 @@ export const StepOrderDetails: React.FC<Props> = ({
         onOpenChange={(o) => !o && setLinkItem(null)}
         businessId={order.business_id}
         suggestedName={linkItem ? itemModel(linkItem) : ''}
+        suggestedPrice={linkItem?.planned_sale_price_ils ?? null}
         isLinking={linkProduct.isPending}
+        isCreating={createAndLinkProduct?.isPending}
+        onCreate={
+          createAndLinkProduct
+            ? (values) =>
+                createAndLinkProduct.mutate(
+                  { item: linkItem, ...values },
+                  { onSuccess: () => setLinkItem(null) }
+                )
+            : undefined
+        }
         onSelect={(productId) =>
           linkProduct.mutate({ itemId: linkItem.id, productId }, { onSuccess: () => setLinkItem(null) })
         }
