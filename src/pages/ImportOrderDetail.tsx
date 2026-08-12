@@ -182,8 +182,9 @@ const ImportOrderDetailContent: React.FC = () => {
         orderId={id!}
         businessId={o.business_id}
         items={itemRows}
-        isReadOnly={o.status === 'cancelled'}
+        isReadOnly={o.status === 'cancelled' || o.status === 'completed'}
       />
+
     </div>
   );
 };
