@@ -90,11 +90,12 @@ const ImportOrderDetailContent: React.FC = () => {
           className="min-h-[44px]"
           variant="secondary"
           onClick={() => setReceivingOpen(true)}
-          disabled={o.status === 'cancelled'}
+          disabled={o.status === 'cancelled' || o.status === 'completed'}
         >
           <PackageCheck className="w-4 h-4 ml-2" />
           קליטת סחורה
         </Button>
+
       </div>
 
       <ImportStepper current={step} completed={completed} onSelect={setStep} />
