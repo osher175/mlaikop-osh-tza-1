@@ -76,6 +76,14 @@ export const StepSummary: React.FC<Props> = ({ orderId, items, landed, costSumma
 
   return (
     <div className="space-y-4" dir="rtl">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-lg font-bold">
+          {receivedUnits > 0 ? 'תוצאות בפועל' : 'תחזית הייבוא'}
+        </h2>
+        <Badge variant="outline">
+          {receivedUnits > 0 ? 'מבוסס על הסחורה שנקלטה' : 'מבוסס על נתוני ההזמנה והערכות עלות'}
+        </Badge>
+      </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Stat label="יחידות שהוזמנו" value={String(totals.units)} />
         <Stat label="יחידות שנקלטו" value={String(receivedUnits)} />
