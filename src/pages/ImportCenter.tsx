@@ -19,6 +19,7 @@ import {
   useImportOrdersPage, IMPORT_PAGE_SIZE, IMPORT_STATUSES,
   IMPORT_STATUS_LABELS, PURCHASE_TYPE_LABELS,
 } from '@/hooks/useImportOrders';
+import { journeyMilestone, journeyProgress } from '@/components/import/journey/importJourney';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { useDebounce } from '@/hooks/use-debounce';
 
