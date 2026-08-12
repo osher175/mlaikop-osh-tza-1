@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Ship, Search, Plus, Lock, Loader2 } from 'lucide-react';
+import { Ship, Search, Plus, Lock, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,9 +14,10 @@ import {
 } from '@/components/ui/table';
 import { ImportPinGate } from '@/components/import/ImportPinGate';
 import { CreateImportOrderDialog } from '@/components/import/CreateImportOrderDialog';
+import { DeleteImportOrderDialog } from '@/components/import/DeleteImportOrderDialog';
 import { useImportPin } from '@/hooks/useImportPin';
 import {
-  useImportOrdersPage, IMPORT_PAGE_SIZE, IMPORT_STATUSES,
+  useImportOrdersPage, useDeleteImportOrder, IMPORT_PAGE_SIZE, IMPORT_STATUSES,
   IMPORT_STATUS_LABELS, PURCHASE_TYPE_LABELS,
 } from '@/hooks/useImportOrders';
 import { journeyMilestone, journeyProgress } from '@/components/import/journey/importJourney';
@@ -34,6 +35,8 @@ const ImportCenterContent: React.FC = () => {
   const [status, setStatus] = useState<string>('__all__');
   const [page, setPage] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; import_number: string } | null>(null);
+  const deleteOrder = useDeleteImportOrder();
   const debouncedSearch = useDebounce(search, 300);
 
   const { data, isLoading } = useImportOrdersPage({
@@ -130,6 +133,7 @@ const ImportCenterContent: React.FC = () => {
                     <TableHead className="text-right">עלות כוללת משוערת</TableHead>
                     <TableHead className="text-right">שולם</TableHead>
                     <TableHead className="text-right">יתרה</TableHead>
+                    <TableHead className="text-right">פעולות</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -159,6 +163,18 @@ const ImportCenterContent: React.FC = () => {
                       <TableCell>{formatCurrency(Number(row.estimated_total_cost_ils))}</TableCell>
                       <TableCell>{formatCurrency(Number(row.paid_ils))}</TableCell>
                       <TableCell>{formatCurrency(Number(row.remaining_payment_ils))}</TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`מחיקת הזמנה ${row.import_number}`}
+                          onClick={() =>
+                            setDeleteTarget({ id: row.id, import_number: row.import_number })
+                          }
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -190,6 +206,20 @@ const ImportCenterContent: React.FC = () => {
       </Card>
 
       <CreateImportOrderDialog open={createOpen} onOpenChange={setCreateOpen} />
+
+      <DeleteImportOrderDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        importNumber={deleteTarget?.import_number}
+        isDeleting={deleteOrder.isPending}
+        onConfirm={(pin) => {
+          if (!deleteTarget) return;
+          deleteOrder.mutate(
+            { orderId: deleteTarget.id, pin },
+            { onSuccess: () => setDeleteTarget(null) }
+          );
+        }}
+      />
     </div>
   );
 };

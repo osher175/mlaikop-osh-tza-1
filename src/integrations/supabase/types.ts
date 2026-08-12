@@ -4459,6 +4459,10 @@ export type Database = {
           variance_percent: number
         }[]
       }
+      import_order_delete: {
+        Args: { p_order_id: string; p_pin: string }
+        Returns: boolean
+      }
       import_order_landed_cost: {
         Args: { p_import_order_id: string }
         Returns: {
