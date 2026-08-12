@@ -109,6 +109,7 @@ const ImportOrderDetailContent: React.FC = () => {
           updateItem={updateItem}
           deleteItem={deleteItem}
           linkProduct={linkProduct}
+          createAndLinkProduct={createAndLinkProduct}
           isReadOnly={isReadOnly}
           onNext={() => setStep('tracking')}
         />
