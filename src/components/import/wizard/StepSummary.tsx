@@ -11,6 +11,8 @@ interface Props {
   landed: any[];
   costSummary: any;
   payments: any[];
+  /** Optional: lets the section state whether it shows a forecast or actuals. */
+  receivedUnits?: number;
 }
 
 const Stat: React.FC<{ label: string; value: string; strong?: boolean; tone?: 'pos' | 'neg' }> = ({
