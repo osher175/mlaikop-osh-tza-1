@@ -132,3 +132,40 @@ export const useCreateImportOrder = () => {
     },
   });
 };
+
+/**
+ * Deletes an import order record. Destructive, so the server-side RPC
+ * re-verifies the business import PIN and refuses orders that already moved
+ * stock (confirmed receipts).
+ */
+export const useDeleteImportOrder = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ orderId, pin }: { orderId: string; pin: string }) => {
+      const { error } = await supabase.rpc('import_order_delete' as never, {
+        p_order_id: orderId,
+        p_pin: pin,
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['import-orders-page'] });
+      toast({ title: 'הזמנת היבוא נמחקה' });
+    },
+    onError: (error: any) => {
+      const raw = error?.message ?? '';
+      const description = raw.includes('Invalid PIN')
+        ? 'הקוד הסודי שגוי'
+        : raw.includes('temporarily locked')
+          ? 'המודול ננעל זמנית עקב ניסיונות שגויים'
+          : raw.includes('confirmed receipts')
+            ? 'לא ניתן למחוק הזמנה שכבר נקלטה למלאי'
+            : raw.includes('Access denied')
+              ? 'אין לך הרשאה למחוק הזמנות יבוא'
+              : raw;
+      toast({ title: 'המחיקה לא בוצעה', description, variant: 'destructive' });
+    },
+  });
+};
