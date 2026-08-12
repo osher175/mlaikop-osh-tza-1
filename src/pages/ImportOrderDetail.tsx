@@ -35,7 +35,7 @@ const ImportOrderDetailContent: React.FC = () => {
     updateStatus, updateOrder, addItem, updateItem, deleteItem,
     addCost, finalizeCost, addPayment, uploadDocument, openDocument,
   } = useImportOrder(id);
-  const { linkProduct } = useImportReceiving(id);
+  const { linkProduct, createAndLinkProduct } = useImportReceiving(id);
 
   const [step, setStep] = useState<ImportStepKey>('order');
   const [receivingOpen, setReceivingOpen] = useState(false);
