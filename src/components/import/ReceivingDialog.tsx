@@ -26,8 +26,11 @@ export const ReceivingDialog: React.FC<Props> = ({
       <DialogHeader className="text-right">
         <DialogTitle>קליטת סחורה</DialogTitle>
         <DialogDescription>
-          כאן מזינים כמה יחידות באמת הגיעו מכל פריט. המלאי מתעדכן רק לאחר אישור סופי של הקליטה.
+          {isReadOnly
+            ? 'תהליך היבוא נסגר — הקליטה זמינה לצפייה בלבד.'
+            : 'כאן מזינים כמה יחידות באמת הגיעו מכל פריט. המלאי מתעדכן רק לאחר אישור סופי של הקליטה.'}
         </DialogDescription>
+
       </DialogHeader>
       <ReceivingPanel
         orderId={orderId}
