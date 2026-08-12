@@ -39,7 +39,7 @@ const emptyItem = {
 
 /** STEP 1 — order header + "מה הזמנתי?" lines. Nothing here touches stock. */
 export const StepOrderDetails: React.FC<Props> = ({
-  order, items, updateOrder, addItem, updateItem, deleteItem, linkProduct, isReadOnly, onNext,
+  order, items, updateOrder, addItem, updateItem, deleteItem, linkProduct, createAndLinkProduct, isReadOnly, onNext,
 }) => {
   const { suppliers = [] } = useSuppliers() as any;
   const [header, setHeader] = React.useState({
