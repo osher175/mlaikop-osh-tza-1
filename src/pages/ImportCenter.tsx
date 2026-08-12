@@ -142,9 +142,14 @@ const ImportCenterContent: React.FC = () => {
                       <TableCell>{row.supplier_name ?? '—'}</TableCell>
                       <TableCell>{PURCHASE_TYPE_LABELS[row.purchase_type] ?? row.purchase_type}</TableCell>
                       <TableCell>
-                        <Badge variant={statusVariant(row.status)}>
-                          {IMPORT_STATUS_LABELS[row.status] ?? row.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={statusVariant(row.status)}>
+                            {journeyMilestone(row.status)
+                              ? `${journeyMilestone(row.status)!.icon} ${journeyMilestone(row.status)!.label}`
+                              : IMPORT_STATUS_LABELS[row.status] ?? row.status}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">{journeyProgress(row.status)}%</span>
+                        </div>
                       </TableCell>
                       <TableCell>{row.order_date}</TableCell>
                       <TableCell>{row.estimated_arrival_date ?? '—'}</TableCell>
