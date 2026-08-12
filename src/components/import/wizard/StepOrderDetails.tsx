@@ -298,7 +298,18 @@ export const StepOrderDetails: React.FC<Props> = ({
         onOpenChange={(o) => !o && setLinkItem(null)}
         businessId={order.business_id}
         suggestedName={linkItem ? itemModel(linkItem) : ''}
+        suggestedPrice={linkItem?.planned_sale_price_ils ?? null}
         isLinking={linkProduct.isPending}
+        isCreating={createAndLinkProduct?.isPending}
+        onCreate={
+          createAndLinkProduct
+            ? (values) =>
+                createAndLinkProduct.mutate(
+                  { item: linkItem, ...values },
+                  { onSuccess: () => setLinkItem(null) }
+                )
+            : undefined
+        }
         onSelect={(productId) =>
           linkProduct.mutate({ itemId: linkItem.id, productId }, { onSuccess: () => setLinkItem(null) })
         }
