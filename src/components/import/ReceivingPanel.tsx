@@ -137,24 +137,33 @@ export const ReceivingPanel: React.FC<ReceivingPanelProps> = ({
             <CardTitle className="text-base">קליטת סחורה</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              פתיחת קליטה יוצרת טיוטה בלבד. המלאי מתעדכן רק לאחר אישור מפורש בסוף התהליך.
-            </p>
-            <Button
-              className="w-full sm:w-auto min-h-[44px]"
-              disabled={isReadOnly || startReceiving.isPending || openItems.length === 0}
-              onClick={() => startReceiving.mutate()}
-            >
-              {startReceiving.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin ml-2" />
-              ) : (
-                <PackageCheck className="h-4 w-4 ml-2" />
-              )}
-              התחל קליטה
-            </Button>
-            {openItems.length === 0 && (
-              <p className="text-sm text-muted-foreground">אין פריטים פתוחים לקליטה בהזמנה זו.</p>
+            {isReadOnly ? (
+              <p className="text-sm text-muted-foreground">
+                תהליך היבוא נסגר. לא ניתן לפתוח קליטה חדשה. לתיקון כמויות שהתקבלו יש להשתמש בתיקון קליטה.
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  פתיחת קליטה יוצרת טיוטה בלבד. המלאי מתעדכן רק לאחר אישור מפורש בסוף התהליך.
+                </p>
+                <Button
+                  className="w-full sm:w-auto min-h-[44px]"
+                  disabled={startReceiving.isPending || openItems.length === 0}
+                  onClick={() => startReceiving.mutate()}
+                >
+                  {startReceiving.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                  ) : (
+                    <PackageCheck className="h-4 w-4 ml-2" />
+                  )}
+                  התחל קליטה
+                </Button>
+                {openItems.length === 0 && (
+                  <p className="text-sm text-muted-foreground">אין פריטים פתוחים לקליטה בהזמנה זו.</p>
+                )}
+              </>
             )}
+
           </CardContent>
         </Card>
 
