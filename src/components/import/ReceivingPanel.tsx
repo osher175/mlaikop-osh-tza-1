@@ -58,6 +58,7 @@ export const ReceivingPanel: React.FC<ReceivingPanelProps> = ({
     correctReceipt,
     resolveShortage,
     linkProduct,
+    createAndLinkProduct,
   } = useImportReceiving(orderId);
 
   const [quantities, setQuantities] = React.useState<Record<string, string>>({});
