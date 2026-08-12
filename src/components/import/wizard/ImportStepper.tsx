@@ -2,13 +2,12 @@ import React from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type ImportStepKey = 'order' | 'costs' | 'receiving' | 'summary';
+export type ImportStepKey = 'order' | 'tracking' | 'status';
 
-export const IMPORT_STEPS: { key: ImportStepKey; label: string }[] = [
-  { key: 'order', label: 'הזמנה' },
-  { key: 'costs', label: 'שילוח ועלויות' },
-  { key: 'receiving', label: 'קליטת סחורה' },
-  { key: 'summary', label: 'סיכום וסגירה' },
+export const IMPORT_STEPS: { key: ImportStepKey; label: string; icon: string }[] = [
+  { key: 'order', label: 'הזמנה', icon: '📝' },
+  { key: 'tracking', label: 'מעקב יבוא', icon: '🚢' },
+  { key: 'status', label: 'תמונת מצב', icon: '📊' },
 ];
 
 interface Props {
@@ -18,9 +17,8 @@ interface Props {
 }
 
 /**
- * Guided 4-step navigation. Purely presentational — no business rules live here.
- * Every step stays clickable; edit-safety is enforced inside each step (and by
- * the server) rather than by hiding navigation.
+ * Lifecycle navigation (הזמנה · מעקב יבוא · תמונת מצב). Purely presentational —
+ * receiving and closure are contextual actions, not sections.
  */
 export const ImportStepper: React.FC<Props> = ({ current, completed, onSelect }) => (
   <nav dir="rtl" className="w-full overflow-x-auto">
@@ -46,7 +44,7 @@ export const ImportStepper: React.FC<Props> = ({ current, completed, onSelect })
                   isCurrent ? 'bg-primary-foreground/20' : 'bg-muted'
                 )}
               >
-                {isDone ? <Check className="h-3.5 w-3.5" /> : idx + 1}
+                {isDone ? <Check className="h-3.5 w-3.5" /> : step.icon}
               </span>
               <span className="whitespace-nowrap">{step.label}</span>
             </button>

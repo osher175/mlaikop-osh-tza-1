@@ -25,7 +25,7 @@ interface Props {
   uploadDocument: any;
   openDocument: (path: string) => void;
   isReadOnly?: boolean;
-  onNext: () => void;
+  onNext?: () => void;
 }
 
 const Stat: React.FC<{ label: string; value: string; strong?: boolean }> = ({ label, value, strong }) => (
@@ -257,12 +257,14 @@ export const StepCosts: React.FC<Props> = ({
         isReadOnly={isReadOnly}
       />
 
-      <div className="flex justify-start">
-        <Button className="min-h-[44px]" onClick={onNext}>
-          שמור והמשך לקליטת סחורה
-          <ArrowLeft className="h-4 w-4 mr-2" />
-        </Button>
-      </div>
+      {onNext && (
+        <div className="flex justify-start">
+          <Button className="min-h-[44px]" onClick={onNext}>
+            המשך לתמונת מצב
+            <ArrowLeft className="h-4 w-4 mr-2" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

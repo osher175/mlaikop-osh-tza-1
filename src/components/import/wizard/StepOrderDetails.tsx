@@ -287,7 +287,7 @@ export const StepOrderDetails: React.FC<Props> = ({
 
       <div className="flex justify-start">
         <Button className="min-h-[44px]" onClick={() => { if (!isReadOnly) saveHeader(); onNext(); }}>
-          שמור והמשך לשילוח ועלויות
+          שמור והמשך למעקב יבוא
           <ArrowLeft className="h-4 w-4 mr-2" />
         </Button>
       </div>
