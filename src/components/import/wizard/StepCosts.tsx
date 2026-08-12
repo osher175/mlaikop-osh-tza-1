@@ -25,7 +25,7 @@ interface Props {
   uploadDocument: any;
   openDocument: (path: string) => void;
   isReadOnly?: boolean;
-  onNext: () => void;
+  onNext?: () => void;
 }
 
 const Stat: React.FC<{ label: string; value: string; strong?: boolean }> = ({ label, value, strong }) => (
