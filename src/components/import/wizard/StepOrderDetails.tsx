@@ -22,6 +22,7 @@ interface Props {
   updateItem: any;
   deleteItem: any;
   linkProduct: any;
+  createAndLinkProduct?: any;
   isReadOnly?: boolean;
   onNext: () => void;
 }
