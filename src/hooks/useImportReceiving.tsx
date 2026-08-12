@@ -306,5 +306,6 @@ export const useImportReceiving = (orderId?: string) => {
     correctReceipt,
     resolveShortage,
     linkProduct,
+    createAndLinkProduct,
   };
 };
