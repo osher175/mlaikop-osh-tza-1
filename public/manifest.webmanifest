@@ -12,13 +12,13 @@
   "background_color": "#FFFFFF",
   "icons": [
     {
-      "src": "/__l5e/assets-v1/a72dd20c-353b-4968-bbbb-2f567ca592bd/mlaiko-icon-192.png",
+      "src": "/icons/mlaiko-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/__l5e/assets-v1/99f186f7-78ec-40f9-8799-db39e579fd8e/mlaiko-icon-512.png",
+      "src": "/icons/mlaiko-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
