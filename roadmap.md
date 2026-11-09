@@ -7,10 +7,11 @@
 - [x] Statically review prepared deliverables; no tests, database execution or publishing.
 - [ ] Apply migration — blocked pending explicit approval, refreshed preflight and compatibility/security validation.
 
-# Security remediation — local only
+# Security remediation — local bounded implementation
 
-- [x] Prepare independently safe anonymous product/reversal ACL proposal outside migration history.
-- [x] Prepare current-membership and inventory-caller implementation specification with unresolved dependencies explicitly blocked.
-- [x] Prepare read-only evidence queries and compatibility/approval report; do not execute SQL or runtime tests.
-- [ ] Complete membership/inventory authorization replacement — blocked on exact live dependencies and verified trusted caller boundaries.
-- [ ] Execute or validate against production — blocked pending separate approval; no deployment or publishing.
+- [x] Implement explicit owner/current-approved membership helpers and restrictive membership/category gates in one existing local SQL candidate.
+- [x] Consolidate independent ACL hardening and unexecuted preflight/verification expectations in the existing package.
+- [x] Preserve verified active import call paths; no app/financial/reservation changes.
+- [ ] Complete inventory/reversal actor and onboarding replacement — blocked on exact current source and proven caller/frozen-path compatibility.
+- [ ] Close analytics/context/service-reader stale-link consumers — blocked on current contracts, protected authority evidence and freeze approval where applicable.
+- [ ] Validate/apply — blocked on separately approved isolated checks, recovery and production execution; NOT READY, NOT APPLIED.

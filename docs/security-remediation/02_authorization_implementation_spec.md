@@ -1,53 +1,50 @@
-# Authorization implementation specification — BLOCKED, not executable
+# Task 1B — implemented subset and blocked boundaries
 
-This is the blocked remainder of the approved safe-partial plan, not an implemented authorization fix. Do not deploy pseudocode or substitute historical migrations for exact live function source. No new employee invitation, approval or onboarding system is proposed.
+**LOCAL SQL IMPLEMENTED; NOT READY; NOT APPLIED TO PRODUCTION.**
 
-## Current membership invariant
+Canonical candidate: `01_independent_acl.proposed.sql` (the existing filename is retained to avoid another report set). It now contains explicit membership/helper/category DDL followed by the independent ACL slice. This supersedes the earlier unconditional-gate draft in `docs/task-1b-security/`; do not concatenate or execute both candidates.
 
-For a verified authenticated identity U and business B:
+## Implemented authorization rules
 
-- Actual owner: `businesses.id = B AND businesses.owner_id = U`. Do not infer ownership from an anchor role or user-editable profile/metadata.
-- Nonowner: a current, legitimately authorized `business_users` row for `(B,U)` with `status = 'approved'`. A `user_businesses` anchor alone never establishes authority. Determine exact uniqueness constraints and conflicting/duplicate status behavior from live evidence; ambiguous memberships must fail closed rather than let any approved row override a revoked row.
-- Pending, rejected, revoked or missing membership denies a nonowner even while a stale anchor remains. Revocation must be consulted at authorization time; do not delete/backfill/reassign historical anchors as a substitute.
-- Keep existing protected platform-admin exceptions only where already intentional, using protected `user_roles` and server checks. Do not add an admin bypass to paths that lack one.
-- Preserve each path's existing role-sensitive permissions; being approved is not permission to manage imports or finances. Verify the canonical current membership role and allowed role vocabulary; a stale anchor cannot preserve a revoked management role.
-- An operational employee selected for sales attribution is not an authenticated identity or membership grant. Do not create login users, PINs or privileged roles for these records.
+- `businesses.owner_id` establishes ownership; membership-table OWNER labels do not.
+- `is_business_member(uuid,uuid)` checks actual owner or current approved `business_users`, never `user_businesses`. Conflicting approved/nonapproved duplicates deny a nonowner; the candidate also aborts if duplicate pairs already exist.
+- `is_active_business_actor(uuid,uuid)` uses that current membership check and retains its existing protected `user_roles.admin` exception. `is_business_member` does not gain an admin exception.
+- `can_manage_business_imports(uuid,uuid)` uses actual ownership or a currently approved `business_users.admin`, retaining its existing platform-admin exception. Nonowner OWNER rows abort preflight rather than silently removing potentially legitimate management access. Production's OWNER/EMPLOYEE CHECK means business admin creation is not introduced by this task.
+- New **RESTRICTIVE** INSERT/UPDATE gates AND with all existing permissive membership policies. Both duplicate INSERT paths remain subject to the same pending/EMPLOYEE rule; no broad new permissive policy grants approval.
+- Actual owners retain their own OWNER/approved insertion. Nonowners can only self-request EMPLOYEE/pending. Existing owner UPDATE paths can change employee status/role only within their business; user/business identifiers have no UPDATE grants. Nonowner OWNER assignment is prohibited.
+- Anchors can be written only by the actual owner for self or an already approved EMPLOYEE. They no longer independently authorize the replaced helpers.
+- Category restrictive ALL gate prevents raw-anchor permissive policies from authorizing a nonmember in USING and WITH CHECK. Existing global NULL-business categories and existing financial write gates remain unchanged.
+- Anonymous product table/column writes and reversal EXECUTE are removed with effective privilege postconditions. Signed-in/service product and reversal privileges are preserved exactly or the transaction aborts.
 
-## Prevent new self-authorization
+No membership data is repaired, approved, deleted, backfilled or synchronized. Approved-row provenance is still an unresolved trust prerequisite. Restrictive policies do not constrain a BYPASSRLS service client or postgres-owned DEFINER writer.
 
-Review all permissive and restrictive membership policies, grants, column privileges, triggers and SECURITY DEFINER writers together. Merely adding one restrictive-looking permissive policy leaves OR bypasses.
+## Verified repository workflows (static, not E2E)
 
-The intended change must prohibit self-assigned approved status, OWNER/management roles and arbitrary business anchors. Preserve verified actual-owner provisioning and existing approved records. Constrain identity/tenant fields against updates. Do not enable a new request or owner-approval API in this task. Exact existing permitted writes cannot be safely replaced until live owner-provisioning and membership writer definitions, protected ownership/role grants and caller ordering are captured.
+| Path | Evidence | Treatment |
+|---|---|---|
+| Import center/detail | `src/App.tsx` registers `/import` and `/import/:id` | No UI or route changes |
+| Receiving | `src/hooks/useImportReceiving.tsx` invokes confirmation/correction | RPC contracts unchanged |
+| Internal receipt mutations | `20260810130007...sql` confirmation/correction call canonical inventory using `v_caller := auth.uid()` and matching `p_user_id` | Caller propagation preserved; runtime unverified |
+| Atomic owner creation | `20260214205127...sql` creates business with caller owner_id, then own OWNER anchor, roles/profile | Owner fallback supports this ordering; DEFINER writer unchanged |
+| Legacy owner creation | `src/pages/CreateBusiness.tsx` inserts owned business then own OWNER/approved membership | Matching insertion remains allowed if reached; no active route found |
+| Progressive onboarding | `OnboardingDecision.tsx` calls create-business then complete-onboarding | No registered route found; complete-onboarding authorization change BLOCKED |
+| Join request | `JoinBusinessForm.tsx` inserts pending with free-text jobTitle as role | Existing CHECK mismatch; no active route found, so do not invent a new workflow or modify UI |
+| Approval/revocation | Existing owner RLS UPDATE policies permit role/status change; no app approval/revocation writer found | Gate constrains existing permission, does not add an endpoint |
 
-No membership synchronization trigger is included: removing stale links would change data and still miss bypassing service readers. No user/business IDs or current membership rows are rewritten.
+Operational sales-attribution employees do not require app accounts. No employee-login/invitation functionality is added.
 
-## Close every stale-link path
+## Exact dependent changes STOPPED
 
-Prepare exact replacements for `is_business_member`, `is_active_business_actor` and `can_manage_business_imports` only after obtaining current definitions, contracts, ACLs and protected dependencies. Inventory ALL active raw-anchor policies, views, functions and service readers, including transitive/dynamic callers. Apply current membership checks to both USING and WITH CHECK where applicable. This is not satisfied by three helper replacements alone.
+1. **Canonical inventory SECURITY DEFINER replacement:** local 19-argument source is available, but the previous production report explicitly states 145 registry entries versus 137 local SQL files and provides only fingerprints here. Complete current body/default/ACL parity and actual no-JWT caller inventory are not proven. Do not replace live financial logic from historical source. The unsafe no-JWT current_user branch remains in production; this subset does NOT fix it. No role/GUC/p_user_id bypass is proposed.
+2. **Authenticated target boundary:** require verified JWT-validating PostgREST ingress and restricted SQL access, caller `auth.uid()` bound to actor, supplied mismatch rejection (subject to caller compatibility), current membership/product tenant match, no-JWT rejection unless a separately proven restricted server path exists. No invented cron/service callers.
+3. **Complete onboarding replacement:** historical body updates onboarding state and inserts default notification settings including plan_limit_enabled. Exact current source and frozen-path impact are not proven; no function replacement or new billing behavior is included.
+4. **Analytics and all stale-link closure:** historical analytics helper includes a service-role branch, protected has_role_or_higher, raw anchors and approved members. Exact live contracts/consumers are not established by supplied findings. No silent replacement of server read authority. Other raw anchor consumers and views require approved evidence, not another unapproved discovery run.
+5. **Frozen get_user_business_context:** unchanged. Altering business selection/auth or existing admin/billing behavior needs the freeze review and explicit approval.
+6. **Service readers:** Retail IQ employees and three procurement webhook recipient readers use elevated raw-anchor reads. Their business/employee contracts are not assumed equivalent to application membership. Unchanged and BLOCKED for system-wide closure.
+7. **Reversal current-actor membership:** only EXECUTE ACL is changed. Exact live body is not preserved in the evidence package; its actor path and OWNER/lowercase mismatch remain BLOCKED for a separate explicit replacement. No reversal arithmetic is changed.
 
-Known repository candidates include inventory/products, categories, suppliers, supplier invoices/preferences, import tables/storage/PIN, analytics, `user_has_business_access`, `is_first_user_in_business` and onboarding. Treat existence in historical SQL as a candidate, not active production proof.
+## Review/application boundary
 
-`get_user_business_context` is frozen and feeds login/business selection and billing. No replacement is included. If it independently authorizes a stale link, remediation requires explicit freeze review and approval, not a silent contract change.
+The SQL is a deterministic **partial** transactional implementation, not an executable complete-system approval. No unconditional exception hides implemented DDL. Its duplicate/nonowner-OWNER/trigger and effective-ACL guards abort incompatible baselines. Existing API SELECT grants and DEFINER/service provisioning are retained. Unknown restrictive policies may still deny valid workflows; unrestricted trusted writers may still manufacture approval. The package is therefore NOT READY for application.
 
-Service-reader candidates: `retail-iq-api` `/employees`, `procurement-request-webhook`, `procurement-quote-webhook`, `procurement-order-confirmed-webhook`. Their service client bypasses RLS; helper changes will not filter these reads. Confirm what each record means before replacing employee exports or notification recipients. None is changed here; deployment is forbidden and their full active contracts are not proven.
-
-## Inventory caller authentication
-
-Canonical function contract candidate: `execute_inventory_transaction(uuid,uuid,uuid,text,integer,numeric,numeric,numeric,numeric,numeric,numeric,numeric,numeric,uuid,text,text,text,uuid,jsonb)` returning JSONB. Confirm exact live argument names/defaults, owner, ACLs, search_path and body before replacement. Do not drop/recreate it or invent an overload.
-
-Required signed-in path:
-
-1. Establish that the request entered through JWT-validating Supabase/PostgREST and that SQL principals cannot impersonate request identities. `auth.uid()` is useful behind this boundary, not independent proof against arbitrary SQL clients setting request GUCs.
-2. Bind the transaction actor to the verified caller, never to unchecked `p_user_id`; reject conflicting supplied identities using a reviewed compatibility rule. Preserve existing import callers that pass the same `auth.uid()`.
-3. Require current membership/actual owner or an existing protected platform-admin exception for `p_business_id`, and retain the product/business match.
-4. Missing identity fails closed unless a separately verified and approved trusted server path applies. Never trust SECURITY DEFINER `current_user`, a role-name setting, metadata, or a supplied actor/business UUID as proof.
-
-Trusted server path is **unresolved**: capture actual no-JWT consumers (cron, SQL principals, edge functions, external callers), their grants, ingress validation and actor/tenant authorization. A valid service-role JWT is elevated server authority, not an employee identity. Do not put the key in the browser, use it as a caller token, add a broad bypass, or silently break legitimate server jobs. Define and approve a restricted entry boundary only after this inventory. No such path is implemented in this proposal.
-
-## Exact replacement and compatibility requirements
-
-Capture complete old source; review complete new source; enforce exact baseline and exact resulting source/contract/ACLs in the same controlled transaction. A fingerprint, substring match or local timestamp is insufficient. Preserve row locks, atomic ledger insertion, quantity rules, weighted cost, adjustments, financial fields, source/reference provenance and return values.
-
-Keep import confirmation, correction, closure, PIN and landed-cost logic unchanged. Verify their transitive authorization and signed-in calls. Fresh isolated runtime validation needs separate approval; current work performs no runtime tests or probes.
-
-**Status:** self-authorization and revocation are not fixed by the independent ACL proposal; complete membership and inventory replacement remains BLOCKED.
+Before any application: reconcile exact live baseline, protected ownership/role writer authority, approved-row provenance and full authorization closure; obtain isolated validation and execution approval. No source fingerprint alone constitutes that evidence. Preserve all financial formulas, row locks, provenance, optional defaults and return shapes during the eventual explicit whole-function replacement.

@@ -1,3 +1,5 @@
+> Superseded implementation candidate: `docs/security-remediation/01_independent_acl.proposed.sql`. Current status/blocked scope: `docs/security-remediation/04_impact_and_approvals.md`. Do not execute or concatenate the older gated SQL with the successor. Historical evidence below is retained, not refreshed.
+
 # Task 1B-Security — preparation-only authorization proposal
 
 **Decision: NOT READY for execution. Prepared for review only.**

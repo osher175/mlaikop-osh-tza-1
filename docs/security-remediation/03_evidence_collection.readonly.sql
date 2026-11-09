@@ -1,4 +1,6 @@
--- PREPARED ONLY; no queries executed. Separate SELECT-only approval required.
+-- TASK 1B PREPARED PREFLIGHT + VERIFICATION; no queries executed.
+-- Sections 1-2 below are the preflight; section 3 is post-candidate verification.
+-- Separate SELECT-only approval required. No mutation RPC calls, SET ROLE or spoofed claims.
 -- Catalog/source outputs require restricted handling; do not publish raw bodies
 -- if legacy definitions contain credentials. No auth.users data or tokens read.
 SELECT current_database(),current_user,session_user,version();
@@ -93,3 +95,83 @@ SELECT count(*) AS owners_without_anchors FROM public.businesses b WHERE NOT EXI
 -- Catalog counts are NOT approval provenance, JWT verification, runtime RLS
 -- tests or external-consumer evidence. Hosted ingress/config, cron callers,
 -- membership authority and frozen context dependencies still need review.
+
+-- SECTION 2: effective membership privileges and combined policy behavior.
+-- Preflight expected: known broad writes. After candidate: table writes FALSE,
+-- INSERT column allowlist user_id/business_id/role (+ status for business_users),
+-- UPDATE role (+ status for business_users); anon all writes FALSE.
+SELECT r.role_name,c.oid::regclass AS relation,cap.capability,
+  has_table_privilege(r.role_name,c.oid,cap.capability) AS allowed
+FROM pg_class c CROSS JOIN (VALUES ('anon'),('authenticated'),('service_role')) r(role_name)
+CROSS JOIN (VALUES ('SELECT'),('INSERT'),('UPDATE'),('DELETE'),('TRUNCATE'),('REFERENCES'),('TRIGGER')) cap(capability)
+WHERE c.oid IN ('public.user_businesses'::regclass,'public.business_users'::regclass);
+SELECT r.role_name,a.attrelid::regclass AS relation,a.attname,cap.capability,
+  has_column_privilege(r.role_name,a.attrelid,a.attname,cap.capability) AS allowed
+FROM pg_attribute a CROSS JOIN (VALUES ('anon'),('authenticated'),('service_role')) r(role_name)
+CROSS JOIN (VALUES ('INSERT'),('UPDATE'),('REFERENCES')) cap(capability)
+WHERE a.attrelid IN ('public.user_businesses'::regclass,'public.business_users'::regclass)
+  AND a.attnum>0 AND NOT a.attisdropped;
+-- Evaluate (OR permissive applicable policies) AND (AND restrictive applicable policies).
+-- Do not mistake merely counting policies for testing RLS.
+SELECT schemaname,tablename,cmd,permissive,policyname,roles,qual,with_check
+FROM pg_policies WHERE schemaname='public' AND tablename IN
+ ('user_businesses','business_users','categories','products','inventory_actions','import_orders','import_receipts')
+ORDER BY tablename,cmd,permissive,policyname;
+
+-- SECTION 3: unexecuted post-candidate verification. Read-only helper checks;
+-- privileged catalog readers do NOT prove JWT authentication or real RLS access.
+-- Aggregate only; no user IDs or personal information returned.
+-- Actual owner membership and imports: expected zero denied owners.
+SELECT count(*) FILTER (WHERE public.is_business_member(id,owner_id) IS NOT TRUE) AS denied_owners,
+ count(*) FILTER (WHERE public.can_manage_business_imports(id,owner_id) IS NOT TRUE) AS denied_import_owners
+FROM public.businesses;
+-- Approved users: expected zero denied current approved pairs.
+SELECT count(*) FILTER (WHERE public.is_business_member(bu.business_id,bu.user_id) IS NOT TRUE) AS denied_approved
+FROM public.business_users bu WHERE bu.status='approved' AND NOT EXISTS (
+ SELECT 1 FROM public.business_users other WHERE other.business_id=bu.business_id AND other.user_id=bu.user_id
+ AND other.status IS DISTINCT FROM 'approved');
+-- Pending/rejected/revoked/nonapproved nonowners: expected zero allowed.
+-- Production CHECK may not support literal 'revoked'; all nonapproved states deny.
+SELECT bu.status,count(*) FILTER (WHERE public.is_business_member(bu.business_id,bu.user_id) IS TRUE) AS wrongly_allowed
+FROM public.business_users bu JOIN public.businesses b ON b.id=bu.business_id
+WHERE bu.user_id IS DISTINCT FROM b.owner_id AND bu.status IS DISTINCT FROM 'approved' GROUP BY bu.status;
+-- Retained stale anchors: expected zero membership/import allowances.
+SELECT count(*) FILTER (WHERE public.is_business_member(ub.business_id,ub.user_id) IS TRUE) AS stale_member_allowed,
+ count(*) FILTER (WHERE public.can_manage_business_imports(ub.business_id,ub.user_id) IS TRUE
+ AND NOT EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id=ub.user_id AND ur.role='admin'::public.user_role)) AS stale_import_allowed
+FROM public.user_businesses ub JOIN public.businesses b ON b.id=ub.business_id
+WHERE ub.user_id IS DISTINCT FROM b.owner_id AND NOT EXISTS (
+ SELECT 1 FROM public.business_users bu WHERE bu.business_id=ub.business_id AND bu.user_id=ub.user_id AND bu.status='approved');
+-- Cross-business helper isolation: only nonowner/nonapproved pairs; expected zero allowed.
+SELECT count(*) FILTER (WHERE public.is_business_member(b.id,u.user_id) IS TRUE) AS cross_business_allowed
+FROM public.businesses b CROSS JOIN (SELECT DISTINCT user_id FROM public.business_users) u
+WHERE u.user_id IS DISTINCT FROM b.owner_id AND NOT EXISTS (
+ SELECT 1 FROM public.business_users bu WHERE bu.business_id=b.id AND bu.user_id=u.user_id AND bu.status='approved');
+-- Anonymous reversal expected false; authenticated/service must match captured preflight.
+SELECT r.role_name,has_function_privilege(r.role_name,'public.reverse_inventory_action(uuid)','EXECUTE') AS allowed
+FROM (VALUES ('anon'),('authenticated'),('service_role')) r(role_name);
+-- Gate inventory expected five rows, permissive=false, correct command/roles/expressions.
+SELECT tablename,policyname,permissive,cmd,roles,qual,with_check FROM pg_policies
+WHERE schemaname='public' AND policyname IN ('t1b_anchor_insert_gate','t1b_anchor_update_gate',
+ 't1b_member_insert_gate','t1b_member_update_gate','t1b_category_membership_gate');
+-- No replaced helper may contain a raw anchor reference. Expected zero rows.
+SELECT p.oid::regprocedure FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+WHERE n.nspname='public' AND p.proname IN ('is_business_member','is_active_business_actor','can_manage_business_imports')
+AND p.prosrc ILIKE '%user_businesses%';
+-- Remaining consumers are blockers, NOT expected to disappear from this partial candidate.
+SELECT p.oid::regprocedure AS unresolved_consumer FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+WHERE n.nspname='public' AND p.prokind='f' AND p.prosrc ILIKE '%user_businesses%';
+
+-- MANUAL ISOLATED ACCEPTANCE MATRIX (prepared expectations, NOT SQL execution):
+-- owner/current approved: inventory and permitted categories read/write succeed;
+-- pending/rejected/revoked + retained anchor: tenant rows inaccessible;
+-- self approved/OWNER INSERT or employee OWNER UPDATE: denied;
+-- membership user_id/business_id UPDATE: denied by effective column ACL;
+-- other-business rows: denied; analytics may still be BLOCKED by unchanged helpers;
+-- genuine signed-in receipt confirm/correct: nested canonical actor equals auth.uid,
+-- exact financial/quantity/provenance results retained; currently BLOCKED/unexecuted;
+-- forged p_user_id/missing verified identity: expected deny after future inventory fix;
+-- current candidate does NOT satisfy that expectation, mark BLOCKED;
+-- reversal anon EXECUTE: denied; reversal stale-original-actor: BLOCKED;
+-- protected platform admin exceptions: identical to baseline on replaced helpers.
+-- Do not invoke mutating inventory/import/onboarding/reversal RPCs in this file.

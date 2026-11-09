@@ -1,73 +1,62 @@
-# Security remediation — local partial implementation report
+# Task 1B — local implementation report
 
-**Decision: BLOCKED for complete authorization remediation. Independent ACL SQL prepared, not applied or runtime-validated.**
+**Overall: BLOCKED / NOT READY. NOT APPLIED TO PRODUCTION.**
 
-## Exact local files
+## Files actually changed
 
-- `docs/security-remediation/01_independent_acl.proposed.sql` — isolated transactional product/reversal ACL candidate.
-- `docs/security-remediation/02_authorization_implementation_spec.md` — blocked membership/revocation/caller replacement specification.
-- `docs/security-remediation/03_evidence_collection.readonly.sql` — unexecuted catalog and aggregate preflight/post-ACL queries.
-- `docs/security-remediation/04_impact_and_approvals.md` — this report.
-- `roadmap.md` — local completion and execution blockers.
-- `AGENTS.md` — keep independent ACL proposals separate from blocked authorization replacements.
-- `.lovable/plan/security-remediation-local-preparation-2026-11-09.md` — approved archived plan; platform removed the prior `.lovable/plan.md`.
+- `docs/security-remediation/01_independent_acl.proposed.sql` — now the single consolidated deterministic SQL candidate: actual helper definitions, restrictive membership/category policies, table/column ACLs and independent product/reversal ACL postconditions.
+- `docs/security-remediation/02_authorization_implementation_spec.md` — implemented rules, static caller compatibility and exact stopped dependencies.
+- `docs/security-remediation/03_evidence_collection.readonly.sql` — preflight (sections 1–2) and post-candidate verification (section 3), including expected results; NOT EXECUTED.
+- `docs/security-remediation/04_impact_and_approvals.md` — this consolidated report.
+- `docs/task-1b-security/04_impact_compatibility_rollback_report.md` — successor pointer only; previous evidence preserved unchanged below it.
+- `roadmap.md`, `AGENTS.md` — bounded implementation status/architecture rule.
 
-No application, edge-function, existing migration or Task 1A file changes. No SQL queries, runtime tests, write probes, builds, production data changes, deployment, publishing or push commands executed. A local Git commit saves these proposals as required by the environment; it is not a production migration or deployment.
+No application code change was necessary for the verified active import call paths. No managed migration, import RPC, financial formula, quantity, cost, movement, receipt/order, reservation, UI, billing or auth-guard file was modified.
 
-## What the independent SQL would do
+## Authorization before → proposed after
 
-Revoke PUBLIC/anon product INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES and TRIGGER table privileges, plus INSERT/UPDATE/REFERENCES column grants. Revoke PUBLIC/anon reversal EXECUTE. Product SELECT is not revoked; existing RLS is unchanged. No global default ACL edits, membership changes, new grants or DML.
+Before: caller-owned anchors and duplicate self-INSERT policies can supply approved/OWNER authority; raw anchors continue to authorize revoked users. Inventory's no-JWT DEFINER owner branch is unsafe. Reversal grants EXECUTE to anon.
 
-Before/after checks compare effective authenticated and service-role product privileges and reversal execution. If privileges inherited via PUBLIC would be lost, the transaction aborts rather than restoring broad grants. Inherited anon capabilities also abort. The reversal body is not replaced. An exclusive product-table lock is requested with a five-second timeout; a separately approved maintenance window is needed. This is a conditional review candidate, not approved production SQL. Other anonymous RPC write routes remain outside this ACL slice and must be inventoried before any system-wide denial claim.
+After **the proposed subset, if separately validated/applied**: actual ownership or current approved membership governs three replaced helpers; anchors have no independent authority there. Restrictive AND gates constrain all duplicate permissive writes; identity/tenant UPDATE grants are removed. Nonowner OWNER grants are denied. Category tenant access additionally requires current membership. Anonymous product writes and reversal execution are revoked. Existing owner and protected admin branches are retained only where already present.
 
-## Approved users retain access — scope of claim
+Unchanged unresolved paths still prevent complete authorization closure: canonical inventory no-JWT bypass, current-actor reversal authorization, onboarding, analytics, frozen context and elevated raw-anchor service readers. Nothing has changed in production.
 
-The ACL slice does not change membership rows, identifiers, RLS predicates, owner fields or role assignments. It is designed to preserve effective authenticated/service privileges exactly, or abort. Existing signed-in access therefore remains governed by the existing policies, including their unresolved defects. This is **not** evidence that current approvals were legitimate.
+## Acceptance evidence
 
-The blocked full implementation must preserve actual owner fallback and legitimate current approval, with the same existing role-sensitive scope. An operational sales-attribution employee is not an authenticated user. Duplicate/conflicting membership states and approval provenance require live evidence before implementing a predicate.
+PASS below means **local static implementation/scope only**, never an executed security test or production result.
 
-## Revoked users lose access — not yet implemented
-
-They do **not** reliably lose access from this ACL proposal alone. Existing raw-anchor and helper paths may authorize retained `user_businesses` rows. No claim of revoked-user denial, owner-role hardening or completed membership security is made.
-
-The required successor must consult current approval for every nonowner across active RLS, RPCs, views and service-side readers. Pending/rejected/revoked/missing approval must deny access despite retained anchors, including stale privileged roles. Existing rows must not be rewritten. Frozen `get_user_business_context` and protected ownership/admin writers are unresolved dependencies, not implicit permission to modify billing/login behavior.
-
-## Inventory and import compatibility assessment
-
-| Surface | Local action | Assessment |
+| Criterion | Status | Evidence / limitation |
 |---|---|---|
-| Canonical 19-argument inventory function | Unchanged | Historical source identifies unsafe no-JWT DEFINER-owner bypass; full replacement blocked on live body and trusted callers. |
-| Quantity, cost, financial/provenance ledger | Unchanged | No stock/cost semantics or historical data altered. |
-| Import confirmation/correction | Unchanged | Repository calls pass authenticated identity into canonical inventory; actual live dependency and runtime behavior unverified. |
-| Import closure/landed costs/PIN | Unchanged | Contract/body not modified; transitive membership dependency still requires review. |
-| Inventory reversal | EXECUTE ACL proposal only | Signed-in/service execution preserved or transaction aborts; original-user, owner and timing logic untouched. Existing operational bugs are not fixed. |
-| Login/business ownership/billing/admin exceptions | Unchanged | No frozen files/functions edited; effects of a future membership replacement require separate freeze review. |
-| Task 1A/reservations | Unchanged | Foundation proposal preserved; positive reservations not activated. |
+| No arbitrary self-created approved membership | PASS (local DDL); BLOCKED end-to-end | Restrictive INSERT requires self EMPLOYEE/pending or actual self-owner; trusted DEFINER writers/provenance still unresolved |
+| No OWNER escalation via API membership tables | PASS (local DDL); BLOCKED system-wide | Actual-owner predicates and restricted UPDATE columns; nonowner existing OWNER precondition aborts rather than data repair |
+| No stale anchor independent access | BLOCKED overall | Three helpers/category gate implemented; analytics/onboarding/context/service consumers not replaced |
+| Legitimate owner/current approved access | PASS (static helper rules); BLOCKED runtime | Owner fallback survives atomic creation ordering; imported actor propagation unchanged; no tests run |
+| Cross-business enforcement | BLOCKED overall | Replaced helpers and category gate check tenant; remaining consumers and RLS runtime not validated |
+| Import confirm/correct compatibility | BLOCKED runtime/canonical replacement | Static calls use matching auth.uid/p_user_id; exact current inventory body/callers not proven; both import RPCs unchanged |
+| Anonymous reversal EXECUTE denied | PASS (local SQL); BLOCKED runtime | REVOKE PUBLIC/anon plus effective privilege assertions; authenticated/service parity required |
+| Inventory DEFINER trusts no unverified identity | BLOCKED | Unsafe live no-JWT branch explicitly not replaced; exact source and no-JWT callers absent |
+| No financial/historical/reservation changes | PASS (scope) | DDL/ACL only; no executed DML or changed financial/reversal body |
+| No production operations/tests/pushes | PASS | No Supabase tools, SQL, tests, builds, exploit probes, deploy or publish invoked |
+| No local commit | BLOCKED environment constraint | Environment mandates committing request edits despite uploaded no-commit instruction; disclose actual commit in closing report |
 
-Compatibility is a static assessment of proposed scope, **not a PASS or end-to-end verification**. Removing unsafe anonymous access is intentional. Product ACL and reversal postconditions do not prove complete caller authentication or role security.
+## Preserved legitimate workflows
 
-## Remaining blockers and required approvals
+`src/App.tsx` actively routes import center/detail; receiving hook calls existing confirmation/correction. Their calls propagate authenticated caller and keep all arguments/provenance. Actual-owner business creation and own OWNER/approved legacy payload remain compatible with proposed predicates. Legacy create/join/onboarding pages are not registered in the active route tree; no invitation or employee-login feature is invented. The join form's job-title/role CHECK mismatch is a separate existing defect, not silently changed.
 
-1. **Live dependency evidence:** separately approve SELECT-only collection of exact active functions, policies, views, triggers, grants, ownership writers and membership consumers. Historical definitions and prior fingerprints are insufficient; no current production inspection occurred here.
-2. **Current membership authority:** establish legitimate existing approvals, uniqueness/conflicting statuses, writer boundaries, actual owner provisioning and protected admin/ownership grants. No new invitation or employee approval system is required or included.
-3. **Revocation closure:** enumerate and replace every helper/raw-anchor authorization path and service reader. Review frozen context separately if affected; no automatic frozen changes.
-4. **Trusted inventory callers:** verify JWT-validating ingress, restricted SQL access, server/cron callers and explicit no-JWT execution boundary. No GUC/current_user/role-label bypass proposed.
-5. **Exact source replacement:** capture canonical full definitions/contracts/ACLs; review exact old/new source and preserve inventory/import contracts before writing executable replacements.
-6. **Isolated validation approval:** separately authorize identity, cross-business and import checks, including approved, pending, rejected, revoked, forged OWNER, stale anchor, conflicting status, mismatched actor and trusted server cases. No test scripts or runtime probes were run.
-7. **Controlled production execution:** obtain backup/recovery evidence, a maintenance window, refreshed preflight and explicit migration approval. Deploy/publish remain prohibited.
+Existing permissive SELECT policies remain. Restrictive gates require an existing applicable permissive policy; they do not manufacture a new permission. Service-role SELECT/provisioning remains unchanged. Unknown trusted writers, inheritance and protected owner/admin write access require validation before application. Operational attribution employees remain independent from app login identities.
 
-## Prepared acceptance cases — not executed
+## Exact blockers, not another discovery task
 
-- anon has no effective product table/column write capability or reversal EXECUTE; authenticated/service capabilities equal pre-change values.
-- Actual owner and existing legitimate approved user retain only their authorized scope.
-- Nonowner pending/rejected/revoked/missing membership is denied with and without a stale anchor; stale OWNER role cannot override current approval/role.
-- Self-supplied OWNER/approved/business IDs do not create authority; tenant or user IDs cannot be moved through permissive write paths.
-- Missing JWT, spoofed actor/GUC/role labels fail closed; approved trusted server boundary enforces tenant/actor authorization.
-- Signed-in import confirmation/correction/closure retain quantities, financial/provenance ledger and return contracts; no duplicate application.
-- Frozen billing/login and Task 1A remain untouched.
+1. Exact current inventory whole-body/default/ACL match and proven no-JWT caller boundaries; known import nested signed-in calls alone do not prove server compatibility.
+2. Exact onboarding body and frozen-path implications; historical notification defaults include plan-limit settings.
+3. Full stale-link closure in analytics, elevated exports/webhook readers and frozen business context; preserving an unverified service branch is not proof of authorization.
+4. Authoritative existing approval provenance and protected businesses.owner_id/user_roles writers; supplied zero-stale counts do not prove legitimacy.
+5. Actual RLS/JWT/tenant/import isolated execution checks and approved application/recovery window. Prepared read-only queries do not exercise real signed-in access.
+
+No further production diagnostics were performed. The candidate is a reviewable implemented subset, NOT READY to apply. No automatic removal of gates, runtime writes, new employee workflow or trusted caller bypass is authorized.
 
 ## Recovery
 
-Capture exact ACLs and definitions securely before approved execution. Pre-COMMIT exceptions are intended to abort the transaction; this has not been exercised. After execution prefer a reviewed forward-fix or read-only maintenance. Do not automatically restore anonymous writes, arbitrary self-membership or the DEFINER-owner bypass. Never restore privileges with GRANT ALL. No unsafe rollback script or data rewrite is supplied.
+Capture exact live policy/ACL/function baseline securely before separately approved application. Transaction exceptions must roll back proposed DDL; untested. Never restore arbitrary membership approval, anonymous write/EXECUTE grants or DEFINER-owner bypass automatically. Prefer reviewed forward-fix/read-only maintenance. No historical rollback or inventory data rewrite is supplied.
 
-**Stop point reached:** safe-partial local documents prepared; complete authorization remediation and production execution remain blocked on the approvals above.
+**NOT APPLIED TO PRODUCTION.**
