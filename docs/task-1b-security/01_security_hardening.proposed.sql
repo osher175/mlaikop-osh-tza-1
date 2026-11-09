@@ -6,6 +6,17 @@ BEGIN;
 SET LOCAL lock_timeout = '5s';
 SET LOCAL statement_timeout = '60s';
 
+-- NON-EXECUTABLE REVIEW DRAFT: this unconditional gate precedes all DDL.
+-- It is not a session setting, caller claim or permission bypass. Do not
+-- delete it merely to apply the partial ACL/policy candidate below.
+-- A separately reviewed successor must include the full approved membership
+-- lifecycle, stale-link enforcement and a verified inventory caller boundary.
+DO $readiness_gate$
+BEGIN
+  RAISE EXCEPTION 'BLOCKED: approval/revocation lifecycle, all stale-link consumers and inventory caller authentication unresolved';
+END;
+$readiness_gate$;
+
 DO $baseline$
 DECLARE
   v_inventory regprocedure := to_regprocedure('public.execute_inventory_transaction(uuid,uuid,uuid,text,integer,numeric,numeric,numeric,numeric,numeric,numeric,numeric,numeric,uuid,text,text,text,uuid,jsonb)');
@@ -57,6 +68,11 @@ DROP POLICY business_users_insert_policy ON public.business_users;
 DROP POLICY business_users_update_policy ON public.business_users;
 
 -- user_businesses is a trusted membership anchor, not a join-request table.
+-- CONDITIONAL POLICY CANDIDATE ONLY, NOT an approved provisioning model.
+-- Owner self-provisioning and prior approved employee linkage need confirmation
+-- against exact live provisioning RPCs and external owner-approval callers.
+-- These write predicates do NOT revoke access through an existing stale link.
+-- Do not apply until every direct/helper stale-link read path is addressed.
 -- Owners may provision themselves, or another user already approved in THEIR
 -- business, with the exact approved role. No self-selected arbitrary tenant.
 CREATE POLICY t1bs_user_businesses_owner_insert ON public.user_businesses
@@ -142,31 +158,66 @@ BEGIN
 END;
 $product_columns$;
 
--- Exact minimal textual changes to the fingerprint-checked live canonical
--- body. No rolling cost, stock lock, financial, import or ledger logic rewrite.
--- current_setting('role') identifies the PostgREST caller role; current_user
--- identifies the DEFINER owner and must NEVER authorize the caller here.
-DO $inventory_auth$
-DECLARE
-  v_oid regprocedure := to_regprocedure('public.execute_inventory_transaction(uuid,uuid,uuid,text,integer,numeric,numeric,numeric,numeric,numeric,numeric,numeric,numeric,uuid,text,text,text,uuid,jsonb)');
-  v_body text;
-  v_old_role text := E'IF current_setting(''role'', true) = ''service_role''\n       OR current_user IN (''service_role'', ''postgres'', ''supabase_admin'') THEN';
-  v_old_actor text := E'IF v_caller IS NOT NULL\n     AND NOT public.is_active_business_actor(p_business_id, v_caller) THEN';
-BEGIN
-  v_body := pg_get_functiondef(v_oid);
-  IF strpos(v_body,v_old_role)=0 OR strpos(v_body,v_old_actor)=0 THEN
-    RAISE EXCEPTION 'Inventory authorization block drift';
-  END IF;
-  v_body := replace(v_body,v_old_role,
-    'IF current_setting(''role'', true) = ''service_role'' THEN');
-  v_body := replace(v_body,v_old_actor,
-    'IF public.is_active_business_actor(p_business_id, v_actor) IS DISTINCT FROM true THEN');
-  EXECUTE v_body;
-END;
-$inventory_auth$;
+-- INVENTORY AUTHORIZATION REPLACEMENT WITHDRAWN, BLOCKED.
+-- Neither SECURITY DEFINER current_user nor current_setting('role') alone
+-- authenticates an API caller. No function definition is replaced in this draft.
+-- Required successor boundary: a trusted Supabase/PostgREST JWT-validated
+-- request carrying auth.uid(), authorized against owner / CURRENT approved
+-- employee / protected platform-admin identity, with p_user_id bound to caller.
+-- JWT/session settings are trusted ONLY behind that verified API boundary;
+-- they are not proof against arbitrary SQL clients that can set GUCs.
+-- No-JWT callers must fail closed unless a distinct trusted execution path
+-- (restricted SQL principal or server handler) is actually verified and approved.
+-- Existing import confirmation/correction supply auth.uid() and call the
+-- canonical RPC; preserve signature, financial/lock/ledger logic and ACLs.
+-- A full-source replacement proposal requires exact canonical old source,
+-- exactly-one authorization block match, expected resulting full source,
+-- unchanged pg_proc identity/owner/security/argument defaults/ACLs, and
+-- post-definition checks inside one transaction. MD5 + strpos is insufficient.
+-- Do not reconstruct the full live body from local migration timestamps.
 REVOKE EXECUTE ON FUNCTION public.reverse_inventory_action(uuid) FROM PUBLIC, anon;
 -- Other reviewed inventory/import RPCs already deny anon/PUBLIC; preserve
 -- existing authenticated/service EXECUTE. Do not add billing gates here.
+
+-- Additional postconditions for a future approved successor, not evidence
+-- that this deliberately gated draft has been executed or tested.
+-- No broad grant restoration: assert the complete allowed column set and all
+-- forbidden table capabilities, including inherited/PUBLIC permissions.
+DO $complete_acl_and_policies$
+DECLARE v_role text; v_relation regclass; v_cap text;
+BEGIN
+  FOREACH v_role IN ARRAY ARRAY['anon','authenticated'] LOOP
+    FOREACH v_relation IN ARRAY ARRAY['public.user_businesses'::regclass,'public.business_users'::regclass] LOOP
+      FOREACH v_cap IN ARRAY ARRAY['INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER'] LOOP
+        IF has_table_privilege(v_role,v_relation,v_cap) THEN
+          RAISE EXCEPTION 'Unexpected effective membership table capability: %, %, %',v_role,v_relation,v_cap;
+        END IF;
+      END LOOP;
+    END LOOP;
+  END LOOP;
+  IF EXISTS (SELECT 1 FROM pg_attribute a
+    WHERE a.attrelid IN ('public.user_businesses'::regclass,'public.business_users'::regclass)
+      AND a.attnum>0 AND NOT a.attisdropped
+      AND (has_column_privilege('authenticated',a.attrelid,a.attname,'INSERT')
+        IS DISTINCT FROM (a.attname IN ('user_id','business_id','role')
+          OR (a.attrelid='public.business_users'::regclass AND a.attname='status'))
+        OR has_column_privilege('authenticated',a.attrelid,a.attname,'UPDATE')
+        IS DISTINCT FROM (a.attname='role'
+          OR (a.attrelid='public.business_users'::regclass AND a.attname='status')))) THEN
+    RAISE EXCEPTION 'Effective membership columns differ from exact candidate allowlist';
+  END IF;
+  IF (SELECT count(*) FROM pg_policy WHERE polrelid IN
+    ('public.user_businesses'::regclass,'public.business_users'::regclass)
+    AND polcmd IN ('a','w','d','*')) <> 4
+    OR EXISTS (SELECT 1 FROM pg_policy WHERE polrelid IN
+      ('public.user_businesses'::regclass,'public.business_users'::regclass)
+      AND polcmd IN ('a','w','d','*') AND polname NOT IN
+        ('t1bs_user_businesses_owner_insert','t1bs_user_businesses_owner_update',
+         't1bs_business_users_request_or_owner_insert','t1bs_business_users_owner_update')) THEN
+    RAISE EXCEPTION 'Alternative membership write policy remains';
+  END IF;
+END;
+$complete_acl_and_policies$;
 
 -- Fail closed if inherited or future-column membership writes defeat grants.
 DO $effective_acl$

@@ -41,8 +41,9 @@ role; no `id`. Creation provenance remains unresolved.
    not RLS alone; do not alter shared default ACLs in this remediation.
 5. Canonical inventory RPC's no-JWT branch trusts `current_user=postgres` inside
    SECURITY DEFINER. That describes its owner, not its caller. anon EXECUTE is
-   currently false. Proposed change allows no-JWT only for effective API role
-   `service_role` and verifies the attributed actor's business authorization.
+   currently false. The earlier role-setting-only replacement is WITHDRAWN:
+   neither `current_user` nor `current_setting('role')` alone proves identity.
+   No inventory body replacement remains in the corrected gated proposal.
 
 Task 1B counts: zero approved members missing anchors, zero owners missing
 anchors, zero nonowner anchors without approved membership, zero ledger and
@@ -93,9 +94,13 @@ not user-approved changes to the operating model.
   preserve authenticated and service product permissions and all product RLS.
 - Revoke anon/PUBLIC EXECUTE on reversal (body unchanged). The other four
   reviewed inventory/import RPCs already deny anon and retain their ACLs.
-- Replace ONLY two authorization expressions in the canonical inventory RPC,
-  under exact live-definition fingerprint and textual-match checks. No import
-  receipt/correction/closure, cost, locking or ledger algorithm rewrite.
+- Withdraw the inventory dynamic replacement. The old MD5/strpos checks did
+  not establish caller authentication or exact whole-source/contract retention.
+- Add an unconditional readiness exception BEFORE all proposed DDL. The
+  remaining policies/ACLs are review candidates only; removing this exception
+  is not an authorized way to apply an incomplete security remediation.
+- Add exact column-allowlist, forbidden table-capability and complete write-policy
+  postconditions; inspect inherited/PUBLIC ACLs and all permissive OR paths.
 
 No new table, trigger, role, RPC signature or reservation object is introduced.
 No billing gate is added or removed. Existing platform-admin helper branches
@@ -105,7 +110,7 @@ are preserved; employee identities are not login roles.
 
 | Live RPC | anon / authenticated / service EXECUTE | Decision |
 |---|---|---|
-| Canonical 19-argument inventory RPC | false / true / true | Narrow caller-role + actor validation only. |
+| Canonical 19-argument inventory RPC | false / true / true | Replacement withdrawn; authentication remains BLOCKED. |
 | `reverse_inventory_action(uuid)` | true / true / true | Remove anon/PUBLIC EXECUTE; keep body and valid signed-in callers. |
 | `import_receipt_confirm(uuid)` | false / true / true | No changes. |
 | `import_receipt_correct(uuid,integer,text)` | false / true / true | No changes. |
@@ -118,11 +123,11 @@ Confirmation `eb00d0ce3ba1413517e8f303fad0ae2c`; correction
 `98474083a1cdc12dae4a1c7de6155313`; reversal
 `2a3abac94664ba19a7ef2b2dc7de9946`. Refresh before execution.
 
-Signed-in import calls use auth.uid and should retain behavior under inspection.
-Service calls must attribute a nonnull, authorized business actor. SQL Editor,
-cron or scripts relying on effective postgres with no JWT will now be denied;
-their existence and legitimate service identities need confirmation. Static
-inspection does not prove runtime compatibility. No business RPC was invoked.
+Existing import definitions supply auth.uid and invoke the canonical RPC.
+This is observed function-source behavior, not verified caller authentication
+or runtime compatibility. This review does not change any no-JWT caller's
+behavior, because the inventory replacement has been withdrawn. SQL Editor,
+cron, service and external RPC callers require evidence before any change.
 
 ## Separate operational defects — NOT changed here
 
@@ -188,6 +193,127 @@ tests, builds, write probes, UI/branding changes, Task 1A edits, reservation
 activation, deployment or publishing. Execution remains separately gated.
 
 Repository-save limitation: the environment requires a local Git commit for
-edited project files despite the requested no-commit boundary. No agent push
-is performed; platform repository synchronization is outside this report's
-no-deployment guarantee. A commit is not migration execution or publishing.
+these document edits despite the requested no-commit boundary. Any final local
+commit must be explicitly disclosed; no agent push or deployment is performed.
+A repository save is not production SQL execution or publishing.
+
+## Final hardening review corrections
+
+**Status remains NOT READY; the SQL draft now fails unconditionally before DDL.**
+Only the four existing documents were corrected. No new production queries were
+executed: this upload does not authorize even SELECT execution in production.
+Task 1B tool results needed for new evidence are no longer retained in the
+current sandbox. The previous in-chat definitions/counts remain cited evidence,
+not a refreshed or complete production lifecycle audit.
+
+### Lifecycle evidence matrix
+
+| Stage | Repository evidence | Actual production evidence available | Decision |
+|---|---|---|---|
+| Business creation | OnboardingDecision calls create_business_for_new_user; historical RPC creates owner anchor and updates profile/roles | RPC existence was catalogued, complete current body was not captured in the prior displayed lifecycle evidence | BLOCKED: obtain exact live body, nested calls and deployed entry point |
+| Owner membership | Legacy CreateBusiness inserts OWNER/approved for actual owner; historical atomic RPC inserts own anchor | businesses.owner_id fallback appears in actual membership helpers; zero owners missing anchors | Candidate preserves owner fallback; provisioning contract still BLOCKED |
+| Employee request | JoinBusinessForm inserts pending with free-text jobTitle as role | Production business_users CHECK accepts OWNER/EMPLOYEE, INSERT policies only checked user_id | Existing mismatch identified; do not silently reinterpret job titles or activate a new model |
+| Employee approval | No approval writer found in repository application/functions; historical backfill is not ongoing approval | No membership-table user triggers observed; complete live membership-writing RPC inventory missing | BLOCKED: authority, actor, transitions, role assignment and anchor ordering unknown |
+| Employee revocation | No complete revocation/anchor-removal caller found | Existing helpers accept user_businesses regardless of pending/rejected/missing approval | FAIL for stale-link defense; BLOCKED on approved remediation/lifecycle evidence |
+
+A valid owner-approved employee must retain access; a pending/revoked nonowner
+must fail authorization even if an anchor remains. Current INSERT/UPDATE
+policies cannot provide this invariant: they do not run on subsequent reads.
+A precondition that finds zero stale links today also does not enforce it tomorrow.
+
+### Stale-link dependency inventory and required closure
+
+**Verified from Task 1B displayed production definitions:**
+- is_business_member(uuid,uuid) accepts raw anchor or actual owner.
+- is_active_business_actor(uuid,uuid) accepts approved business_users, raw
+  anchor, actual owner or protected platform admin.
+- can_manage_business_imports(uuid,uuid) accepts OWNER/admin anchor, approved
+  manager, actual owner or protected platform admin.
+- Product SELECT/INSERT/UPDATE/DELETE and inventory_actions SELECT/INSERT
+  policies use is_business_member, sometimes plus can_business_write.
+- Actual user_businesses INSERT/UPDATE policies allow self-link creation and
+  owner update; actual business_users duplicates allow self-selected status/role.
+
+**Repository/history candidates, NOT a verified current production inventory:**
+- complete_business_onboarding, get_user_business_context (frozen),
+  user_has_business_access, is_first_user_in_business, can_access_business_analytics
+  and any wrappers discovered by recursive live definition review.
+- Raw-anchor policies historically on categories (categories_select/insert/
+  update/delete and older manage-category policy), suppliers (older manage-
+  supplier policy), supplier_invoices (member read), supplier_preferences and
+  category_supplier_preferences. Later migrations may supersede these;
+  catalog inventory, not file timestamps, must identify the active set.
+- Import tables/storage policies call can_manage_business_imports; all must be
+  included transitively even where no raw anchor occurs in their own predicate.
+- useBusinessOnboardingStatus reads anchors; Retail IQ employees and three
+  procurement webhook recipient readers use service-side raw anchors.
+
+The corrected preflight enumerates ALL public functions, policies, views,
+materialized views, rules and catalog dependency edges containing these links
+or helpers. Text searches/pg_depend cannot prove dynamic/nested/external call
+completeness: recursively inspect exact bodies and deployed callers. **Complete
+live helper/RLS inventory remains BLOCKED; no claim of exhaustive production
+closure is made.**
+
+Required successor design must either enforce current owner/approved membership
+on every raw/helper read path or implement a verified atomic lifecycle that
+prevents any stale link from authorizing, including trusted provisioning paths.
+Just changing the three helpers misses direct raw-anchor policies and service
+readers. A sync trigger alone cannot be invented before proving approval and
+revocation semantics. Do not alter protected platform-admin behavior or frozen
+get_user_business_context without separate freeze review/approval.
+
+### Inventory caller boundary — what is proven vs proposed
+
+**Proven statically from earlier actual definitions:** anon lacks EXECUTE on
+canonical inventory and three import mutations; reversal permits anon EXECUTE
+but rejects missing auth.uid. All five are DEFINER owned by postgres. Existing
+import confirmation/correction propagate auth.uid and canonical calls. No runtime
+identity or tenant rejection has been proven.
+
+**Required, not yet proven:** Supabase/PostgREST validates caller JWT and sets
+request identity; canonical signed-in operation must bind p_user_id to auth.uid
+and authorize that user via actual owner, CURRENT approved membership or
+existing protected system-admin identity. auth.uid/request claims are trusted
+only behind an established JWT-validating ingress and restricted SQL access;
+a caller-controlled SQL GUC is not an independent identity proof.
+
+For no-JWT server jobs, require a separately verified, restricted execution
+principal or trusted server handler with explicit business/actor authorization.
+Do not implement a broad service-role-name/GUC bypass. Missing evidence about
+such callers means BLOCKED, not permission to disable them or trust their role
+label. Existing import business logic and authenticated signature must survive.
+
+### Safe replacement requirements
+
+The earlier dynamic replacement is removed, not merely relabelled safe.
+Before any successor changes inventory authentication:
+1. Capture exact canonical pg_get_functiondef text and full pg_proc identity,
+   owner, security mode, argument names/types/defaults, return type, search_path
+   and ACL. Fingerprint is a drift signal, not exact-source proof.
+2. Approve exact old/new source text, require each replaced block occurs once,
+   and reject any source mismatch before DDL. No broad global replace.
+3. Lock the maintenance/application window against concurrent definition changes;
+   take an immediate pre-change comparison, execute in one transaction, and
+   compare exact resulting source and all unchanged contract/privilege fields.
+4. Use CREATE OR REPLACE on the same signature, never DROP/recreate, overload,
+   GRANT ALL or default-based permission reconstruction. Assert effective anon,
+   authenticated and service EXECUTE after replacement.
+5. Roll back on any mismatch; run separately approved isolated identity/tenant/
+   import compatibility checks before controlled production application.
+
+### Remaining controlled-execution gates
+
+- Separate authorization to read production; exact current lifecycle writers,
+  owner approval/revocation entry points and all stale-link consumers.
+- Explicit intended employee role/status model; free-text job title is not an
+  authorization role. No silent frontend/business-model changes.
+- Revocation invariant across helpers, raw RLS, views and service consumers.
+- Verified inventory ingress and any trusted no-JWT execution path.
+- Exact-source/contract/ACL replacement proposal and isolated validation.
+- Backup/restore readiness, freeze approval where a shared frozen path is needed,
+  refreshed compatibility review and explicit execution approval.
+
+**No READY claim is permitted while any of approval, revocation or caller
+identity is unresolved.** The policy candidate does not satisfy complete
+employee security; the unconditional SQL gate prevents accidental application.
