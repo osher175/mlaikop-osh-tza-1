@@ -9,8 +9,8 @@
 
 # Security remediation — local only
 
-- [ ] Prepare independently safe anonymous product/reversal ACL proposal outside migration history.
-- [ ] Prepare current-membership and inventory-caller implementation specification with unresolved dependencies explicitly blocked.
-- [ ] Prepare read-only evidence queries and compatibility/approval report; do not execute SQL or runtime tests.
+- [x] Prepare independently safe anonymous product/reversal ACL proposal outside migration history.
+- [x] Prepare current-membership and inventory-caller implementation specification with unresolved dependencies explicitly blocked.
+- [x] Prepare read-only evidence queries and compatibility/approval report; do not execute SQL or runtime tests.
 - [ ] Complete membership/inventory authorization replacement — blocked on exact live dependencies and verified trusted caller boundaries.
 - [ ] Execute or validate against production — blocked pending separate approval; no deployment or publishing.
