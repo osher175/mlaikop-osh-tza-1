@@ -2,6 +2,28 @@
 -- Run only after explicit approval, with catalog visibility (prefer postgres).
 -- Save ALL result sets securely as baseline before any approved migration.
 -- No JWT/session mutation, SET ROLE, business RPC execution or SQL writes.
+-- Statically checked against repository history; NOT production-verified.
+-- Run dependency inventory below FIRST. Stop before dependent statements if
+-- any relation/column is absent. user_businesses creation DDL is missing from
+-- local migrations; types.ts and later ALTER/helpers are NOT creation proof.
+SELECT d.relation, d.column_name, to_regclass(d.relation) AS relation_oid,
+       EXISTS (SELECT 1 FROM pg_attribute a
+         WHERE a.attrelid = to_regclass(d.relation) AND a.attname = d.column_name
+           AND a.attnum > 0 AND NOT a.attisdropped) AS column_exists
+FROM (VALUES
+  ('public.products', 'id'), ('public.products', 'quantity'),
+  ('public.products', 'cost'), ('public.products', 'price'), ('public.products', 'business_id'),
+  ('public.inventory_actions', 'id'), ('public.inventory_actions', 'product_id'),
+  ('public.inventory_actions', 'business_id'), ('public.business_users', 'status'),
+  ('public.business_users', 'user_id'), ('public.business_users', 'business_id'),
+  ('public.business_users', 'role'), ('public.user_businesses', 'user_id'),
+  ('public.user_businesses', 'business_id'), ('public.user_businesses', 'role'),
+  ('public.businesses', 'id'), ('public.businesses', 'owner_id'), ('public.profiles', 'id'),
+  ('public.user_roles', 'user_id'), ('public.user_roles', 'role')
+) d(relation, column_name);
+-- Supabase API roles must also exist before has_*_privilege(name, ...) calls.
+SELECT name, EXISTS (SELECT 1 FROM pg_roles WHERE rolname = name) AS role_exists
+FROM (VALUES ('anon'), ('authenticated'), ('service_role')) r(name);
 
 SELECT version() AS postgres_version, current_user AS inspection_role,
        now() AS captured_at, current_database() AS database_name;
@@ -39,20 +61,21 @@ FROM pg_constraint c
 WHERE c.conrelid IN ('public.products'::regclass, 'public.inventory_actions'::regclass,
                     'public.business_users'::regclass, 'public.user_businesses'::regclass,
                     'public.profiles'::regclass)
-ORDER BY relation::text, c.conname;
+ORDER BY c.conrelid::regclass::text, c.conname;
 
 -- Incoming product references: identify existing CASCADE/SET NULL behavior.
 SELECT c.conrelid::regclass AS child_relation, c.conname,
        pg_get_constraintdef(c.oid) AS definition
 FROM pg_constraint c
 WHERE c.contype = 'f' AND c.confrelid = 'public.products'::regclass
-ORDER BY child_relation::text, c.conname;
+ORDER BY c.conrelid::regclass::text, c.conname;
 
 SELECT c.oid::regclass AS relation, c.relrowsecurity, c.relforcerowsecurity,
        pg_get_userbyid(c.relowner) AS owner, c.relacl
 FROM pg_class c
 WHERE c.oid IN ('public.products'::regclass, 'public.inventory_actions'::regclass,
-                'public.business_users'::regclass, 'public.user_businesses'::regclass);
+                'public.business_users'::regclass, 'public.user_businesses'::regclass,
+                'public.businesses'::regclass);
 
 -- Effective privileges, including inheritance/PUBLIC (not merely visibility-
 -- filtered information_schema.role_table_grants).
@@ -73,6 +96,16 @@ FROM pg_roles r CROSS JOIN pg_attribute a
 WHERE r.rolname IN ('anon', 'authenticated', 'service_role')
   AND a.attrelid = 'public.products'::regclass AND a.attnum > 0 AND NOT a.attisdropped
 ORDER BY r.rolname, a.attnum;
+-- Explicit direct ACL and inherited role inventory for proposed ACL narrowing.
+SELECT CASE WHEN x.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(x.grantee) END AS grantee,
+       x.privilege_type, x.is_grantable
+FROM pg_class c CROSS JOIN LATERAL aclexplode(c.relacl) x
+WHERE c.oid = 'public.products'::regclass;
+SELECT r.rolname AS member_role, parent.rolname AS inherited_role,
+       pg_has_role(r.oid, parent.oid, 'USAGE') AS currently_inherited
+FROM pg_roles r CROSS JOIN pg_roles parent
+WHERE r.rolname IN ('anon', 'authenticated') AND r.oid <> parent.oid
+  AND pg_has_role(r.oid, parent.oid, 'MEMBER');
 
 SELECT t.tgrelid::regclass AS relation, t.tgname, t.tgenabled,
        pg_get_triggerdef(t.oid) AS definition,
@@ -98,7 +131,7 @@ SELECT p.oid::regprocedure AS signature, p.prosecdef, p.proconfig,
        pg_get_functiondef(p.oid) AS definition
 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public' AND p.proname IN
-  ('is_business_member', 'is_active_business_actor', 'can_business_write',
+  ('is_business_member', 'is_active_business_actor', 'can_manage_business_imports', 'can_business_write',
    'execute_inventory_transaction', 'reverse_inventory_action', 'reports_aggregate',
    'import_receipt_confirm', 'import_receipt_correct', 'import_order_close')
 ORDER BY p.proname, p.oid;
@@ -135,4 +168,4 @@ SELECT p.oid::regprocedure AS signature, pg_get_userbyid(p.proowner) AS owner,
 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public' AND p.prosecdef AND p.prokind = 'f'
   AND (p.prosrc ILIKE '%products%' OR p.prosrc ILIKE '%execute_inventory_transaction%')
-ORDER BY signature::text;
+ORDER BY p.oid::regprocedure::text;

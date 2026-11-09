@@ -37,9 +37,55 @@ ALTER TABLE public.products
 COMMENT ON COLUMN public.products.reserved_quantity IS
   'Aggregate reserved physical units; initially zero. Client writes forbidden. Future atomic reservation RPC must maintain sum of reservation remaining_quantity under product lock. Available = quantity - reserved_quantity.';
 
--- Protect ONLY the new balance column; this is NOT legacy stock-write lockdown.
--- SECURITY INVOKER is essential: current_user must be the effective SQL role,
--- not the owner of this trigger function. No caller-controlled custom GUC.
+-- Protect ONLY the new balance column; keep legacy quantity/cost writes.
+-- PostgreSQL has no column DENY: a table-level INSERT/UPDATE grant overrides
+-- a column REVOKE. Narrow direct authenticated grants to existing columns,
+-- preserving each column's effective pre-change permissions. Fail closed on
+-- PUBLIC, anon, or inherited write access rather than changing shared roles.
+DO $reserved_acl$
+DECLARE
+  v_insert_columns text;
+  v_update_columns text;
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_attribute a
+    WHERE a.attrelid = 'public.products'::regclass
+      AND a.attname = 'reserved_quantity' AND NOT a.attisdropped
+      AND (has_column_privilege('anon', a.attrelid, a.attname, 'INSERT')
+        OR has_column_privilege('anon', a.attrelid, a.attname, 'UPDATE'))
+  ) THEN
+    RAISE EXCEPTION 'Unapproved anon/PUBLIC product write access: reconcile ACLs first';
+  END IF;
+  SELECT string_agg(format('%I', a.attname), ', ' ORDER BY a.attnum)
+    FILTER (WHERE has_column_privilege('authenticated', a.attrelid, a.attname, 'INSERT')),
+    string_agg(format('%I', a.attname), ', ' ORDER BY a.attnum)
+    FILTER (WHERE has_column_privilege('authenticated', a.attrelid, a.attname, 'UPDATE'))
+  INTO v_insert_columns, v_update_columns
+  FROM pg_attribute a
+  WHERE a.attrelid = 'public.products'::regclass AND a.attnum > 0
+    AND NOT a.attisdropped AND a.attname <> 'reserved_quantity';
+
+  REVOKE INSERT, UPDATE ON public.products FROM authenticated;
+  REVOKE INSERT (reserved_quantity), UPDATE (reserved_quantity)
+    ON public.products FROM PUBLIC, anon, authenticated;
+  IF v_insert_columns IS NOT NULL THEN
+    EXECUTE format('GRANT INSERT (%s) ON public.products TO authenticated', v_insert_columns);
+  END IF;
+  IF v_update_columns IS NOT NULL THEN
+    EXECUTE format('GRANT UPDATE (%s) ON public.products TO authenticated', v_update_columns);
+  END IF;
+  IF has_column_privilege('authenticated', 'public.products', 'reserved_quantity', 'INSERT')
+     OR has_column_privilege('authenticated', 'public.products', 'reserved_quantity', 'UPDATE') THEN
+    RAISE EXCEPTION 'Inherited/PUBLIC reserved write access remains: reconcile shared grants first';
+  END IF;
+END;
+$reserved_acl$;
+
+-- Dormant trusted-writer boundary: NO role, including service_role or an
+-- existing SECURITY DEFINER owner, may change reserved stock in Task 1A.
+-- No role-name allowlist, JWT claim, custom GUC or client-callable bypass.
+-- A separately approved atomic-writer cutover must replace this boundary;
+-- legacy import/reversal writers leave reserved unchanged and still pass.
 CREATE FUNCTION public.task1a_guard_reserved_column()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path = public
 AS $function$
@@ -51,11 +97,8 @@ BEGIN
       RETURN NEW;
     END IF;
   END IF;
-  IF current_user NOT IN ('postgres', 'supabase_admin', 'service_role') THEN
-    RAISE EXCEPTION 'Reserved stock is writable only by trusted inventory operations'
-      USING ERRCODE = '42501';
-  END IF;
-  RETURN NEW;
+  RAISE EXCEPTION 'Reservation balance changes are disabled until approved atomic-writer cutover'
+    USING ERRCODE = '42501';
 END;
 $function$;
 REVOKE ALL ON FUNCTION public.task1a_guard_reserved_column() FROM PUBLIC, anon, authenticated;
@@ -162,6 +205,9 @@ CREATE FUNCTION public.task1a_reservation_operation_audit()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path = public
 AS $function$
 BEGIN
+  IF TG_OP = 'INSERT' THEN
+    RAISE EXCEPTION 'Reservation operation creation is disabled in Task 1A' USING ERRCODE = '42501';
+  END IF;
   IF TG_OP <> 'INSERT' THEN
     RAISE EXCEPTION 'Reservation operation provenance is immutable';
   END IF;
@@ -239,6 +285,9 @@ BEGIN
   IF TG_OP = 'DELETE' THEN
     RAISE EXCEPTION 'Reservation history cannot be deleted; release remaining balance instead';
   END IF;
+  IF TG_OP = 'INSERT' THEN
+    RAISE EXCEPTION 'Reservation creation is disabled in Task 1A' USING ERRCODE = '42501';
+  END IF;
   v_actor := NEW.updated_by;
   IF auth.uid() IS NOT NULL AND v_actor IS DISTINCT FROM auth.uid() THEN
     RAISE EXCEPTION 'Reservation actor must be authenticated caller' USING ERRCODE = '42501';
@@ -294,8 +343,9 @@ COMMENT ON TABLE public.inventory_reservation_operations IS
   'Tenant-bound reservation source identity. External reference is provenance only, not a claim of relational integrity with any future domain table.';
 COMMENT ON TABLE public.inventory_reservations IS
   'Dormant additive reservation model. Partial fulfillment and release allowed; original = remaining + fulfilled + released. Future atomic RPCs and event ledger required before activation.';
--- No grants/revokes on existing products, inventory_actions or existing RPCs.
--- Reserved-column trigger compensates for existing table-level product grants.
--- No aggregate synchronization trigger: reservation writes remain operationally
--- disabled until the separately approved atomic mutation/cutover phase.
+-- Existing product INSERT/UPDATE ACL shape is narrowed as described above;
+-- effective permissions on every legacy column must remain identical.
+-- No changes to inventory_actions grants, existing policies or RPC ACLs/bodies.
+-- No aggregate sync trigger: new reservation/source inserts and reserved
+-- balance changes are hard-blocked until separately approved writer cutover.
 COMMIT;

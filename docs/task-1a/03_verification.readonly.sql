@@ -50,14 +50,14 @@ FROM pg_roles r CROSS JOIN pg_attribute a
 WHERE r.rolname IN ('anon', 'authenticated') AND a.attnum > 0 AND NOT a.attisdropped
   AND a.attrelid IN ('public.employees'::regclass,
     'public.inventory_reservation_operations'::regclass, 'public.inventory_reservations'::regclass)
-ORDER BY relation::text, r.rolname, a.attnum;
+ORDER BY a.attrelid::regclass::text, r.rolname, a.attnum;
 
 SELECT c.conrelid::regclass AS relation, c.conname, c.convalidated,
        pg_get_constraintdef(c.oid) AS definition FROM pg_constraint c
 WHERE c.conrelid IN ('public.employees'::regclass,
   'public.inventory_reservation_operations'::regclass, 'public.inventory_reservations'::regclass)
   OR (c.conrelid = 'public.products'::regclass AND c.conname LIKE 'products_task1a_%')
-ORDER BY relation::text, c.conname;
+ORDER BY c.conrelid::regclass::text, c.conname;
 SELECT schemaname, tablename, indexname, indexdef FROM pg_indexes
 WHERE schemaname = 'public' AND tablename IN
   ('employees', 'inventory_reservation_operations', 'inventory_reservations');
@@ -73,9 +73,39 @@ SELECT t.tgrelid::regclass AS relation, t.tgname, t.tgenabled,
        has_function_privilege('anon', p.oid, 'EXECUTE') AS anon_execute,
        has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated_execute
 FROM pg_trigger t JOIN pg_proc p ON p.oid = t.tgfoid
-WHERE t.tgname LIKE 'trg_task1a_%' ORDER BY t.tgname;
--- All five Task 1A functions SECURITY INVOKER, locked search_path; anon and
+WHERE t.tgname LIKE 'trg_task1a_%'
+  AND t.tgrelid IN ('public.products'::regclass, 'public.employees'::regclass,
+    'public.inventory_reservation_operations'::regclass, 'public.inventory_reservations'::regclass)
+ORDER BY t.tgname;
+-- Exactly FOUR Task 1A trigger functions and FOUR triggers (one per function).
+-- All four Task 1A functions SECURITY INVOKER, locked search_path; anon and
 -- authenticated direct EXECUTE false. Trigger execution still works normally.
+
+-- Counts must each equal 4; inspect definitions above, not counts alone.
+SELECT (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'public' AND p.proname IN
+          ('task1a_guard_reserved_column', 'task1a_employee_audit',
+           'task1a_reservation_operation_audit', 'task1a_reservation_validate')
+          AND p.prorettype = 'trigger'::regtype) AS new_trigger_functions,
+       (SELECT count(*) FROM pg_trigger t WHERE NOT t.tgisinternal
+        AND t.tgname IN ('trg_task1a_reserved_column', 'trg_task1a_employee_audit',
+          'trg_task1a_reservation_operation_audit', 'trg_task1a_reservation_validate')
+        AND t.tgrelid IN ('public.products'::regclass, 'public.employees'::regclass,
+          'public.inventory_reservation_operations'::regclass,
+          'public.inventory_reservations'::regclass)) AS new_triggers;
+
+-- PostgreSQL effective checks, including PUBLIC/inherited/table grants.
+-- anon/authenticated reserved INSERT and UPDATE must all be FALSE.
+-- Compare all legacy column permissions with preflight: must be unchanged.
+SELECT r.rolname, a.attname,
+       has_column_privilege(r.oid, a.attrelid, a.attname, 'INSERT') AS can_insert,
+       has_column_privilege(r.oid, a.attrelid, a.attname, 'UPDATE') AS can_update
+FROM pg_roles r CROSS JOIN pg_attribute a
+WHERE r.rolname IN ('anon', 'authenticated', 'service_role')
+  AND a.attrelid = 'public.products'::regclass AND a.attnum > 0 AND NOT a.attisdropped
+ORDER BY r.rolname, a.attnum;
+-- service_role may retain ACL privileges but trigger forbids balance changes;
+-- new operation/reservation INSERTs are blocked for every trigger-bound writer.
 
 SELECT p.oid::regprocedure AS signature, p.prosecdef, p.proconfig,
        pg_get_userbyid(p.proowner) AS owner, p.proacl,
@@ -84,11 +114,12 @@ SELECT p.oid::regprocedure AS signature, p.prosecdef, p.proconfig,
        has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated_execute
 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public' AND p.proname IN
-  ('is_business_member', 'is_active_business_actor', 'can_business_write',
+  ('is_business_member', 'is_active_business_actor', 'can_manage_business_imports', 'can_business_write',
    'execute_inventory_transaction', 'reverse_inventory_action', 'reports_aggregate',
    'import_receipt_confirm', 'import_receipt_correct', 'import_order_close')
 ORDER BY p.proname, p.oid;
 -- Exact definitions, ownership, ACLs must match preflight; no existing RPC changed.
+-- These SELECTs cannot prove actual client/import behavior; approved validation remains required.
 
 SELECT count(*) AS reservation_product_tenant_mismatches
 FROM public.inventory_reservations r JOIN public.products p ON p.id = r.product_id
