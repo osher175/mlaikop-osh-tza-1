@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { BusinessDiagnosticPanel } from '@/components/dev/BusinessDiagnosticPanel';
 import { BillingReadOnlyBanner } from '@/components/billing/BillingReadOnlyBanner';
 import mlaikoLogo from '@/assets/mlaiko-logo-full.png';
+import { isV2UiEnabled } from '@/lib/v2/uiFlag';
+import { AppShellV2 } from '@/components/v2/AppShellV2';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -26,9 +28,19 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
   const isSidebarDrawer = useIsSidebarDrawer();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [v2Enabled] = useState(isV2UiEnabled);
 
   if (alreadyMounted) {
     return <>{children}</>;
+  }
+
+  // V2 shell (opt-in flag, default off). AppShellV2 renders BillingReadOnlyBanner unchanged.
+  if (v2Enabled) {
+    return (
+      <MainLayoutMountedContext.Provider value={true}>
+        <AppShellV2>{children}</AppShellV2>
+      </MainLayoutMountedContext.Provider>
+    );
   }
 
   return (

@@ -15,3 +15,6 @@
 - [ ] Complete inventory/reversal actor and onboarding replacement — blocked on exact current source and proven caller/frozen-path compatibility.
 - [ ] Close analytics/context/service-reader stale-link consumers — blocked on current contracts, protected authority evidence and freeze approval where applicable.
 - [ ] Validate/apply — blocked on separately approved isolated checks, recovery and production execution; NOT READY, NOT APPLIED.
+
+- [ ] V2 Employees screen — reference design received (Mlaiko_V2_Employee_Performance_Dashboard.png); later phase, not Phase 0
+- [x] V2 Phase 0 — shared design + app shell behind flag (awaiting review)
