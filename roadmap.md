@@ -6,3 +6,11 @@
 - [x] Document impact, authorization, compatibility, rollback and remaining blockers.
 - [x] Statically review prepared deliverables; no tests, database execution or publishing.
 - [ ] Apply migration — blocked pending explicit approval, refreshed preflight and compatibility/security validation.
+
+# Security remediation — local only
+
+- [ ] Prepare independently safe anonymous product/reversal ACL proposal outside migration history.
+- [ ] Prepare current-membership and inventory-caller implementation specification with unresolved dependencies explicitly blocked.
+- [ ] Prepare read-only evidence queries and compatibility/approval report; do not execute SQL or runtime tests.
+- [ ] Complete membership/inventory authorization replacement — blocked on exact live dependencies and verified trusted caller boundaries.
+- [ ] Execute or validate against production — blocked pending separate approval; no deployment or publishing.
