@@ -11,7 +11,7 @@ import { InsightsPanel } from '@/components/dashboard/InsightsPanel';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRealtimeDashboard } from '@/hooks/useRealtimeDashboard';
-import { isV2UiEnabled } from '@/lib/v2/uiFlag';
+import { useV2UiEnabled } from '@/lib/v2/uiFlag';
 
 /* Phase A3: the two recharts-based cards are the only consumers of the
    charting library on this screen. Loading them lazily keeps recharts out of
@@ -38,7 +38,7 @@ const DashboardV2 = lazy(() => import('@/components/v2/dashboard/DashboardV2'));
 
 export const Dashboard: React.FC = () => {
   useRealtimeDashboard();
-  const [v2] = React.useState(isV2UiEnabled);
+  const v2 = useV2UiEnabled();
 
   if (v2) {
     return (
