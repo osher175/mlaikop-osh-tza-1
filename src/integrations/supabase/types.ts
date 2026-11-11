@@ -640,6 +640,51 @@ export type Database = {
         }
         Relationships: []
       }
+      employees: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string
+          display_name: string
+          id: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by?: string
+          display_name: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_cost_adjustments: {
         Row: {
           actor_user_id: string | null
@@ -1651,6 +1696,7 @@ export type Database = {
           reverses_action_id: string | null
           sale_total_ils: number | null
           sale_unit_ils: number | null
+          salesperson_employee_id: string | null
           source: string | null
           supplier_id: string | null
           timestamp: string | null
@@ -1679,6 +1725,7 @@ export type Database = {
           reverses_action_id?: string | null
           sale_total_ils?: number | null
           sale_unit_ils?: number | null
+          salesperson_employee_id?: string | null
           source?: string | null
           supplier_id?: string | null
           timestamp?: string | null
@@ -1707,6 +1754,7 @@ export type Database = {
           reverses_action_id?: string | null
           sale_total_ils?: number | null
           sale_unit_ils?: number | null
+          salesperson_employee_id?: string | null
           source?: string | null
           supplier_id?: string | null
           timestamp?: string | null
@@ -1740,6 +1788,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inventory_actions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_actions_salesperson_employee_fkey"
+            columns: ["business_id", "salesperson_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["business_id", "id"]
           },
           {
             foreignKeyName: "inventory_actions_supplier_id_fkey"
@@ -2676,6 +2731,366 @@ export type Database = {
           },
         ]
       }
+      purchase_order_events: {
+        Row: {
+          business_id: string
+          created_at: string
+          detail: Json
+          employee_id: string | null
+          event_type: string
+          id: string
+          purchase_order_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          detail?: Json
+          employee_id?: string | null
+          event_type: string
+          id?: string
+          purchase_order_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          detail?: Json
+          employee_id?: string | null
+          event_type?: string
+          id?: string
+          purchase_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_events_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_order_lines: {
+        Row: {
+          agreed_unit_cost: number | null
+          barcode: string | null
+          brand: string | null
+          business_id: string
+          description: string | null
+          id: string
+          load_index: string | null
+          model: string | null
+          ordered_qty: number
+          product_id: string | null
+          purchase_order_id: string
+          received_qty: number
+          size_label: string | null
+          speed_rating: string | null
+          supplier_sku: string | null
+        }
+        Insert: {
+          agreed_unit_cost?: number | null
+          barcode?: string | null
+          brand?: string | null
+          business_id: string
+          description?: string | null
+          id?: string
+          load_index?: string | null
+          model?: string | null
+          ordered_qty: number
+          product_id?: string | null
+          purchase_order_id: string
+          received_qty?: number
+          size_label?: string | null
+          speed_rating?: string | null
+          supplier_sku?: string | null
+        }
+        Update: {
+          agreed_unit_cost?: number | null
+          barcode?: string | null
+          brand?: string | null
+          business_id?: string
+          description?: string | null
+          id?: string
+          load_index?: string | null
+          model?: string | null
+          ordered_qty?: number
+          product_id?: string | null
+          purchase_order_id?: string
+          received_qty?: number
+          size_label?: string | null
+          speed_rating?: string | null
+          supplier_sku?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_lines_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          business_id: string
+          close_reason: string | null
+          completion: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          created_by: string
+          expected_on: string | null
+          id: string
+          idempotency_key: string
+          last_request_key: string | null
+          notes: string | null
+          order_number: string | null
+          ordered_on: string
+          ordering_employee_id: string | null
+          status: string
+          supplier_id: string | null
+          supplier_reference: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          business_id: string
+          close_reason?: string | null
+          completion?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string
+          expected_on?: string | null
+          id?: string
+          idempotency_key: string
+          last_request_key?: string | null
+          notes?: string | null
+          order_number?: string | null
+          ordered_on?: string
+          ordering_employee_id?: string | null
+          status?: string
+          supplier_id?: string | null
+          supplier_reference?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          business_id?: string
+          close_reason?: string | null
+          completion?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string
+          expected_on?: string | null
+          id?: string
+          idempotency_key?: string
+          last_request_key?: string | null
+          notes?: string | null
+          order_number?: string | null
+          ordered_on?: string
+          ordering_employee_id?: string | null
+          status?: string
+          supplier_id?: string | null
+          supplier_reference?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_ordering_employee_id_fkey"
+            columns: ["ordering_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_receipt_lines: {
+        Row: {
+          actual_unit_cost: number | null
+          agreed_unit_cost: number | null
+          business_id: string
+          cost_ack_at: string | null
+          cost_ack_employee_id: string | null
+          cost_reason: string | null
+          id: string
+          product_id: string
+          purchase_order_line_id: string
+          quantity: number
+          receipt_id: string
+        }
+        Insert: {
+          actual_unit_cost?: number | null
+          agreed_unit_cost?: number | null
+          business_id: string
+          cost_ack_at?: string | null
+          cost_ack_employee_id?: string | null
+          cost_reason?: string | null
+          id?: string
+          product_id: string
+          purchase_order_line_id: string
+          quantity: number
+          receipt_id: string
+        }
+        Update: {
+          actual_unit_cost?: number | null
+          agreed_unit_cost?: number | null
+          business_id?: string
+          cost_ack_at?: string | null
+          cost_ack_employee_id?: string | null
+          cost_reason?: string | null
+          id?: string
+          product_id?: string
+          purchase_order_line_id?: string
+          quantity?: number
+          receipt_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_receipt_lines_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipt_lines_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipt_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipt_lines_purchase_order_line_id_fkey"
+            columns: ["purchase_order_line_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipt_lines_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_receipts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_receipts: {
+        Row: {
+          business_id: string
+          id: string
+          idempotency_key: string
+          purchase_order_id: string
+          received_at: string
+          receiving_employee_id: string
+        }
+        Insert: {
+          business_id: string
+          id?: string
+          idempotency_key: string
+          purchase_order_id: string
+          received_at?: string
+          receiving_employee_id: string
+        }
+        Update: {
+          business_id?: string
+          id?: string
+          idempotency_key?: string
+          purchase_order_id?: string
+          received_at?: string
+          receiving_employee_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_receipts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipts_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipts_receiving_employee_id_fkey"
+            columns: ["receiving_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recent_activity: {
         Row: {
           action_type: string
@@ -2772,6 +3187,170 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "suppliers_safe"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      sale_lines: {
+        Row: {
+          axle: string
+          business_id: string
+          id: string
+          inventory_action_id: string
+          line_cost_ex_vat_ils: number | null
+          line_revenue_gross_ils: number
+          line_revenue_net_ils: number
+          line_vat_ils: number
+          position: number
+          product_id: string
+          quantity: number
+          transaction_id: string
+          unit_cost_ils: number | null
+          unit_price_gross_ils: number
+          vat_rate: number
+        }
+        Insert: {
+          axle?: string
+          business_id: string
+          id?: string
+          inventory_action_id: string
+          line_cost_ex_vat_ils?: number | null
+          line_revenue_gross_ils: number
+          line_revenue_net_ils: number
+          line_vat_ils: number
+          position: number
+          product_id: string
+          quantity: number
+          transaction_id: string
+          unit_cost_ils?: number | null
+          unit_price_gross_ils: number
+          vat_rate: number
+        }
+        Update: {
+          axle?: string
+          business_id?: string
+          id?: string
+          inventory_action_id?: string
+          line_cost_ex_vat_ils?: number | null
+          line_revenue_gross_ils?: number
+          line_revenue_net_ils?: number
+          line_vat_ils?: number
+          position?: number
+          product_id?: string
+          quantity?: number
+          transaction_id?: string
+          unit_cost_ils?: number | null
+          unit_price_gross_ils?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_lines_action_fkey"
+            columns: ["business_id", "inventory_action_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_actions"
+            referencedColumns: ["business_id", "id"]
+          },
+          {
+            foreignKeyName: "sale_lines_product_fkey"
+            columns: ["business_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["business_id", "id"]
+          },
+          {
+            foreignKeyName: "sale_lines_transaction_fkey"
+            columns: ["business_id", "transaction_id"]
+            isOneToOne: false
+            referencedRelation: "sale_transactions"
+            referencedColumns: ["business_id", "id"]
+          },
+        ]
+      }
+      sale_transactions: {
+        Row: {
+          business_id: string
+          cost_known_lines: number
+          created_by: string
+          currency: string
+          id: string
+          idempotency_key: string
+          known_cost_ex_vat_ils: number | null
+          line_count: number
+          notes: string | null
+          revenue_gross_ils: number
+          revenue_net_ils: number
+          reversed_at: string | null
+          reversed_by: string | null
+          salesperson_employee_id: string | null
+          sold_at: string
+          status: string
+          units_total: number
+          vat_amount_ils: number
+          vat_rate: number
+        }
+        Insert: {
+          business_id: string
+          cost_known_lines: number
+          created_by: string
+          currency?: string
+          id?: string
+          idempotency_key: string
+          known_cost_ex_vat_ils?: number | null
+          line_count: number
+          notes?: string | null
+          revenue_gross_ils: number
+          revenue_net_ils: number
+          reversed_at?: string | null
+          reversed_by?: string | null
+          salesperson_employee_id?: string | null
+          sold_at?: string
+          status?: string
+          units_total: number
+          vat_amount_ils: number
+          vat_rate: number
+        }
+        Update: {
+          business_id?: string
+          cost_known_lines?: number
+          created_by?: string
+          currency?: string
+          id?: string
+          idempotency_key?: string
+          known_cost_ex_vat_ils?: number | null
+          line_count?: number
+          notes?: string | null
+          revenue_gross_ils?: number
+          revenue_net_ils?: number
+          reversed_at?: string | null
+          reversed_by?: string | null
+          salesperson_employee_id?: string | null
+          sold_at?: string
+          status?: string
+          units_total?: number
+          vat_amount_ils?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_transactions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_transactions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_transactions_salesperson_fkey"
+            columns: ["business_id", "salesperson_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["business_id", "id"]
           },
         ]
       }
@@ -4170,6 +4749,16 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: boolean
       }
+      complete_quick_sale: {
+        Args: {
+          p_business_id: string
+          p_idempotency_key: string
+          p_lines: Json
+          p_notes: string
+          p_salesperson_employee_id: string
+        }
+        Returns: Json
+      }
       create_brand_if_missing: {
         Args: { p_business_id: string; p_name: string; p_tier?: string }
         Returns: string
@@ -4657,6 +5246,17 @@ export type Database = {
         Args: { p_provider: string; p_provider_status: string }
         Returns: string
       }
+      post_purchase_receipt: {
+        Args: {
+          p_business_id: string
+          p_idempotency_key: string
+          p_lines: Json
+          p_order_id: string
+          p_receiving_employee_id: string
+          p_update_current_cost?: boolean
+        }
+        Returns: Json
+      }
       products_needing_notifications: {
         Args: {
           p_business_id: string
@@ -4687,6 +5287,27 @@ export type Database = {
       }
       require_premium: { Args: { p_business_id: string }; Returns: boolean }
       reverse_inventory_action: { Args: { p_action_id: string }; Returns: Json }
+      reverse_quick_sale: {
+        Args: { p_business_id: string; p_transaction_id: string }
+        Returns: Json
+      }
+      save_purchase_order: {
+        Args: {
+          p_business_id: string
+          p_confirm: boolean
+          p_employee_id: string
+          p_expected_on?: string
+          p_expected_version?: number
+          p_idempotency_key: string
+          p_lines: Json
+          p_notes?: string
+          p_order_id?: string
+          p_ordered_on: string
+          p_supplier_id: string
+          p_supplier_reference?: string
+        }
+        Returns: Json
+      }
       score_procurement_quotes: {
         Args: { p_request_id: string }
         Returns: undefined
