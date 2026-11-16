@@ -5380,6 +5380,14 @@ export type Database = {
         Args: { business_id: string; date_from: string; date_to: string }
         Returns: Json
       }
+      /**
+       * Prepared in docs/v2/employee-sales-report-history.UNAPPLIED.sql.
+       * The client does not call it while V2_REPORTS_SQL_READY is false.
+       */
+      employee_sales_report: {
+        Args: { p_business_id: string; p_from: string; p_to: string }
+        Returns: Json
+      }
       require_active_business: {
         Args: { p_business_id: string }
         Returns: boolean

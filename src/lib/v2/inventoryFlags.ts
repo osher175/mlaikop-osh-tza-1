@@ -4,14 +4,12 @@ export const PURCHASE_RECEIPT_ATOMIC_READY = false;
 export const STOCK_ADJUSTMENT_RPC_READY = false;
 export const SUPPLIER_RETURN_READY = false;
 /**
- * Reserved-for-return is closed. products.quantity is both physical stock and
- * what sales treat as available. A reservation would have to decrease that
- * column, which is a stock-out. Do not turn this on until sale writers reject
- * reserved units and a return document can reserve without that decrease.
- * The prepared path is docs/v2/supplier-return-reservation.UNAPPLIED.sql.
- * It is not applied. This flag stays false, so the client does not call it.
+ * The final release uses confirm_supplier_return_dispatch once.
+ * Reservation stays closed so the same units cannot be deducted again by
+ * dispatch_reserved_supplier_return. Do not turn this flag on in that release.
  */
 export const SUPPLIER_RETURN_RESERVATION_READY = false;
+export const SUPPLIER_RETURN_AUTHORITY = 'confirm_supplier_return_dispatch' as const;
 /**
  * Confirmed physical dispatch. Prepared in
  * docs/v2/supplier-return-dispatch.UNAPPLIED.sql and not deployed.

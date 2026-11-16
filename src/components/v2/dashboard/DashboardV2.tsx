@@ -22,6 +22,10 @@ import {
   useDashboardSales, useDashboardStock, useDashboardActiveImport, useOpenProcurementCount,
 } from '@/hooks/v2/useV2Dashboard';
 import { useEmployeeAttribution } from '@/hooks/v2/useEmployeeAttribution';
+import { useEmployeeSalesReport } from '@/hooks/v2/useEmployeeSalesReport';
+import { useEmployees } from '@/hooks/v2/useEmployees';
+import { V2_REPORTS_SQL_READY } from '@/lib/v2/reportFlags';
+import type { EmployeeSalesReport } from '@/lib/v2/employeeSalesReport';
 import { EmployeeDistributionBody, EmployeePanelStatus, EmployeeRankingBody } from '@/components/v2/dashboard/EmployeeAnalyticsPanels';
 import type { ImportStatus } from '@/hooks/useImportOrders';
 
@@ -186,6 +190,7 @@ export const DashboardV2: React.FC = () => {
 
   const cur = useDashboardSales(range, canFin);
   const attribution = useEmployeeAttribution(range, canFin);
+  const sqlReport = useEmployeeSalesReport(range, canFin);
   const old = useDashboardSales(prev, canFin);
   const stock = useDashboardStock(canStock);
   const imp = useDashboardActiveImport(canImports);
@@ -268,7 +273,9 @@ export const DashboardV2: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 min-[1440px]:grid-cols-[1.05fr_0.92fr_1.22fr] gap-3 mb-3">
         <Panel title="ביצועי עובדים (לפי רווח גולמי)" icon={UserRound}>
-          {!canFin ? <Unauthorized /> : !attribution.ready ? (
+          {!canFin ? <Unauthorized /> : V2_REPORTS_SQL_READY ? (
+            <AuthorizedEmployeeReport loading={sqlReport.isLoading} error={sqlReport.isError} report={sqlReport.data} onRetry={() => { void sqlReport.refetch(); }} />
+          ) : !attribution.ready ? (
             <Unavailable
               title="שיוך מכירות לעובד כבוי"
               description={s
@@ -284,7 +291,9 @@ export const DashboardV2: React.FC = () => {
           )}
         </Panel>
         <Panel title="חלוקת מכירות לפי עובד" icon={PieIcon}>
-          {!canFin ? <Unauthorized /> : !attribution.ready ? (
+          {!canFin ? <Unauthorized /> : V2_REPORTS_SQL_READY ? (
+            <AuthorizedEmployeeReport loading={sqlReport.isLoading} error={sqlReport.isError} report={sqlReport.data} onRetry={() => { void sqlReport.refetch(); }} />
+          ) : !attribution.ready ? (
             <Unavailable
               icon={PieIcon}
               title="חלוקה לפי עובד אינה זמינה"
@@ -511,6 +520,31 @@ export const DashboardV2: React.FC = () => {
           </div>
         </Panel>
       </div>
+    </div>
+  );
+};
+
+const AuthorizedEmployeeReport: React.FC<{
+  loading: boolean;
+  error: boolean;
+  report: EmployeeSalesReport | undefined;
+  onRetry: () => void;
+}> = ({ loading, error, report, onRetry }) => {
+  const employees = useEmployees(true);
+  if (loading) return <LoadingSkeleton variant="panel" />;
+  if (error || !report) return <ErrorState onRetry={onRetry} />;
+  const profit = (value: number | null) => value === null ? 'עלות לא ידועה' : ils0.format(value);
+  const name = (id: string) => employees.employees.find((employee) => employee.id === id)?.display_name ?? 'שם לא זמין';
+  return (
+    <div className="space-y-2 text-sm">
+      <p className="font-bold">ללא שיוך: {ils0.format(report.unattributed.revenueGross)} · {profit(report.unattributed.grossProfit)}</p>
+      {report.employees.length === 0 ? <p className="text-v2-muted">אין מכירה עם מוכר בטווח.</p> : report.employees.map((employee) => (
+        <p key={employee.employeeId} className="flex justify-between gap-3">
+          <span className="truncate">{name(employee.employeeId)}</span>
+          <span>{ils0.format(employee.revenueGross)} · {profit(employee.grossProfit)}</span>
+        </p>
+      ))}
+      <p className="text-xs text-v2-muted">החזרות לקוח בטווח: {num0.format(report.customerReturnUnits)} יחידות. הן אינן מפחיתות את המחזור.</p>
     </div>
   );
 };

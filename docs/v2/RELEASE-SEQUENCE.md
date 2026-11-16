@@ -2,7 +2,9 @@
 
 Nothing in this file is applied by reading it. Writer flags stay false. Do not copy these files into `supabase/migrations`.
 
-GitHub `main` is `216bafe80893e6bb8a832a596818bdd693955d25`. Lovable has not published that commit. https://www.mlaiko.com still serves `index-D4CxLjjQ.js` until Share → Publish. The quantity lock stays unapplied. The product editor on `main` sells through `execute_inventory_transaction` and does not send a salesperson. The local compatibility change routes that sale to `record_legacy_sale` only after `LEGACY_SALE_ATOMIC_READY` is true, and it refuses the sale if attribution is turned on first.
+GitHub `main` is `9b1431dafd9ee9bbcdf3be6e1040d1ed36a3be6c`. Lovable has not published that commit. The last observed live bundle was `index-Cpjp56DM.js`, the client before the salesperson commit. The quantity lock stays unapplied. While both sale flags are false, the product editor sells through `execute_inventory_transaction` and does not send a salesperson. It calls `record_legacy_sale` only after `LEGACY_SALE_ATOMIC_READY` is true, and it refuses the sale if attribution is turned on first.
+
+The final release is one cutover after a confirmed backup. This file does not turn flags on. Confirm Supabase PITR, or a fresh backup, for `gtakgctmtayalcbpnryg` before the first production SQL. Stop if that backup cannot be shown. There is no service worker. An installed home-screen icon loads the new bundle on the next open. `?ui=legacy` remains available. Do not change the domain or environment variables.
 
 ## Already on production
 
@@ -24,7 +26,7 @@ Do not run these again:
 
 ## Staged activation
 
-Each stage is one approval. Stop at the first failed check. Do not combine stages. Flags change only in a published bundle, after the function they call already exists. `V2_UI_DEFAULT_ENABLED` stays false through stage 16. `v2DefaultSwitchReady` is the checklist for a later edit of that constant. `?ui=v2` stays the opt-in.
+Each stage is one approval. Stop at the first failed check. Do not combine stages. Flags change only in a published bundle, after the function they call already exists. `V2_UI_DEFAULT_ENABLED` stays false until the last stage. `v2DefaultSwitchReady` is the checklist for a later edit of that constant. `?ui=v2` stays the opt-in.
 
 Historical editor sales use `reference_type = editor_operation`. `employee_sales_report` counts `legacy_sale_request` and quick-sale lines only. Do not replace the dashboard reader with that function until the sales being ranked were written by `record_legacy_sale` or `complete_quick_sale`.
 
@@ -38,17 +40,18 @@ Historical editor sales use `reference_type = editor_operation`. `employee_sales
 7. `docs/v2/salesperson-required-b.enforcement.sql`. Stop if any `sale_transactions.salesperson_employee_id` is null, or if the published editor still sells through `execute_inventory_transaction`. A cached page then fails closed with `salesperson is required` and does not deduct stock. Do not backfill old sales.
 8. `docs/v2/sale-list-price-snapshot.UNAPPLIED.sql` immediately after stage 7. Do not re-apply stage 7 afterwards. It replaces `complete_quick_sale` and still requires the salesperson.
 9. `docs/v2/sale-profit-reporting.UNAPPLIED.sql`, then `docs/v2/bi-insights-known-cost.UNAPPLIED.sql`. Profit stays ex-VAT and unknown cost stays out of profit. `reports_aggregate` is not the V2 profit source.
-10. `docs/v2/inventory-lifecycle.UNAPPLIED.sql`. Then enable one flag at a time, only after the deployed client calls that function: `PURCHASE_RECEIPT_ATOMIC_READY` → `record_purchase_receipt`; `STOCK_ADJUSTMENT_RPC_READY` → `record_stock_adjustment`; `SUPPLIER_RETURN_READY` → `record_supplier_return`. Leave customer returns for stage 11.
+10. `docs/v2/inventory-lifecycle.UNAPPLIED.sql`. Then `STOCK_ADJUSTMENT_RPC_READY` only, so count corrections call `record_stock_adjustment`. Do not enable `PURCHASE_RECEIPT_ATOMIC_READY` here. Do not enable `SUPPLIER_RETURN_READY`. Leave customer returns for stage 11.
 11. `docs/v2/return-after-customer-return.UNAPPLIED.sql`, then `CUSTOMER_RETURN_READY` so the client calls `record_customer_return`. Do not apply `docs/v2/return-reversal-guard.UNAPPLIED.sql`. A full reversal after any customer return stays rejected. There is no partial reversal and no monetary refund.
-12. `docs/v2/purchase-order-receipts.UNAPPLIED.sql`, then `PURCHASE_ORDERS_READY` so the client calls `save_purchase_order`. Do not also post that receipt through `record_purchase_receipt`.
-13. `docs/v2/supplier-return-dispatch.UNAPPLIED.sql`, then `SUPPLIER_RETURN_DISPATCH_READY` so the client calls `confirm_supplier_return_dispatch`. This deducts once and does not reserve.
-14. `docs/v2/supplier-return-reservation.UNAPPLIED.sql` only after stage 1. `SUPPLIER_RETURN_RESERVATION_READY` stays false until sales reject reserved units. Dispatch of a reservation is `dispatch_reserved_supplier_return` and must not be combined with stage 13 for the same units.
-15. `docs/v2/import-receipt-shortage-event.UNAPPLIED.sql` before a partial import receipt is confirmed. It adds `receipt_shortage_recorded` and `receipt_overage_recorded` to the existing check. It does not replace `import_receipt_confirm` and it does not apply the i2 schema. Documents and shipments still add no stock. Then `docs/v2/import-payment-method.UNAPPLIED.sql` before a client sends `payment_method` or `client_request_id`.
-16. `docs/v2/employee-sales-report.UNAPPLIED.sql`. It is read-only. `can_access_business_analytics` is already on production. Keep `V2_REPORTS_SQL_READY` false until a deployed screen calls `employee_sales_report` and the operator accepts that historical `editor_operation` sales are outside that function.
-17. Set `V2_SALES_STACK_READY` only after stages 4, 7, 8, and 3. That one constant also turns on `QUICK_SALE_PERSISTENCE_READY` and `EMPLOYEE_SALES_ATTRIBUTION_READY`. The quick-sale screen then calls `complete_quick_sale` with one active employee.
-18. Set `V2_UI_DEFAULT_ENABLED` true only when `v2DefaultSwitchReady` is true for the published flags and stages 1, 4, 6, and 7 have been verified on www.mlaiko.com. Publish that bundle. `?ui=legacy` remains the way back for one browser.
+12. `docs/v2/purchase-order-receipts.UNAPPLIED.sql`, then `docs/v2/purchase-receipt-grant.UNAPPLIED.sql`. The first file leaves `post_purchase_receipt` without EXECUTE. The grant file does not replace the function. Then `PURCHASE_ORDERS_READY` and `PURCHASE_RECEIPT_ATOMIC_READY` together, so the receiving screen calls `post_purchase_receipt`. Do not also post those units through `record_purchase_receipt`. Direct product receiving stays a separate later flag.
+13. `docs/v2/supplier-return-dispatch.UNAPPLIED.sql`, then `SUPPLIER_RETURN_DISPATCH_READY` so the client calls `confirm_supplier_return_dispatch`. This is the only supplier-return stock exit in the final release. It deducts once. Leave `SUPPLIER_RETURN_READY` and `SUPPLIER_RETURN_RESERVATION_READY` false. Do not apply `docs/v2/supplier-return-reservation.UNAPPLIED.sql` in this release. That path would deduct the same units a second time through `dispatch_reserved_supplier_return`.
+14. `docs/v2/import-receipt-shortage-event.UNAPPLIED.sql` before a partial import receipt is confirmed. It adds `receipt_shortage_recorded` and `receipt_overage_recorded` to the existing check. It does not replace `import_receipt_confirm` and it does not apply the i2 schema. Documents and shipments still add no stock. Then `docs/v2/import-payment-method.UNAPPLIED.sql` before a client sends `payment_method` or `client_request_id`.
+15. `docs/v2/employee-sales-report-history.UNAPPLIED.sql` instead of the earlier report file. It is read-only, granted to `authenticated`, and requires `can_access_business_analytics`. Historical `editor_operation` sales stay unattributed. `inventory_actions.user_id` is not an employee. Then `V2_REPORTS_SQL_READY` so the dashboard calls `employee_sales_report`. `reports_aggregate.total_value` is not gross profit. `FIFO_AGING_READY` stays false.
+16. Set `V2_SALES_STACK_READY` only after stages 4, 7, 8, and 3. That one constant also turns on `QUICK_SALE_PERSISTENCE_READY` and `EMPLOYEE_SALES_ATTRIBUTION_READY`. The quick-sale screen then calls `complete_quick_sale` with one active employee.
+17. Set `V2_UI_DEFAULT_ENABLED` true only when `v2DefaultSwitchReady` is true for the published flags and stages 1, 4, 6, and 7 have been verified on www.mlaiko.com. Publish that bundle. `?ui=legacy` remains the way back for one browser.
 
 Import shipment documents stay separate from `import_receipt_confirm`. The i2 import-upgrade files are not in this order. They are not required for the current import screens, and goods are still added only by the existing receipt confirmation.
+
+One Lovable publish happens after the SQL in this list has been applied and checked, and after a follow-up client commit turns on only the flags whose functions were just verified. That commit is not this one. Publish the existing project at `https://lovable.dev/projects/189c289a-9430-4114-9212-465332a6e893` with Share → Publish. Do not create a project, change the domain, or edit environment variables. Confirm the live bundle contains the approved SHA's sale routing and still has `V2_UI_DEFAULT_ENABLED` false until stage 17.
 
 ## Rollback limits
 

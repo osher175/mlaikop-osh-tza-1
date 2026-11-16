@@ -6,6 +6,7 @@ import {
   PURCHASE_ORDERS_READY,
   PURCHASE_RECEIPT_ATOMIC_READY,
   STOCK_ADJUSTMENT_RPC_READY,
+  SUPPLIER_RETURN_AUTHORITY,
   SUPPLIER_RETURN_DISPATCH_READY,
   SUPPLIER_RETURN_READY,
   SUPPLIER_RETURN_RESERVATION_READY,
@@ -14,6 +15,7 @@ import { LEGACY_SALE_ATOMIC_READY, resolveLegacySaleWrite } from '@/lib/v2/legac
 import { FIFO_AGING_READY, V2_REPORTS_SQL_READY } from '@/lib/v2/reportFlags';
 import { explicitPurchaseCost, planLegacyProductSave, purchaseCostFromInput, UNKNOWN_COST_SALE_MESSAGE } from '@/lib/v2/legacyInventoryWrite';
 import { quoteDraft } from '@/lib/v2/saleQuote';
+import { readEmployeeSalesReport } from '@/lib/v2/employeeSalesReport';
 import { V2_UI_DEFAULT_ENABLED, v2DefaultSwitchReady } from '@/lib/v2/uiFlag';
 import type { DraftLine } from '@/lib/v2/saleDraft';
 
@@ -35,6 +37,21 @@ assert.equal(PURCHASE_RECEIPT_ATOMIC_READY, false);
 assert.equal(STOCK_ADJUSTMENT_RPC_READY, false);
 assert.equal(SUPPLIER_RETURN_READY, false);
 assert.equal(SUPPLIER_RETURN_RESERVATION_READY, false);
+assert.equal(SUPPLIER_RETURN_AUTHORITY, 'confirm_supplier_return_dispatch');
+const historyReport = readEmployeeSalesReport({
+  revenue_gross: 118,
+  gross_profit: null,
+  vat: 18,
+  unknown_cost_revenue: 118,
+  units: 1,
+  transactions: 1,
+  customer_return_units: 0,
+  unattributed: { revenue_gross: 118, gross_profit: null, units: 1, transactions: 1, unknown_cost_revenue: 118 },
+  employees: [],
+});
+assert.equal(historyReport?.unattributed.grossProfit, null);
+assert.equal(historyReport?.unattributed.revenueGross, 118);
+assert.equal(readEmployeeSalesReport({ revenue_gross: 1, gross_profit: 0, vat: 0, unknown_cost_revenue: 0, units: 1, transactions: 1, customer_return_units: 0, employees: [] }), null);
 assert.equal(SUPPLIER_RETURN_DISPATCH_READY, false);
 assert.equal(CUSTOMER_RETURN_READY, false);
 assert.equal(V2_REPORTS_SQL_READY, false);
@@ -137,6 +154,17 @@ const employeeReport = readFileSync('docs/v2/employee-sales-report.UNAPPLIED.sql
 assert.match(employeeReport, /unit_cost IS NULL THEN NULL/);
 assert.match(employeeReport, /customer_return/);
 assert.match(employeeReport, /t.status = 'completed'/);
+const historySql = readFileSync('docs/v2/employee-sales-report-history.UNAPPLIED.sql', 'utf8');
+assert.match(historySql, /editor_operation/);
+assert.match(historySql, /'unattributed'/);
+assert.equal(historySql.includes('ia.user_id'), false);
+const reportClient = readFileSync('src/lib/v2/employeeSalesReport.ts', 'utf8');
+assert.equal(reportClient.indexOf('if (!V2_REPORTS_SQL_READY)') < reportClient.indexOf("rpc('employee_sales_report'"), true);
+const receiptGrant = readFileSync('docs/v2/purchase-receipt-grant.UNAPPLIED.sql', 'utf8');
+assert.match(receiptGrant, /GRANT EXECUTE ON FUNCTION public.post_purchase_receipt/);
+assert.equal(receiptGrant.includes('CREATE OR REPLACE FUNCTION public.post_purchase_receipt'), false);
+const receiptWrite = readFileSync('src/lib/v2/purchaseReceiptWrite.ts', 'utf8');
+assert.equal(receiptWrite.indexOf('if (!receiptPostingAvailable())') < receiptWrite.indexOf("rpc('post_purchase_receipt'"), true);
 const knownCost = readFileSync('docs/v2/sale-known-cost-required.UNAPPLIED.sql', 'utf8');
 assert.match(knownCost, /NEW\.unit_cost_ils IS NULL/);
 assert.match(knownCost, /BEFORE INSERT ON public\.sale_lines/);
