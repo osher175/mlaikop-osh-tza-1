@@ -8,6 +8,33 @@ import type { Json } from '@/integrations/supabase/types';
  */
 export const LEGACY_SALE_ATOMIC_READY = false;
 
+export type LegacySaleWrite =
+  | { mode: 'inventory_transaction' }
+  | { mode: 'atomic'; salespersonEmployeeId: string | null }
+  | { mode: 'blocked'; error: string };
+
+/**
+ * The live editor still sells through execute_inventory_transaction, which
+ * cannot store a salesperson. An attributed sale is refused until the atomic
+ * function is the path this screen calls. While attribution is off, the atomic
+ * path stores null and does not copy an id the screen happened to hold.
+ */
+export function resolveLegacySaleWrite(input: {
+  atomicReady: boolean;
+  attributionReady: boolean;
+  salespersonEmployeeId?: string | null;
+}): LegacySaleWrite {
+  const salesperson = input.salespersonEmployeeId?.trim() || null;
+  if (input.attributionReady && !input.atomicReady) {
+    return { mode: 'blocked', error: 'שיוך המוכר דורש את שמירת המכירה האטומית. המלאי לא השתנה.' };
+  }
+  if (!input.atomicReady) return { mode: 'inventory_transaction' };
+  if (input.attributionReady && !salesperson) {
+    return { mode: 'blocked', error: 'יש לבחור איש מכירות לפני אישור העסקה' };
+  }
+  return { mode: 'atomic', salespersonEmployeeId: input.attributionReady ? salesperson : null };
+}
+
 export interface LegacySaleAtomicInput {
   businessId: string;
   productId: string;

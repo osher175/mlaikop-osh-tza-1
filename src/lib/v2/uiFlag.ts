@@ -5,7 +5,22 @@ import { useLocation } from 'react-router-dom';
 
 const STORAGE_KEY = 'mlaiko.ui.v2';
 
+/**
+ * Stays false. The activation runbook changes this only after the published
+ * bundle is selling through the atomic sale, with one active salesperson,
+ * and the core stock writers are the functions that bundle calls.
+ * `?ui=v2` remains the opt-in until that separate change.
+ */
 export const V2_UI_DEFAULT_ENABLED = false;
+
+/** The default switch may be edited only when every one of these is already true in the deployed bundle. */
+export function v2DefaultSwitchReady(input: {
+  legacySaleAtomic: boolean;
+  legacyAttribution: boolean;
+  quickSale: boolean;
+}): boolean {
+  return input.legacySaleAtomic && input.legacyAttribution && input.quickSale;
+}
 
 // URL param takes precedence over localStorage; otherwise the persisted choice applies.
 function applyUiParam(search: string): boolean {

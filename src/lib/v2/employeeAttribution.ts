@@ -8,7 +8,10 @@
  * 2. Apply docs/v2/legacy-sale-atomic.UNAPPLIED.sql. The dialog keeps the
  *    two-step write while LEGACY_SALE_ATOMIC_READY is false.
  * 3. Deploy the client that calls record_legacy_sale, then set that flag.
+ *    EditProductDialog takes that branch only while the flag is true.
  *    A frontend flag without the deployed function is not an atomic sale.
+ *    Attribution stays blocked while this flag is false, so a salesperson
+ *    is never dropped onto execute_inventory_transaction.
  * 4. Apply docs/v2/legacy-sale-direct-write-guard.UNAPPLIED.sql. There is no
  *    service worker, so this guard is what stops a cached page from selling.
  * 5. Set LEGACY_SALE_ATTRIBUTION_READY true only after one active employee

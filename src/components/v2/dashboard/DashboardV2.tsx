@@ -270,10 +270,10 @@ export const DashboardV2: React.FC = () => {
         <Panel title="ביצועי עובדים (לפי רווח גולמי)" icon={UserRound}>
           {!canFin ? <Unauthorized /> : !attribution.ready ? (
             <Unavailable
-              title="שיוך מכירות לעובד עדיין לא קיים"
+              title="שיוך מכירות לעובד כבוי"
               description={s
-                ? `מחזור ${ils0.format(s.revenueGross)} ו-${num0.format(s.units)} צמיגים בטווח אינם משויכים לעובד, ולכן אין דירוג.`
-                : 'אין טבלת עובדים ואין מוכר על העסקה, ולכן לא ניתן לדרג ביצועים.'}
+                ? `מחזור ${ils0.format(s.revenueGross)} ו-${num0.format(s.units)} צמיגים בטווח אינם משויכים לעובד, כי שיוך המכירות כבוי.`
+                : 'טבלת העובדים קיימת. שיוך המכירות כבוי, ולכן אין דירוג.'}
             />
           ) : (
             <EmployeePanelStatus loading={attribution.isLoading} error={attribution.isError} onRetry={attribution.refetch}>

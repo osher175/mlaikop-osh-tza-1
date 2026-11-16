@@ -119,7 +119,7 @@ export const QuickSaleV2: React.FC = () => {
         <aside className="order-2 lg:order-1 space-y-3">
           <section className="rounded-[18px] border border-v2-border bg-v2-surface shadow-[var(--v2-shadow)] p-4">
             <h2 className="font-extrabold mb-3">מי ביצע את המכירה?</h2>
-            {!QUICK_SALE_PERSISTENCE_READY && <p className="text-sm text-v2-muted mb-3">אין רשימת עובדים פעילה. אי אפשר לבחור מוכר, והאישור עדיין לא נשמר.</p>}
+            {!QUICK_SALE_PERSISTENCE_READY && <p className="text-sm text-v2-muted mb-3">השמירה האטומית עדיין כבויה. רשימת העובדים קיימת, אבל אי אפשר לבחור מוכר והאישור לא נשמר.</p>}
             {QUICK_SALE_PERSISTENCE_READY && employees.isError && <p className="text-sm text-v2-red mb-3">לא הצלחנו לטעון את רשימת העובדים.</p>}
             {QUICK_SALE_PERSISTENCE_READY && salespersonNotice && <p className="text-sm text-v2-red mb-3">{salespersonNotice}</p>}
             {QUICK_SALE_PERSISTENCE_READY && !employees.isLoading && !employees.isError && activeEmployees.length === 0 && <p className="text-sm text-v2-muted mb-3">אין עובדים פעילים. בעל העסק צריך להוסיף עובד לפני שאפשר לאשר עסקה.</p>}
@@ -134,8 +134,8 @@ export const QuickSaleV2: React.FC = () => {
                 );
               })}
               {!QUICK_SALE_PERSISTENCE_READY && (
-                <button type="button" aria-pressed={draft.salespersonEmployeeId === null} className={`h-14 rounded-2xl border text-base font-bold ${draft.salespersonEmployeeId === null ? 'bg-v2-navy text-white border-v2-navy' : 'bg-v2-surface border-v2-border'}`} onClick={() => setDraftSalesperson(businessId, null)}>
-                  ללא שיוך
+                <button type="button" disabled className="h-14 rounded-2xl border border-v2-border bg-v2-surface text-base font-bold text-v2-muted">
+                  בחירת מוכר כבויה
                 </button>
               )}
             </div>

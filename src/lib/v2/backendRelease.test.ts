@@ -10,14 +10,23 @@ import {
   SUPPLIER_RETURN_READY,
   SUPPLIER_RETURN_RESERVATION_READY,
 } from '@/lib/v2/inventoryFlags';
-import { LEGACY_SALE_ATOMIC_READY } from '@/lib/v2/legacySaleAtomic';
+import { LEGACY_SALE_ATOMIC_READY, resolveLegacySaleWrite } from '@/lib/v2/legacySaleAtomic';
 import { FIFO_AGING_READY, V2_REPORTS_SQL_READY } from '@/lib/v2/reportFlags';
 import { explicitPurchaseCost, planLegacyProductSave, purchaseCostFromInput, UNKNOWN_COST_SALE_MESSAGE } from '@/lib/v2/legacyInventoryWrite';
 import { quoteDraft } from '@/lib/v2/saleQuote';
-import { V2_UI_DEFAULT_ENABLED } from '@/lib/v2/uiFlag';
+import { V2_UI_DEFAULT_ENABLED, v2DefaultSwitchReady } from '@/lib/v2/uiFlag';
 import type { DraftLine } from '@/lib/v2/saleDraft';
 
 assert.equal(V2_UI_DEFAULT_ENABLED, false);
+assert.equal(v2DefaultSwitchReady({ legacySaleAtomic: false, legacyAttribution: false, quickSale: false }), false);
+assert.equal(v2DefaultSwitchReady({ legacySaleAtomic: true, legacyAttribution: true, quickSale: true }), true);
+assert.equal(resolveLegacySaleWrite({ atomicReady: false, attributionReady: false, salespersonEmployeeId: 'e' }).mode, 'inventory_transaction');
+const blockedAttribution = resolveLegacySaleWrite({ atomicReady: false, attributionReady: true, salespersonEmployeeId: 'e' });
+assert.equal(blockedAttribution.mode, 'blocked');
+const blockedMissing = resolveLegacySaleWrite({ atomicReady: true, attributionReady: true, salespersonEmployeeId: null });
+assert.equal(blockedMissing.mode, 'blocked');
+assert.deepEqual(resolveLegacySaleWrite({ atomicReady: true, attributionReady: true, salespersonEmployeeId: 'e' }), { mode: 'atomic', salespersonEmployeeId: 'e' });
+assert.deepEqual(resolveLegacySaleWrite({ atomicReady: true, attributionReady: false, salespersonEmployeeId: 'e' }), { mode: 'atomic', salespersonEmployeeId: null });
 assert.equal(V2_SALES_STACK_READY, false);
 assert.equal(QUICK_SALE_PERSISTENCE_READY, false);
 assert.equal(LEGACY_SALE_ATOMIC_READY, false);
@@ -117,6 +126,13 @@ assert.match(importFix, /does not replace import_receipt_confirm/);
 const reversalFix = readFileSync('docs/v2/return-after-customer-return.UNAPPLIED.sql', 'utf8');
 assert.match(reversalFix, /reversal is closed after a customer return/);
 assert.equal(reversalFix.includes('CREATE OR REPLACE FUNCTION public.reverse_inventory_action'), false);
+const editor = readFileSync('src/components/inventory/EditProductDialog.tsx', 'utf8');
+const saleRoute = editor.indexOf('resolveLegacySaleWrite({');
+const atomicSale = editor.indexOf('await recordLegacySaleAtomic');
+const inventorySale = editor.indexOf("supabase.rpc('execute_inventory_transaction'");
+assert.equal(saleRoute > -1 && saleRoute < atomicSale && atomicSale < inventorySale, true);
+assert.match(editor, /salespersonEmployeeId: route\.salespersonEmployeeId/);
+assert.equal(editor.includes('quantity: formData.quantity') || editor.includes('quantity: newQuantity'), false);
 const employeeReport = readFileSync('docs/v2/employee-sales-report.UNAPPLIED.sql', 'utf8');
 assert.match(employeeReport, /unit_cost IS NULL THEN NULL/);
 assert.match(employeeReport, /customer_return/);

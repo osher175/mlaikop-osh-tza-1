@@ -16,7 +16,9 @@ import { AddProductCategoryDialog } from '@/components/inventory/AddProductCateg
 import { SaleModal, SaleData } from '@/components/inventory/SaleModal';
 import { PurchaseModal, PurchaseData } from '@/components/inventory/PurchaseModal';
 import { rememberReversibleAction } from '@/hooks/useReversibleAction';
+import { LEGACY_SALE_ATTRIBUTION_READY } from '@/lib/v2/employeeAttribution';
 import { EDITOR_OPERATION, explicitPurchaseCost, planLegacyProductSave, purchaseCostFromInput, readLedgerActionId } from '@/lib/v2/legacyInventoryWrite';
+import { LEGACY_SALE_ATOMIC_READY, legacySaleError, recordLegacySaleAtomic, resolveLegacySaleWrite } from '@/lib/v2/legacySaleAtomic';
 import { ProductAgingNote } from '@/components/v2/reports/ProductAgingNote';
 import { Plus, Scan } from 'lucide-react';
 import { useCategories } from '@/hooks/useCategories';
@@ -197,6 +199,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       let stockPosted: 'remove' | 'add' | 'adjust' | null = null;
       if (plan.stock) {
         const stock = plan.stock;
+        const salespersonEmployeeId = saleData?.salespersonEmployeeId ?? null;
         const signature = JSON.stringify({
           productId: plan.productId,
           actionType: stock.actionType,
@@ -205,6 +208,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
           purchaseUnit: stock.purchaseUnitIls ?? null,
           supplierId: stock.supplierId ?? null,
           notes: stock.notes,
+          salespersonEmployeeId,
         });
         const slot = stock.actionType === 'remove'
           ? saleOperation
@@ -213,6 +217,41 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
             : correctionOperation;
         const operation = sameOperationKey(slot.current, signature);
         slot.current = operation;
+        if (stock.actionType === 'remove') {
+          const route = resolveLegacySaleWrite({
+            atomicReady: LEGACY_SALE_ATOMIC_READY,
+            attributionReady: LEGACY_SALE_ATTRIBUTION_READY,
+            salespersonEmployeeId,
+          });
+          if (route.mode === 'blocked') throw new Error(route.error);
+          if (route.mode === 'atomic') {
+            let result;
+            try {
+              result = await recordLegacySaleAtomic({
+                businessId: plan.businessId,
+                productId: plan.productId,
+                quantitySold: Math.abs(stock.quantityChanged),
+                saleTotalIls: stock.saleTotalIls ?? 0,
+                notes: stock.notes,
+                salespersonEmployeeId: route.salespersonEmployeeId,
+                idempotencyKey: operation.key,
+              });
+            } catch (error) {
+              const message = error instanceof Error ? error.message : '';
+              if (/[\u0590-\u05FF]/.test(message)) throw error;
+              throw new Error(legacySaleError(error));
+            }
+            stockPosted = 'remove';
+            rememberReversibleAction({
+              action_id: result.action_id,
+              product_name: product.name,
+              quantity: Math.abs(stock.quantityChanged),
+              action_type: 'sale',
+              created_at: new Date().toISOString(),
+            });
+          }
+        }
+        if (stockPosted === null) {
         const { data: ledger, error: stockError } = await supabase.rpc('execute_inventory_transaction', {
           p_business_id: plan.businessId,
           p_user_id: user.id,
@@ -244,6 +283,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
             action_type: 'sale',
             created_at: new Date().toISOString(),
           });
+        }
         }
       }
 
@@ -328,9 +368,10 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating product:', error);
+      const message = error instanceof Error ? error.message : '';
       toast({
         title: "שגיאה בעדכון המוצר",
-        description: "אנא נסה שוב",
+        description: /[\u0590-\u05FF]/.test(message) ? message : "אנא נסה שוב",
         variant: "destructive",
       });
     } finally {

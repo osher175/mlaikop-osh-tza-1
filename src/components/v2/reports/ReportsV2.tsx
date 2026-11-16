@@ -275,12 +275,12 @@ export const ReportsV2: React.FC = () => {
         )}
         {show('sales') && (
           <OpenCard title="מוצרים מובילים ברווח גולמי" icon={Trophy} onOpen={() => setTopic('top')} className="min-h-[280px]">
-            <ReportTable headers={['מוצר', 'מכירות', 'רווח גולמי', 'שיעור רווחיות']} reason="דירוג הרווח אינו זמין." />
+            <ReportTable headers={['מוצר', 'מכירות', 'רווח גולמי', 'שיעור רווחיות']} reason="דירוג הרווח לפי עלות ידועה עדיין כבוי." />
           </OpenCard>
         )}
         {show('stock') && (
           <OpenCard title="מוצרים במלאי איטי" icon={Clock} onOpen={() => setTopic('slow')} className="min-h-[280px]">
-            <ReportTable headers={['מוצר', 'יתרה', 'גיל ממוצע', 'שווי מלאי', 'מכירות 90']} reason="גיל המחסן אינו זמין." />
+            <ReportTable headers={['מוצר', 'יתרה', 'גיל ממוצע', 'שווי מלאי', 'מכירות 90']} reason="שכבות FIFO עדיין כבויות." />
           </OpenCard>
         )}
         {show('purchasing') && (

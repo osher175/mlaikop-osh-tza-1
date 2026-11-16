@@ -2,7 +2,7 @@
 
 Nothing in this file is applied by reading it. Writer flags stay false. Do not copy these files into `supabase/migrations`.
 
-The live site is a separate publish. GitHub `main` does not update https://www.mlaiko.com until Lovable Share → Publish. The quantity lock stays unapplied until that published bundle no longer patches `products.quantity`.
+GitHub `main` is `216bafe80893e6bb8a832a596818bdd693955d25`. Lovable has not published that commit. https://www.mlaiko.com still serves `index-D4CxLjjQ.js` until Share → Publish. The quantity lock stays unapplied. The product editor on `main` sells through `execute_inventory_transaction` and does not send a salesperson. The local compatibility change routes that sale to `record_legacy_sale` only after `LEGACY_SALE_ATOMIC_READY` is true, and it refuses the sale if attribution is turned on first.
 
 ## Already on production
 
@@ -22,25 +22,31 @@ Do not run these again:
 - `docs/v2/inventory-movement-balance.UNAPPLIED.sql`
 - `docs/v2/products-quantity-update-lock.UNAPPLIED.sql` (isolated project only)
 
-## Order when a later approval allows production SQL
+## Staged activation
 
-1. Publish the client already on `main`. Confirm the live bundle calls `execute_inventory_transaction` and does not patch `products.quantity`. Flags stay false.
-2. `docs/v2/products-quantity-update-lock.PRODUCTION.UNAPPLIED.sql`, in one transaction that sets `mlaiko.apply_quantity_lock` to `gtakgctmtayalcbpnryg`. It refuses any `isolated.project_ref`.
-3. `docs/v2/legacy-sale-atomic.UNAPPLIED.sql`. Deploy the client with `LEGACY_SALE_ATOMIC_READY` only after this function exists.
-4. `docs/v2/legacy-sale-direct-write-guard.UNAPPLIED.sql` only after that atomic client is what production serves.
-5. Turn `LEGACY_SALE_ATTRIBUTION_READY` on only after one active employee exists, then `docs/v2/salesperson-required-b.enforcement.sql`.
-6. `docs/v2/sale-list-price-snapshot.UNAPPLIED.sql` immediately after step 5. Do not re-apply step 5 afterwards.
-7. `docs/v2/preserve-unknown-cost.UNAPPLIED.sql` before `V2_SALES_STACK_READY`. It keeps a null purchase cost null inside `execute_inventory_transaction` and rejects a financial sale whose cost snapshot is null. Then `docs/v2/sale-known-cost-required.UNAPPLIED.sql`.
-8. `docs/v2/sale-profit-reporting.UNAPPLIED.sql`, then `docs/v2/bi-insights-known-cost.UNAPPLIED.sql`.
-9. `docs/v2/inventory-lifecycle.UNAPPLIED.sql`. Turn purchase, adjustment, supplier-return, and customer-return flags on one at a time only after their function is the one the deployed client calls.
-10. `docs/v2/return-after-customer-return.UNAPPLIED.sql` before `CUSTOMER_RETURN_READY`. Do not apply `docs/v2/return-reversal-guard.UNAPPLIED.sql`. The new file adds triggers and does not replace `reverse_inventory_action` or `reverse_quick_sale`. A reversal after any customer return is rejected because those functions restore the whole movement. A partial reversal of only the outstanding units is not supported.
-11. `docs/v2/purchase-order-receipts.UNAPPLIED.sql` before `PURCHASE_ORDERS_READY`. Do not also post the same receipt through `record_purchase_receipt`.
-12. `docs/v2/supplier-return-dispatch.UNAPPLIED.sql` before `SUPPLIER_RETURN_DISPATCH_READY`. This path deducts once and does not reserve.
-13. `docs/v2/supplier-return-reservation.UNAPPLIED.sql` after the quantity lock. `SUPPLIER_RETURN_RESERVATION_READY` stays false until sale writers are rejecting reserved units, which this file enforces with `quantity_reserved <= GREATEST(quantity, 0)`. Dispatch of a reservation is `dispatch_reserved_supplier_return` and must not be combined with step 12 for the same units.
-14. `docs/v2/import-receipt-shortage-event.UNAPPLIED.sql` before partial import receiving is used. It only adds `receipt_shortage_recorded` and `receipt_overage_recorded` to the existing event check. It does not replace `import_receipt_confirm` and it does not apply the i2 schema.
-15. `docs/v2/import-payment-method.UNAPPLIED.sql` before a client sends `payment_method` or `client_request_id`.
-16. `docs/v2/employee-sales-report.UNAPPLIED.sql` after the sale tables. It is read-only. `can_access_business_analytics` is already on production. `V2_REPORTS_SQL_READY` stays false until the deployed client calls this function.
-17. Set `V2_SALES_STACK_READY` only after steps 3, 5, 6, and 7.
+Each stage is one approval. Stop at the first failed check. Do not combine stages. Flags change only in a published bundle, after the function they call already exists. `V2_UI_DEFAULT_ENABLED` stays false through stage 16. `v2DefaultSwitchReady` is the checklist for a later edit of that constant. `?ui=v2` stays the opt-in.
+
+Historical editor sales use `reference_type = editor_operation`. `employee_sales_report` counts `legacy_sale_request` and quick-sale lines only. Do not replace the dashboard reader with that function until the sales being ranked were written by `record_legacy_sale` or `complete_quick_sale`.
+
+0. Publish the compatibility client with every writer flag false. Verify the live bundle still calls `execute_inventory_transaction` for a sale, omits `products.quantity`, and contains `resolveLegacySaleWrite` only as source, not as a changed live sale. Stop if the bundle patches quantity or sends `p_salesperson_employee_id` to `execute_inventory_transaction`.
+1. `docs/v2/products-quantity-update-lock.PRODUCTION.UNAPPLIED.sql`. Set `mlaiko.apply_quantity_lock` to `gtakgctmtayalcbpnryg` in that transaction. Stop if the session is not that project, or if the published bundle updates `products.quantity`. Verify `has_column_privilege(authenticated, products.quantity, UPDATE)` is false and a metadata update still succeeds in a reviewed statement that is rolled back, or by a non-writing privilege read.
+2. `docs/v2/user-businesses-insert-lock.UNAPPLIED.sql`, alone. The file has no project-ref gate. Stop unless the session is proven to be `gtakgctmtayalcbpnryg`. Signup must still reach `create_business_for_new_user`. Stop if that function is not postgres-owned `SECURITY DEFINER`.
+3. `docs/v2/preserve-unknown-cost.UNAPPLIED.sql`, then `docs/v2/sale-known-cost-required.UNAPPLIED.sql`. Stop if `execute_inventory_transaction` already contains `salesperson_employee_id`. A null receipt stays null. An explicit 0 stays 0. A sale with a null cost snapshot is rejected and changes no stock.
+4. `docs/v2/legacy-sale-atomic.UNAPPLIED.sql`. Confirm `record_legacy_sale(uuid,uuid,integer,numeric,uuid,text,uuid)` exists. Then set `LEGACY_SALE_ATOMIC_READY` true and publish. Stop if the live editor still calls `execute_inventory_transaction` for a quantity decrease. Purchases and count corrections stay on that function.
+5. `docs/v2/legacy-sale-direct-write-guard.UNAPPLIED.sql` only after stage 4 is the bundle production serves. It blocks a browser quantity decrease. It does not block `execute_inventory_transaction`, so it is not a substitute for stage 7.
+6. Confirm one active employee in the business that will sell. Then set `LEGACY_SALE_ATTRIBUTION_READY` true and publish. The sale dialog requires that employee and `record_legacy_sale` receives the id. Stop if the published bundle can still save a sale with no employee.
+7. `docs/v2/salesperson-required-b.enforcement.sql`. Stop if any `sale_transactions.salesperson_employee_id` is null, or if the published editor still sells through `execute_inventory_transaction`. A cached page then fails closed with `salesperson is required` and does not deduct stock. Do not backfill old sales.
+8. `docs/v2/sale-list-price-snapshot.UNAPPLIED.sql` immediately after stage 7. Do not re-apply stage 7 afterwards. It replaces `complete_quick_sale` and still requires the salesperson.
+9. `docs/v2/sale-profit-reporting.UNAPPLIED.sql`, then `docs/v2/bi-insights-known-cost.UNAPPLIED.sql`. Profit stays ex-VAT and unknown cost stays out of profit. `reports_aggregate` is not the V2 profit source.
+10. `docs/v2/inventory-lifecycle.UNAPPLIED.sql`. Then enable one flag at a time, only after the deployed client calls that function: `PURCHASE_RECEIPT_ATOMIC_READY` → `record_purchase_receipt`; `STOCK_ADJUSTMENT_RPC_READY` → `record_stock_adjustment`; `SUPPLIER_RETURN_READY` → `record_supplier_return`. Leave customer returns for stage 11.
+11. `docs/v2/return-after-customer-return.UNAPPLIED.sql`, then `CUSTOMER_RETURN_READY` so the client calls `record_customer_return`. Do not apply `docs/v2/return-reversal-guard.UNAPPLIED.sql`. A full reversal after any customer return stays rejected. There is no partial reversal and no monetary refund.
+12. `docs/v2/purchase-order-receipts.UNAPPLIED.sql`, then `PURCHASE_ORDERS_READY` so the client calls `save_purchase_order`. Do not also post that receipt through `record_purchase_receipt`.
+13. `docs/v2/supplier-return-dispatch.UNAPPLIED.sql`, then `SUPPLIER_RETURN_DISPATCH_READY` so the client calls `confirm_supplier_return_dispatch`. This deducts once and does not reserve.
+14. `docs/v2/supplier-return-reservation.UNAPPLIED.sql` only after stage 1. `SUPPLIER_RETURN_RESERVATION_READY` stays false until sales reject reserved units. Dispatch of a reservation is `dispatch_reserved_supplier_return` and must not be combined with stage 13 for the same units.
+15. `docs/v2/import-receipt-shortage-event.UNAPPLIED.sql` before a partial import receipt is confirmed. It adds `receipt_shortage_recorded` and `receipt_overage_recorded` to the existing check. It does not replace `import_receipt_confirm` and it does not apply the i2 schema. Documents and shipments still add no stock. Then `docs/v2/import-payment-method.UNAPPLIED.sql` before a client sends `payment_method` or `client_request_id`.
+16. `docs/v2/employee-sales-report.UNAPPLIED.sql`. It is read-only. `can_access_business_analytics` is already on production. Keep `V2_REPORTS_SQL_READY` false until a deployed screen calls `employee_sales_report` and the operator accepts that historical `editor_operation` sales are outside that function.
+17. Set `V2_SALES_STACK_READY` only after stages 4, 7, 8, and 3. That one constant also turns on `QUICK_SALE_PERSISTENCE_READY` and `EMPLOYEE_SALES_ATTRIBUTION_READY`. The quick-sale screen then calls `complete_quick_sale` with one active employee.
+18. Set `V2_UI_DEFAULT_ENABLED` true only when `v2DefaultSwitchReady` is true for the published flags and stages 1, 4, 6, and 7 have been verified on www.mlaiko.com. Publish that bundle. `?ui=legacy` remains the way back for one browser.
 
 Import shipment documents stay separate from `import_receipt_confirm`. The i2 import-upgrade files are not in this order. They are not required for the current import screens, and goods are still added only by the existing receipt confirmation.
 
