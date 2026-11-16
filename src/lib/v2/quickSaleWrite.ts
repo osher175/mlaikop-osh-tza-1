@@ -4,6 +4,7 @@ import { requireActiveSalesperson } from '@/lib/v2/activeSalesperson';
 import { QUICK_SALE_PERSISTENCE_READY } from '@/lib/v2/employeeAttribution';
 import type { Axle, SaleDraft } from '@/lib/v2/saleDraft';
 import { hebrewSaleError } from '@/lib/v2/saleErrors';
+import { quoteDraft } from '@/lib/v2/saleQuote';
 import { readQuickSaleRpcResult, type QuickSaleRpcResult } from '@/lib/v2/upgradeContract';
 
 export interface CompletedQuickSale {
@@ -27,6 +28,9 @@ export async function completeQuickSale(draft: SaleDraft): Promise<CompletedQuic
   }
   if (!QUICK_SALE_PERSISTENCE_READY) {
     throw new Error('השמירה האטומית עדיין כבויה. הטיוטה לא נשלחה.');
+  }
+  if (!quoteDraft(draft.lines).costComplete) {
+    throw new Error('אי אפשר להשלים מכירה בלי עלות רכישה ידועה. עלות חסרה אינה אפס, והמלאי לא השתנה.');
   }
   await requireActiveSalesperson(draft.businessId, draft.salespersonEmployeeId);
   if (draft.lines.length < 1 || draft.lines.length > 50) {

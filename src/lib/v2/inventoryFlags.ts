@@ -8,6 +8,8 @@ export const SUPPLIER_RETURN_READY = false;
  * what sales treat as available. A reservation would have to decrease that
  * column, which is a stock-out. Do not turn this on until sale writers reject
  * reserved units and a return document can reserve without that decrease.
+ * The prepared path is docs/v2/supplier-return-reservation.UNAPPLIED.sql.
+ * It is not applied. This flag stays false, so the client does not call it.
  */
 export const SUPPLIER_RETURN_RESERVATION_READY = false;
 /**

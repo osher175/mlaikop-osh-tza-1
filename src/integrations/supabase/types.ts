@@ -5469,6 +5469,30 @@ export type Database = {
         }
         Returns: Json
       }
+      /**
+       * Prepared in docs/v2/supplier-return-reservation.UNAPPLIED.sql. Not deployed.
+       * reserve changes quantity_reserved only. release reverses that reservation.
+       * dispatch_reserved decreases quantity and quantity_reserved together, once.
+       */
+      reserve_supplier_return: {
+        Args: {
+          p_business_id: string
+          p_idempotency_key: string
+          p_lines: Json
+          p_notes?: string | null
+          p_reason: string
+          p_supplier_id: string
+        }
+        Returns: Json
+      }
+      release_supplier_return_reservation: {
+        Args: { p_business_id: string; p_reservation_id: string }
+        Returns: Json
+      }
+      dispatch_reserved_supplier_return: {
+        Args: { p_business_id: string; p_reservation_id: string }
+        Returns: Json
+      }
       reverse_inventory_action: { Args: { p_action_id: string }; Returns: Json }
       reverse_quick_sale: {
         Args: { p_business_id: string; p_transaction_id: string }

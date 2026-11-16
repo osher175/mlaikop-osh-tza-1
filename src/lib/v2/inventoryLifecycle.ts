@@ -6,6 +6,7 @@ import {
   STOCK_ADJUSTMENT_RPC_READY,
   SUPPLIER_RETURN_DISPATCH_READY,
   SUPPLIER_RETURN_READY,
+  SUPPLIER_RETURN_RESERVATION_READY,
 } from '@/lib/v2/inventoryFlags';
 import { purchaseReceiptQuantityValid } from '@/lib/v2/quantityRules';
 
@@ -132,6 +133,72 @@ export async function recordSupplierReturn(input: {
   });
   if (error) throw error;
   return finish(data);
+}
+
+const reservationClosed = (): never => closed('שריון המלאי כבוי. המלאי הפיזי והכמות הזמינה למכירה הם אותו מספר, ולכן שריון היה מוריד מהמלאי. שום כמות לא השתנתה.');
+
+/**
+ * Holds units for a supplier return without changing products.quantity.
+ * Available stock becomes quantity minus quantity_reserved. Refuses before any request while the flag is off.
+ */
+export async function reserveSupplierReturn(input: {
+  businessId: string;
+  supplierId: string;
+  reason: string;
+  notes?: string;
+  lines: Array<{ productId: string; quantity: number; unitCost: number | null }>;
+  idempotencyKey: string;
+}): Promise<Json> {
+  if (!SUPPLIER_RETURN_RESERVATION_READY) reservationClosed();
+  const { data, error } = await supabase.rpc('reserve_supplier_return', {
+    p_business_id: input.businessId,
+    p_supplier_id: input.supplierId,
+    p_reason: input.reason,
+    p_notes: input.notes ?? null,
+    p_lines: input.lines.map((line) => ({
+      product_id: line.productId,
+      quantity: line.quantity,
+      unit_cost: line.unitCost,
+    })),
+    p_idempotency_key: input.idempotencyKey,
+  });
+  if (error) throw error;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) reservationClosed();
+  return data;
+}
+
+/** Releases a reservation. products.quantity stays unchanged. */
+export async function releaseSupplierReturnReservation(input: {
+  businessId: string;
+  reservationId: string;
+}): Promise<Json> {
+  if (!SUPPLIER_RETURN_RESERVATION_READY) reservationClosed();
+  const { data, error } = await supabase.rpc('release_supplier_return_reservation', {
+    p_business_id: input.businessId,
+    p_reservation_id: input.reservationId,
+  });
+  if (error) throw error;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) reservationClosed();
+  return data;
+}
+
+/**
+ * Physical exit for a reservation. Decreases quantity and quantity_reserved by the same amount, once.
+ * Both flags must be on. A disabled path returns before the RPC.
+ */
+export async function dispatchReservedSupplierReturn(input: {
+  businessId: string;
+  reservationId: string;
+}): Promise<Json> {
+  if (!SUPPLIER_RETURN_RESERVATION_READY) reservationClosed();
+  if (!SUPPLIER_RETURN_DISPATCH_READY) closed('מסירה לספק עדיין כבויה. אישור המסירה לא נשלח, והמלאי לא השתנה.');
+  const { data, error } = await supabase.rpc('dispatch_reserved_supplier_return', {
+    p_business_id: input.businessId,
+    p_reservation_id: input.reservationId,
+  });
+  if (error) throw error;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) closed('המסירה לא הושלמה.');
+  return data;
 }
 
 export interface SupplierDispatchResult {

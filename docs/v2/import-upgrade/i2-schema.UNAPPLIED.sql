@@ -1,0 +1,4 @@
+-- UNAPPLIED POINTER. This file has no DDL and must not be executed.
+-- Phase I2 is the ordered set in docs/v2/import-upgrade/i2/.
+-- Apply nothing here. Do not copy these files into supabase/migrations
+-- until a separate human approval, after a backup.
