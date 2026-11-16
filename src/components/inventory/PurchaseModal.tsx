@@ -39,7 +39,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
   defaultSupplierId,
   isLoading = false,
 }) => {
-  const { suppliers } = useSuppliers();
+  const { suppliers } = useSuppliers('local');
   const [purchaseUnitIls, setPurchaseUnitIls] = useState<string>('');
   const [purchaseTotalIls, setPurchaseTotalIls] = useState<string>('');
   const [supplierId, setSupplierId] = useState<string>('');

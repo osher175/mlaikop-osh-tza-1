@@ -1,5 +1,7 @@
 
 import React, { useState } from 'react';
+import { useV2UiEnabled } from '@/lib/v2/uiFlag';
+import { InventoryV2 } from '@/components/v2/inventory/InventoryV2';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Package, Loader2 } from 'lucide-react';
@@ -24,7 +26,7 @@ type Product = Database['public']['Tables']['products']['Row'] & {
   product_thresholds?: { low_stock_threshold: number } | null;
 };
 
-export const Inventory: React.FC = () => {
+const LegacyInventory: React.FC = () => {
   const PAGE_SIZE = 50;
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -201,4 +203,16 @@ export const Inventory: React.FC = () => {
       <UndoActionBanner />
     </MainLayout>
   );
+};
+
+export const Inventory: React.FC = () => {
+  const v2 = useV2UiEnabled();
+  if (v2) {
+    return (
+      <MainLayout>
+        <InventoryV2 />
+      </MainLayout>
+    );
+  }
+  return <LegacyInventory />;
 };

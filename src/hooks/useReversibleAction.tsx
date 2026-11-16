@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { customerReturnBlocksReversal } from '@/lib/v2/inventoryLifecycle';
+import { fullReversalClosed } from '@/lib/v2/reversalRules';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -79,6 +81,18 @@ export const useReversibleAction = () => {
 
   const reverse = useCallback(async () => {
     if (!action) return;
+    // Legacy inventory_actions only. A V2 sale is reversed with reverse_quick_sale, not this RPC.
+    try {
+      if (fullReversalClosed(await customerReturnBlocksReversal(action.action_id))) {
+        toast.error('אי אפשר לבטל את כל המכירה אחרי החזרה חלקית', {
+          description: 'המלאי לא שונה. ההחזרה החלקית נשארת רשומה.',
+        });
+        return;
+      }
+    } catch {
+      toast.error('לא הצלחנו לבדוק החזרות קודמות', { description: 'המלאי לא שונה.' });
+      return;
+    }
     const { error } = await supabase.rpc('reverse_inventory_action', {
       p_action_id: action.action_id,
     });

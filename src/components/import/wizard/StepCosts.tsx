@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Plus } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { COST_CATEGORY_LABELS, PAYMENT_TYPE_LABELS } from '@/hooks/useImportOrder';
+import { useSuppliers } from '@/hooks/useSuppliers';
+import { foreignRateMissing, orderPayableRemaining, paidImportIls } from '@/lib/v2/importPaymentMath';
 import { DocumentsCard } from './DocumentsCard';
 
 const CURRENCIES = ['ILS', 'USD', 'EUR', 'CNY', 'GBP'];
@@ -26,6 +28,7 @@ interface Props {
   openDocument: (path: string) => void;
   isReadOnly?: boolean;
   onNext?: () => void;
+  focus?: 'all' | 'payments' | 'expenses';
 }
 
 const Stat: React.FC<{ label: string; value: string; strong?: boolean }> = ({ label, value, strong }) => (
@@ -42,16 +45,18 @@ const Stat: React.FC<{ label: string; value: string; strong?: boolean }> = ({ la
  */
 export const StepCosts: React.FC<Props> = ({
   order, costs, payments, landed, costSummary, documents, addCost, finalizeCost, addPayment,
-  uploadDocument, openDocument, isReadOnly, onNext,
+  uploadDocument, openDocument, isReadOnly, onNext, focus = 'all',
 }) => {
   const [costForm, setCostForm] = React.useState({
     category: 'international_freight', description: '', amount: '',
     currency_code: 'ILS', exchange_rate_to_ils: '',
   });
   const [finalDrafts, setFinalDrafts] = React.useState<Record<string, string>>({});
+  const { suppliers } = useSuppliers();
   const [paymentForm, setPaymentForm] = React.useState({
-    payment_type: 'deposit', amount: '', currency_code: 'ILS', exchange_rate_to_ils: '',
+    payment_type: 'partial', amount: '', currency_code: 'ILS', exchange_rate_to_ils: '',
     payment_date: new Date().toISOString().slice(0, 10), payment_status: 'paid', reference: '',
+    payee_supplier_id: order?.supplier_id ?? '',
   });
 
   const goods = landed.reduce(
@@ -59,20 +64,23 @@ export const StepCosts: React.FC<Props> = ({
   );
   const expenses = Number(costSummary?.effective_total_ils ?? 0);
   const totalToShelf = goods + expenses;
-  const paid = payments
-    .filter((p) => p.payment_status === 'paid')
-    .reduce((s, p) => s + Number(p.amount_ils ?? 0), 0);
+  const paid = paidImportIls(payments);
+  const remaining = orderPayableRemaining(goods, expenses, paid);
+
+  const showExpenses = focus === 'all' || focus === 'expenses';
+  const showPayments = focus === 'all' || focus === 'payments';
 
   return (
     <div className="space-y-4" dir="rtl">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {focus === 'all' && <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Stat label="עלות סחורה" value={formatCurrency(goods)} />
         <Stat label="הוצאות יבוא נוספות" value={formatCurrency(expenses)} />
         <Stat label="עלות עד המדף (סה״כ)" value={formatCurrency(totalToShelf)} strong />
         <Stat label="שולם עד כה" value={formatCurrency(paid)} />
-      </div>
+        <Stat label="יתרה לתשלום" value={formatCurrency(remaining)} />
+      </div>}
 
-      <Card>
+      {showExpenses && <Card>
         <CardHeader className="pb-3"><CardTitle className="text-base">שילוח ועלויות</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <form
@@ -176,9 +184,9 @@ export const StepCosts: React.FC<Props> = ({
             את ההערכה בחישוב עלות עד המדף (הערכה וסופי לעולם לא נסכמים יחד).
           </p>
         </CardContent>
-      </Card>
+      </Card>}
 
-      <Card>
+      {showPayments && <Card>
         <CardHeader className="pb-3"><CardTitle className="text-base">תשלומים</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <form
@@ -193,6 +201,7 @@ export const StepCosts: React.FC<Props> = ({
                 payment_date: paymentForm.payment_date,
                 payment_status: paymentForm.payment_status,
                 reference: paymentForm.reference || null,
+                payee_supplier_id: paymentForm.payee_supplier_id || order?.supplier_id || null,
               });
               setPaymentForm({ ...paymentForm, amount: '', reference: '' });
             }}
@@ -229,10 +238,24 @@ export const StepCosts: React.FC<Props> = ({
                 onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })} />
             </div>
             <div className="space-y-2">
+              <Label>ספק</Label>
+              <Select value={paymentForm.payee_supplier_id || 'none'} onValueChange={(v) => setPaymentForm({ ...paymentForm, payee_supplier_id: v === 'none' ? '' : v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">ללא ספק</SelectItem>
+                  {suppliers.map((supplier) => <SelectItem key={supplier.id} value={supplier.id}>{supplier.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>אמצעי תשלום</Label>
+              <Input value="יישמר אחרי עדכון מבנה התשלומים" disabled />
+            </div>
+            <div className="space-y-2">
               <Label>אסמכתא</Label>
               <Input value={paymentForm.reference} onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })} />
             </div>
-            <Button type="submit" className="min-h-[44px]" disabled={isReadOnly || addPayment.isPending}>
+            <Button type="submit" className="min-h-[44px]" disabled={isReadOnly || addPayment.isPending || foreignRateMissing(paymentForm.currency_code, paymentForm.exchange_rate_to_ils)}>
               <Plus className="h-4 w-4 ml-2" />רישום תשלום
             </Button>
           </form>
@@ -240,22 +263,25 @@ export const StepCosts: React.FC<Props> = ({
           <div className="space-y-2">
             {payments.map((p: any) => (
               <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm">
-                <span>{PAYMENT_TYPE_LABELS[p.payment_type] ?? p.payment_type} · {p.payment_date}</span>
+                <span>{PAYMENT_TYPE_LABELS[p.payment_type] ?? p.payment_type} · {p.payment_date} · {p.payment_status}</span>
                 <span className="text-muted-foreground">{p.reference ?? '—'}</span>
                 <span className="font-semibold">{formatCurrency(Number(p.amount_ils ?? 0))}</span>
               </div>
             ))}
             {payments.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">טרם נרשמו תשלומים</p>}
+            <p className="text-xs text-muted-foreground">רישום תשלום לא משנה מלאי ולא נרשם כהוצאת רווח והפסד. קליטת סחורה לא יוצרת תשלום נוסף. מטבע שאינו שקל דורש שער המרה, כדי שהסכום בשקלים לא יירשם כאילו הוא כבר בשקלים.</p>
           </div>
         </CardContent>
-      </Card>
+      </Card>}
 
+      {focus === 'all' && (
       <DocumentsCard
         documents={documents}
         uploadDocument={uploadDocument}
         openDocument={openDocument}
         isReadOnly={isReadOnly}
       />
+      )}
 
       {onNext && (
         <div className="flex justify-start">

@@ -38,12 +38,12 @@ export function buildV2Nav(p: Perms): { primary: V2NavItem[]; secondary: V2NavIt
   const primary: V2NavItem[] = [
     { key: 'dashboard', label: 'לוח בקרה', icon: Home, to: '/dashboard', show: true },
     { key: 'inventory', label: 'מלאי', icon: Package, to: '/inventory', show: p.canViewProducts },
-    { key: 'sales', label: 'מכירה', icon: ShoppingCart, to: null, show: p.canViewProducts },
+    { key: 'sales', label: 'מכירה', icon: ShoppingCart, to: '/sale', show: p.canViewProducts },
     { key: 'purchasing', label: 'רכש', icon: Truck, to: '/procurement', show: p.canEditProducts },
-    { key: 'returns', label: 'החזרות לספקים', icon: Undo2, to: null, show: p.canEditProducts },
-    { key: 'movements', label: 'תנועות מלאי', icon: Layers, to: null, show: p.canViewProducts },
+    { key: 'returns', label: 'החזרות לספקים', icon: Undo2, to: '/procurement/returns', show: p.canEditProducts },
+    { key: 'movements', label: 'תנועות מלאי', icon: Layers, to: '/movements', show: p.canViewProducts },
     { key: 'reports', label: 'דוחות', icon: BarChart3, to: '/reports', show: p.canViewReports },
-    { key: 'employees', label: 'עובדים', icon: Users, to: null, show: p.canManageSettings },
+    { key: 'employees', label: 'עובדים', icon: Users, to: '/employees', show: p.canViewReports || p.canManageSettings },
     { key: 'settings', label: 'הגדרות עסק', icon: Settings, to: '/settings', show: p.canManageSettings },
   ];
   // Existing destinations not in the V2 menu list — kept reachable so nothing is lost.
@@ -59,5 +59,8 @@ export function buildV2Nav(p: Perms): { primary: V2NavItem[]; secondary: V2NavIt
 
 export function isNavActive(pathname: string, to: string | null) {
   if (!to) return false;
-  return pathname === to || pathname.startsWith(to + '/');
+  if (pathname === to) return true;
+  if (!pathname.startsWith(`${to}/`)) return false;
+  if (to === '/procurement' && pathname.startsWith('/procurement/returns')) return false;
+  return true;
 }

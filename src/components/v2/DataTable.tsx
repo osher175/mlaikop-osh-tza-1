@@ -40,7 +40,8 @@ export function DataTable<T>({
   const allSelected = rows.length > 0 && rows.every((r) => sel.has(getRowId(r)));
   const toggle = (id: string) => {
     const next = new Set(sel);
-    next.has(id) ? next.delete(id) : next.add(id);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     onSelectionChange?.(next);
   };
 

@@ -15,7 +15,7 @@ import { Save, Search, Trash2 } from 'lucide-react';
 export const ProductPairsTable: React.FC = () => {
   const { businessContext } = useBusinessAccess();
   const businessId = businessContext?.business_id;
-  const { suppliers } = useSuppliers();
+  const { suppliers } = useSuppliers('local');
   const { pairs, upsertPair, deletePair } = useSupplierPairs('product');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<{ id: string; name: string } | null>(null);

@@ -2,22 +2,30 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveBusiness } from '@/hooks/useActiveBusiness';
 import { OPEN_STATUSES } from '@/constants/procurement';
-import { DEFAULT_LOW_STOCK_THRESHOLD, rangeToUtc, type DayRange, type SaleRow } from '@/lib/v2/dashboardMetrics';
+import { atomicLegacyCostKnown, DEFAULT_LOW_STOCK_THRESHOLD, rangeToUtc, type DayRange, type SaleRow } from '@/lib/v2/dashboardMetrics';
+import { QUICK_SALE_PERSISTENCE_READY } from '@/lib/v2/employeeAttribution';
+import { loadQuickSaleFacts } from '@/lib/v2/quickSaleRead';
 import type { ImportOrderRow } from '@/hooks/useImportOrders';
 
 const PAGE = 1000;
 const MAX_ROWS = 20000;
 
-/** Sale rows for one period. Same filters as reports_aggregate (remove|sale, non-reversed). Business scope enforced by RLS. */
+/**
+ * Sale rows for one period. Same filters as reports_aggregate / yoy_financials:
+ * action_type remove|sale, a recorded sale amount, reversals and reversed rows excluded.
+ * `remove` without sale_total_ils is an inventory adjustment, not a sale.
+ * Business scope is enforced by the business_id filter and by RLS. There is no branch column.
+ */
 async function fetchSales(businessId: string, range: DayRange) {
   const { start, endExclusive } = rangeToUtc(range);
   const rows: SaleRow[] = [];
   for (let offset = 0; offset < MAX_ROWS; offset += PAGE) {
     const { data, error } = await supabase
       .from('inventory_actions')
-      .select('timestamp, product_id, quantity_changed, sale_total_ils, cost_snapshot_ils')
+      .select('timestamp, product_id, quantity_changed, sale_total_ils, cost_snapshot_ils, reference_type')
       .eq('business_id', businessId)
       .in('action_type', ['remove', 'sale'])
+      .not('sale_total_ils', 'is', null)
       .eq('is_reversal', false)
       .is('reversed_at', null)
       .gte('timestamp', start)
@@ -25,10 +33,24 @@ async function fetchSales(businessId: string, range: DayRange) {
       .order('timestamp', { ascending: true })
       .range(offset, offset + PAGE - 1);
     if (error) throw error;
-    rows.push(...(data as SaleRow[]));
-    if (!data || data.length < PAGE) return { rows, truncated: false };
+    const page = data ?? [];
+    rows.push(...page.map((row): SaleRow => ({
+      timestamp: row.timestamp,
+      product_id: row.product_id,
+      quantity_changed: row.quantity_changed,
+      sale_total_ils: row.sale_total_ils,
+      cost_snapshot_ils: row.cost_snapshot_ils,
+      cost_known: atomicLegacyCostKnown(row.reference_type, row.cost_snapshot_ils),
+    })));
+    if (page.length < PAGE) {
+      if (!QUICK_SALE_PERSISTENCE_READY) return { rows, truncated: false };
+      const extra = await loadQuickSaleFacts(businessId, range);
+      return { rows: [...rows, ...extra], truncated: false };
+    }
   }
-  return { rows, truncated: true };
+  if (!QUICK_SALE_PERSISTENCE_READY) return { rows, truncated: true };
+  const extra = await loadQuickSaleFacts(businessId, range);
+  return { rows: [...rows, ...extra], truncated: true };
 }
 
 export const useDashboardSales = (range: DayRange, enabled: boolean) => {

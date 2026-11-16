@@ -188,6 +188,7 @@ export const useImportOrder = (orderId?: string) => {
   const invalidate = (keys: string[]) => {
     keys.forEach((k) => queryClient.invalidateQueries({ queryKey: [k, orderId] }));
     queryClient.invalidateQueries({ queryKey: ['import-orders-page'] });
+    queryClient.invalidateQueries({ queryKey: ['import-dashboard'] });
     queryClient.invalidateQueries({ queryKey: ['import-order-events', orderId] });
     queryClient.invalidateQueries({ queryKey: ['import-order-landed-cost', orderId] });
     queryClient.invalidateQueries({ queryKey: ['import-order-cost-summary', orderId] });

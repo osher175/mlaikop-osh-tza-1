@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export const Header: React.FC = () => {
+export const Header: React.FC<{ variant?: 'bar' | 'inline' }> = ({ variant = 'bar' }) => {
   const { signOut, user } = useAuth();
   const { getRoleDisplayName, userRole } = useUserRole();
 
@@ -32,7 +32,7 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-3 py-2 md:px-4 md:py-3 lg:px-6">
+    <header className={variant === 'inline' ? 'bg-transparent' : 'bg-white border-b border-gray-200 px-3 py-2 md:px-4 md:py-3 lg:px-6'}>
       <div className="flex items-center justify-end">
         {/* Actions */}
         <div className="flex items-center gap-2 md:gap-3">

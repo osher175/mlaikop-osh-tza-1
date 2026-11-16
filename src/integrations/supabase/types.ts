@@ -640,6 +640,8 @@ export type Database = {
         }
         Relationships: []
       }
+      // Hand-written from the applied docs/v2/production-upgrade SQL.
+      // supabase gen types was not available in this session, so this block was not generated.
       employees: {
         Row: {
           business_id: string
@@ -1696,6 +1698,11 @@ export type Database = {
           reverses_action_id: string | null
           sale_total_ils: number | null
           sale_unit_ils: number | null
+          /**
+           * Deployed by salesperson-required-a.additive.sql. Nullable.
+           * Do not write it while LEGACY_SALE_ATTRIBUTION_READY is false.
+           * Historical rows stay null. Not generated from the live catalog.
+           */
           salesperson_employee_id: string | null
           source: string | null
           supplier_id: string | null
@@ -1809,6 +1816,172 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "suppliers_safe"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      sale_lines: {
+        Row: {
+          axle: string
+          business_id: string
+          id: string
+          inventory_action_id: string
+          line_cost_ex_vat_ils: number | null
+          line_revenue_gross_ils: number
+          line_revenue_net_ils: number
+          line_vat_ils: number
+          position: number
+          product_id: string
+          quantity: number
+          transaction_id: string
+          unit_cost_ils: number | null
+          unit_price_gross_ils: number
+          list_unit_gross_ils: number | null
+          discount_ils: number | null
+          discount_percent: number | null
+          vat_rate: number
+        }
+        Insert: {
+          axle?: string
+          business_id: string
+          id?: string
+          inventory_action_id: string
+          line_cost_ex_vat_ils?: number | null
+          line_revenue_gross_ils: number
+          line_revenue_net_ils: number
+          line_vat_ils: number
+          position: number
+          product_id: string
+          quantity: number
+          transaction_id: string
+          unit_cost_ils?: number | null
+          unit_price_gross_ils: number
+          list_unit_gross_ils?: number | null
+          discount_ils?: number | null
+          discount_percent?: number | null
+          vat_rate: number
+        }
+        Update: {
+          axle?: string
+          business_id?: string
+          id?: string
+          inventory_action_id?: string
+          line_cost_ex_vat_ils?: number | null
+          line_revenue_gross_ils?: number
+          line_revenue_net_ils?: number
+          line_vat_ils?: number
+          position?: number
+          product_id?: string
+          quantity?: number
+          transaction_id?: string
+          unit_cost_ils?: number | null
+          unit_price_gross_ils?: number
+          list_unit_gross_ils?: number | null
+          discount_ils?: number | null
+          discount_percent?: number | null
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_lines_transaction_fkey"
+            columns: ["business_id", "transaction_id"]
+            isOneToOne: false
+            referencedRelation: "sale_transactions"
+            referencedColumns: ["business_id", "id"]
+          },
+          {
+            foreignKeyName: "sale_lines_product_fkey"
+            columns: ["business_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["business_id", "id"]
+          },
+        ]
+      }
+      sale_transactions: {
+        Row: {
+          business_id: string
+          cost_known_lines: number
+          created_by: string
+          currency: string
+          id: string
+          idempotency_key: string
+          known_cost_ex_vat_ils: number | null
+          line_count: number
+          notes: string | null
+          revenue_gross_ils: number
+          revenue_net_ils: number
+          reversed_at: string | null
+          reversed_by: string | null
+          salesperson_employee_id: string | null
+          sold_at: string
+          status: string
+          units_total: number
+          vat_amount_ils: number
+          vat_rate: number
+        }
+        Insert: {
+          business_id: string
+          cost_known_lines: number
+          created_by: string
+          currency?: string
+          id?: string
+          idempotency_key: string
+          known_cost_ex_vat_ils?: number | null
+          line_count: number
+          notes?: string | null
+          revenue_gross_ils: number
+          revenue_net_ils: number
+          reversed_at?: string | null
+          reversed_by?: string | null
+          salesperson_employee_id?: string | null
+          sold_at?: string
+          status?: string
+          units_total: number
+          vat_amount_ils: number
+          vat_rate: number
+        }
+        Update: {
+          business_id?: string
+          cost_known_lines?: number
+          created_by?: string
+          currency?: string
+          id?: string
+          idempotency_key?: string
+          known_cost_ex_vat_ils?: number | null
+          line_count?: number
+          notes?: string | null
+          revenue_gross_ils?: number
+          revenue_net_ils?: number
+          reversed_at?: string | null
+          reversed_by?: string | null
+          salesperson_employee_id?: string | null
+          sold_at?: string
+          status?: string
+          units_total?: number
+          vat_amount_ils?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_transactions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_transactions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_transactions_salesperson_fkey"
+            columns: ["business_id", "salesperson_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["business_id", "id"]
           },
         ]
       }
@@ -3190,170 +3363,6 @@ export type Database = {
           },
         ]
       }
-      sale_lines: {
-        Row: {
-          axle: string
-          business_id: string
-          id: string
-          inventory_action_id: string
-          line_cost_ex_vat_ils: number | null
-          line_revenue_gross_ils: number
-          line_revenue_net_ils: number
-          line_vat_ils: number
-          position: number
-          product_id: string
-          quantity: number
-          transaction_id: string
-          unit_cost_ils: number | null
-          unit_price_gross_ils: number
-          vat_rate: number
-        }
-        Insert: {
-          axle?: string
-          business_id: string
-          id?: string
-          inventory_action_id: string
-          line_cost_ex_vat_ils?: number | null
-          line_revenue_gross_ils: number
-          line_revenue_net_ils: number
-          line_vat_ils: number
-          position: number
-          product_id: string
-          quantity: number
-          transaction_id: string
-          unit_cost_ils?: number | null
-          unit_price_gross_ils: number
-          vat_rate: number
-        }
-        Update: {
-          axle?: string
-          business_id?: string
-          id?: string
-          inventory_action_id?: string
-          line_cost_ex_vat_ils?: number | null
-          line_revenue_gross_ils?: number
-          line_revenue_net_ils?: number
-          line_vat_ils?: number
-          position?: number
-          product_id?: string
-          quantity?: number
-          transaction_id?: string
-          unit_cost_ils?: number | null
-          unit_price_gross_ils?: number
-          vat_rate?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sale_lines_action_fkey"
-            columns: ["business_id", "inventory_action_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_actions"
-            referencedColumns: ["business_id", "id"]
-          },
-          {
-            foreignKeyName: "sale_lines_product_fkey"
-            columns: ["business_id", "product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["business_id", "id"]
-          },
-          {
-            foreignKeyName: "sale_lines_transaction_fkey"
-            columns: ["business_id", "transaction_id"]
-            isOneToOne: false
-            referencedRelation: "sale_transactions"
-            referencedColumns: ["business_id", "id"]
-          },
-        ]
-      }
-      sale_transactions: {
-        Row: {
-          business_id: string
-          cost_known_lines: number
-          created_by: string
-          currency: string
-          id: string
-          idempotency_key: string
-          known_cost_ex_vat_ils: number | null
-          line_count: number
-          notes: string | null
-          revenue_gross_ils: number
-          revenue_net_ils: number
-          reversed_at: string | null
-          reversed_by: string | null
-          salesperson_employee_id: string | null
-          sold_at: string
-          status: string
-          units_total: number
-          vat_amount_ils: number
-          vat_rate: number
-        }
-        Insert: {
-          business_id: string
-          cost_known_lines: number
-          created_by: string
-          currency?: string
-          id?: string
-          idempotency_key: string
-          known_cost_ex_vat_ils?: number | null
-          line_count: number
-          notes?: string | null
-          revenue_gross_ils: number
-          revenue_net_ils: number
-          reversed_at?: string | null
-          reversed_by?: string | null
-          salesperson_employee_id?: string | null
-          sold_at?: string
-          status?: string
-          units_total: number
-          vat_amount_ils: number
-          vat_rate: number
-        }
-        Update: {
-          business_id?: string
-          cost_known_lines?: number
-          created_by?: string
-          currency?: string
-          id?: string
-          idempotency_key?: string
-          known_cost_ex_vat_ils?: number | null
-          line_count?: number
-          notes?: string | null
-          revenue_gross_ils?: number
-          revenue_net_ils?: number
-          reversed_at?: string | null
-          reversed_by?: string | null
-          salesperson_employee_id?: string | null
-          sold_at?: string
-          status?: string
-          units_total?: number
-          vat_amount_ils?: number
-          vat_rate?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sale_transactions_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sale_transactions_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses_safe"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sale_transactions_salesperson_fkey"
-            columns: ["business_id", "salesperson_employee_id"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["business_id", "id"]
-          },
-        ]
-      }
       sales_cycles: {
         Row: {
           business_id: string
@@ -4709,6 +4718,96 @@ export type Database = {
           },
         ]
       }
+      // Deployed. The client reads these tables only while PURCHASE_ORDERS_READY is true.
+      // Row types cover the columns the ledger screen selects.
+      purchase_orders: {
+        Row: {
+          business_id: string
+          expected_on: string | null
+          id: string
+          notes: string | null
+          order_number: string | null
+          ordered_on: string
+          ordering_employee_id: string | null
+          status: string
+          supplier_id: string | null
+          supplier_reference: string | null
+          version: number
+        }
+        Insert: {
+          business_id: string
+          expected_on?: string | null
+          id?: string
+          notes?: string | null
+          order_number?: string | null
+          ordered_on?: string
+          ordering_employee_id?: string | null
+          status?: string
+          supplier_id?: string | null
+          supplier_reference?: string | null
+          version?: number
+        }
+        Update: {
+          business_id?: string
+          expected_on?: string | null
+          notes?: string | null
+          order_number?: string | null
+          ordered_on?: string
+          ordering_employee_id?: string | null
+          status?: string
+          supplier_id?: string | null
+          supplier_reference?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
+      purchase_order_lines: {
+        Row: {
+          agreed_unit_cost: number | null
+          barcode: string | null
+          brand: string | null
+          description: string | null
+          id: string
+          load_index: string | null
+          model: string | null
+          ordered_qty: number
+          product_id: string | null
+          purchase_order_id: string
+          received_qty: number
+          size_label: string | null
+          speed_rating: string | null
+          supplier_sku: string | null
+        }
+        Insert: {
+          agreed_unit_cost?: number | null
+          barcode?: string | null
+          brand?: string | null
+          description?: string | null
+          id?: string
+          load_index?: string | null
+          model?: string | null
+          ordered_qty: number
+          product_id?: string | null
+          purchase_order_id: string
+          received_qty?: number
+          size_label?: string | null
+          speed_rating?: string | null
+          supplier_sku?: string | null
+        }
+        Update: {
+          agreed_unit_cost?: number | null
+          barcode?: string | null
+          brand?: string | null
+          description?: string | null
+          ordered_qty?: number
+          product_id?: string | null
+          received_qty?: number
+          size_label?: string | null
+          speed_rating?: string | null
+          supplier_sku?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       bi_analytics_yearly: {
@@ -4754,8 +4853,8 @@ export type Database = {
           p_business_id: string
           p_idempotency_key: string
           p_lines: Json
-          p_notes: string
-          p_salesperson_employee_id: string
+          p_notes: string | null
+          p_salesperson_employee_id: string | null
         }
         Returns: Json
       }
@@ -5286,6 +5385,90 @@ export type Database = {
         Returns: boolean
       }
       require_premium: { Args: { p_business_id: string }; Returns: boolean }
+      /**
+       * Prepared in docs/v2/inventory-lifecycle.UNAPPLIED.sql. Not deployed.
+       */
+      record_customer_return: {
+        Args: {
+          p_business_id: string
+          p_disposition: string
+          p_idempotency_key: string
+          p_notes?: string | null
+          p_original_action_id: string
+          p_quantity: number
+        }
+        Returns: Json
+      }
+      /**
+       * Prepared in docs/v2/legacy-sale-atomic.UNAPPLIED.sql.
+       * Not deployed. The dialog does not call it while LEGACY_SALE_ATOMIC_READY is false.
+       */
+      record_legacy_sale: {
+        Args: {
+          p_business_id: string
+          p_idempotency_key: string
+          p_notes?: string | null
+          p_product_id: string
+          p_quantity: number
+          p_sale_total_ils: number
+          p_salesperson_employee_id?: string | null
+        }
+        Returns: Json
+      }
+      /**
+       * Prepared in docs/v2/inventory-lifecycle.UNAPPLIED.sql. Not deployed.
+       * The live purchase and stock screens do not call these while their flags are false.
+       */
+      record_purchase_receipt: {
+        Args: {
+          p_business_id: string
+          p_idempotency_key: string
+          p_notes?: string | null
+          p_product_id: string
+          p_quantity: number
+          p_supplier_id?: string | null
+          p_unit_cost?: number | null
+        }
+        Returns: Json
+      }
+      record_stock_adjustment: {
+        Args: {
+          p_business_id: string
+          p_idempotency_key: string
+          p_notes?: string | null
+          p_product_id: string
+          p_quantity_changed: number
+          p_reason: string
+        }
+        Returns: Json
+      }
+      record_supplier_return: {
+        Args: {
+          p_business_id: string
+          p_idempotency_key: string
+          p_notes?: string | null
+          p_product_id: string
+          p_quantity: number
+          p_reason: string
+          p_supplier_id: string
+        }
+        Returns: Json
+      }
+      /**
+       * Prepared in docs/v2/supplier-return-dispatch.UNAPPLIED.sql. Not deployed.
+       * The returns screen does not call this while SUPPLIER_RETURN_DISPATCH_READY is false.
+       */
+      confirm_supplier_return_dispatch: {
+        Args: {
+          p_business_id: string
+          p_idempotency_key: string
+          p_lines: Json
+          p_notes?: string | null
+          p_reason: string
+          p_supplier_id: string
+        }
+        Returns: Json
+      }
       reverse_inventory_action: { Args: { p_action_id: string }; Returns: Json }
       reverse_quick_sale: {
         Args: { p_business_id: string; p_transaction_id: string }

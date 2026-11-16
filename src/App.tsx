@@ -23,6 +23,9 @@ import { ResetPassword } from "@/pages/ResetPassword";
 import { Unauthorized } from "@/pages/Unauthorized";
 import { Dashboard } from "@/pages/Dashboard";
 import { Inventory } from "@/pages/Inventory";
+import { QuickSale } from "@/pages/QuickSale";
+import { Employees } from "@/pages/Employees";
+import { Movements } from "@/pages/Movements";
 import { Subscriptions } from "@/pages/Subscriptions";
 import { Subscribe } from "@/pages/Subscribe";
 
@@ -40,6 +43,8 @@ const AdminDashboard = lazy(() => import("@/pages/AdminDashboard").then(m => ({ 
 const AdminSettings = lazy(() => import("@/pages/AdminSettings").then(m => ({ default: m.AdminSettings })));
 const StorageManagement = lazy(() => import("@/pages/admin/StorageManagement"));
 const Procurement = lazy(() => import("@/pages/Procurement").then(m => ({ default: m.Procurement })));
+const GoodsReceiving = lazy(() => import("@/pages/GoodsReceiving").then(m => ({ default: m.GoodsReceiving })));
+const SupplierReturns = lazy(() => import("@/pages/SupplierReturns").then(m => ({ default: m.SupplierReturns })));
 const ProcurementDetail = lazy(() => import("@/pages/ProcurementDetail").then(m => ({ default: m.ProcurementDetail })));
 const WhatsAppSettings = lazy(() => import("@/pages/WhatsAppSettings").then(m => ({ default: m.WhatsAppSettings })));
 const SettingsApi = lazy(() => import("@/pages/SettingsApi"));
@@ -123,6 +128,30 @@ function App() {
                   }
                 />
                 <Route
+                  path="/sale"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                      <QuickSale />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/movements"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                      <Movements />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/employees"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                      <Employees />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/suppliers"
                   element={
                     <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
@@ -159,6 +188,22 @@ function App() {
                   element={
                     <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
                       <Procurement />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/procurement/receiving"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                      <GoodsReceiving />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/procurement/returns"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user']}>
+                      <SupplierReturns />
                     </ProtectedRoute>
                   }
                 />

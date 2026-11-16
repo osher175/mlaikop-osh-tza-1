@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useEmployees } from '@/hooks/v2/useEmployees';
+import { LEGACY_SALE_ATTRIBUTION_READY } from '@/lib/v2/employeeAttribution';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +24,8 @@ interface SaleModalProps {
 export interface SaleData {
   saleTotalIls: number;
   notes?: string;
+  /** Active employees.id. Required once legacy attribution is activated. Never the signed-in user. */
+  salespersonEmployeeId?: string;
 }
 
 export const SaleModal: React.FC<SaleModalProps> = ({
@@ -36,6 +40,11 @@ export const SaleModal: React.FC<SaleModalProps> = ({
 }) => {
   const [saleTotalIls, setSaleTotalIls] = useState<string>('');
   const [notes, setNotes] = useState('');
+  const [salespersonEmployeeId, setSalespersonEmployeeId] = useState<string | null>(null);
+  const [salespersonNotice, setSalespersonNotice] = useState<string | null>(null);
+  const needsSalesperson = LEGACY_SALE_ATTRIBUTION_READY;
+  const employees = useEmployees(needsSalesperson);
+  const activeEmployees = employees.employees.filter((employee) => employee.is_active);
 
   const listTotal = listPrice * quantitySold;
   const saleTotal = parseFloat(saleTotalIls) || 0;
@@ -44,23 +53,36 @@ export const SaleModal: React.FC<SaleModalProps> = ({
   const grossProfit = saleTotal - (costPrice * quantitySold);
   const profitMargin = saleTotal > 0 ? (grossProfit / saleTotal) * 100 : 0;
 
+  useEffect(() => {
+    if (!needsSalesperson || !salespersonEmployeeId || employees.isLoading || employees.isError) return;
+    const selected = employees.employees.find((employee) => employee.id === salespersonEmployeeId);
+    if (selected?.is_active) return;
+    setSalespersonEmployeeId(null);
+    setSalespersonNotice('המוכר שנבחר אינו פעיל, ולכן הבחירה הוסרה.');
+  }, [employees.employees, employees.isError, employees.isLoading, needsSalesperson, salespersonEmployeeId]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!saleTotalIls || parseFloat(saleTotalIls) <= 0) return;
+    if (needsSalesperson && !salespersonEmployeeId) return;
 
     onConfirm({
       saleTotalIls: parseFloat(saleTotalIls),
       notes: notes || undefined,
+      salespersonEmployeeId: salespersonEmployeeId ?? undefined,
     });
 
-    // Reset form
     setSaleTotalIls('');
     setNotes('');
+    setSalespersonEmployeeId(null);
+    setSalespersonNotice(null);
   };
 
   const handleClose = () => {
     setSaleTotalIls('');
     setNotes('');
+    setSalespersonEmployeeId(null);
+    setSalespersonNotice(null);
     onOpenChange(false);
   };
 
@@ -145,6 +167,31 @@ export const SaleModal: React.FC<SaleModalProps> = ({
             </div>
           )}
 
+          {needsSalesperson && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">מי ביצע את המכירה?</p>
+              {employees.isError && <p className="text-sm text-red-600">לא הצלחנו לטעון את רשימת העובדים.</p>}
+              {salespersonNotice && <p className="text-sm text-red-600">{salespersonNotice}</p>}
+              {!employees.isLoading && !employees.isError && activeEmployees.length === 0 && (
+                <p className="text-sm text-gray-600">אין עובדים פעילים. בעל העסק צריך להוסיף עובד לפני שאפשר לאשר מכירה.</p>
+              )}
+              {!salespersonEmployeeId && <p className="text-sm text-red-600">יש לבחור איש מכירות לפני אישור העסקה</p>}
+              <div className="grid grid-cols-1 gap-2">
+                {activeEmployees.map((employee) => (
+                  <Button
+                    key={employee.id}
+                    type="button"
+                    variant={salespersonEmployeeId === employee.id ? 'default' : 'outline'}
+                    className="h-12 text-base font-bold"
+                    onClick={() => { setSalespersonNotice(null); setSalespersonEmployeeId(employee.id); }}
+                  >
+                    {employee.display_name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* הערות */}
           <div>
             <Label htmlFor="notes" className="text-sm font-medium">הערות (אופציונלי)</Label>
@@ -177,7 +224,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
             </Button>
             <Button 
               type="submit" 
-              disabled={isLoading || !saleTotalIls || parseFloat(saleTotalIls) <= 0}
+              disabled={isLoading || !saleTotalIls || parseFloat(saleTotalIls) <= 0 || (needsSalesperson && !salespersonEmployeeId)}
               className="bg-red-600 hover:bg-red-700"
             >
               {isLoading ? 'שומר...' : 'אשר מכירה'}

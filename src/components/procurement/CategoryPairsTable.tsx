@@ -13,7 +13,7 @@ import { Save } from 'lucide-react';
 export const CategoryPairsTable: React.FC = () => {
   const { businessContext } = useBusinessAccess();
   const businessId = businessContext?.business_id;
-  const { suppliers } = useSuppliers();
+  const { suppliers } = useSuppliers('local');
   const { pairs, upsertPair } = useSupplierPairs('category');
   const [edits, setEdits] = useState<Record<string, { a: string; b: string; strategy: string; active: boolean }>>({});
 

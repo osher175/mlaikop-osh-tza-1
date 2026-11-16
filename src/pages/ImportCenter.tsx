@@ -1,228 +1,296 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Ship, Search, Plus, Lock, Loader2, Trash2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Coins, CreditCard, Filter, Loader2, Plus, Search, Ship, Warehouse } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ImportPinGate } from '@/components/import/ImportPinGate';
 import { CreateImportOrderDialog } from '@/components/import/CreateImportOrderDialog';
 import { DeleteImportOrderDialog } from '@/components/import/DeleteImportOrderDialog';
-import { useImportPin } from '@/hooks/useImportPin';
+import { ImportOrderCard } from '@/components/import/center/ImportOrderCard';
+import { IMPORT_STATUS_LABELS, useDeleteImportOrder } from '@/hooks/useImportOrders';
+import { useImportDashboard } from '@/hooks/useImportDashboard';
 import {
-  useImportOrdersPage, useDeleteImportOrder, IMPORT_PAGE_SIZE, IMPORT_STATUSES,
-  IMPORT_STATUS_LABELS, PURCHASE_TYPE_LABELS,
-} from '@/hooks/useImportOrders';
-import { journeyMilestone, journeyProgress } from '@/components/import/journey/importJourney';
-import { formatCurrency } from '@/lib/formatCurrency';
-import { useDebounce } from '@/hooks/use-debounce';
-
-const statusVariant = (status: string) =>
-  status === 'completed' ? 'secondary' : status === 'cancelled' ? 'destructive' : 'default';
+  buildOrderCard,
+  dashboardView,
+  filterCards,
+  formatMoney,
+  isActiveStatus,
+  summarizeKpis,
+  todayIso,
+  type DashboardFilters,
+} from '@/lib/v2/importDashboardMetrics';
+import { filtersFromSearch, filtersToSearch, rememberImportCenterSearch } from '@/lib/v2/importCenterNavigation';
 
 const ImportCenterContent: React.FC = () => {
-  const navigate = useNavigate();
-  const { lock } = useImportPin();
-  const [scope, setScope] = useState<'active' | 'completed' | 'all'>('active');
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<string>('__all__');
-  const [page, setPage] = useState(0);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; import_number: string } | null>(null);
+  const dashboard = useImportDashboard();
   const deleteOrder = useDeleteImportOrder();
-  const debouncedSearch = useDebounce(search, 300);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filters = useMemo(() => filtersFromSearch(searchParams.toString()), [searchParams]);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; importNumber: string } | null>(null);
+  const today = todayIso();
 
-  const { data, isLoading } = useImportOrdersPage({
-    scope,
-    search: debouncedSearch,
-    status: status === '__all__' ? null : status,
-    page,
+  useEffect(() => {
+    rememberImportCenterSearch(searchParams.toString());
+  }, [searchParams]);
+
+  const updateFilters = (patch: Partial<DashboardFilters>) => {
+    setSearchParams(filtersToSearch({ ...filters, ...patch }), { replace: true });
+  };
+
+  const cards = useMemo(() => {
+    if (!dashboard.data) return [];
+    return dashboard.data.orders.map((order) => buildOrderCard(order, dashboard.data.items, dashboard.data.payments, today));
+  }, [dashboard.data, today]);
+
+  const visible = useMemo(() => filterCards(cards, filters, today), [cards, filters, today]);
+  const kpis = useMemo(() => summarizeKpis(visible), [visible]);
+  const view = dashboardView({
+    isLoading: dashboard.isLoading,
+    isError: dashboard.isError,
+    orderCount: cards.length,
+    visibleCount: visible.length,
   });
-
-  const rows = data?.rows ?? [];
-  const totalCount = data?.totalCount ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalCount / IMPORT_PAGE_SIZE));
+  const closedInView = visible.filter((card) => !isActiveStatus(card.order.status)).length;
+  const suppliers = useMemo(() => {
+    const map = new Map<string, string>();
+    cards.forEach((card) => {
+      if (card.order.supplierId) map.set(card.order.supplierId, card.order.supplierName);
+    });
+    return [...map.entries()];
+  }, [cards]);
 
   return (
-    <div className="space-y-6" dir="rtl">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Ship className="w-6 h-6 text-primary" />
-          </div>
+    <div className="space-y-5" dir="rtl">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <Ship className="h-9 w-9 shrink-0 text-[hsl(var(--v2-navy))]" strokeWidth={1.75} />
           <div>
-            <h1 className="text-2xl font-bold">מרכז יבוא</h1>
-            <p className="text-sm text-muted-foreground">ניהול הזמנות יבוא, עלויות ותשלומים</p>
+            <h1 className="text-[2.15rem] font-bold leading-none text-[hsl(var(--v2-navy))] md:text-[2.4rem]">מרכז הייבוא</h1>
+            <p className="mt-2 text-lg text-[hsl(var(--v2-muted))]">ניהול הזמנות יבוא, משלוחים, תשלומים וקליטת סחורה</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => lock()}>
-            <Lock className="w-4 h-4 ml-2" />
-            נעילה
-          </Button>
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="w-4 h-4 ml-2" />
-            הזמנת יבוא חדשה
-          </Button>
-        </div>
+        <Button className="h-14 gap-2 rounded-xl bg-[hsl(var(--v2-green))] px-6 text-base text-white shadow-sm hover:bg-[hsl(141_90%_24%)]" onClick={() => setCreateOpen(true)}>
+          הזמנה חדשה
+          <Plus className="h-5 w-5" strokeWidth={2.25} />
+        </Button>
       </div>
 
-      <Card>
-        <CardHeader className="space-y-4">
-          <CardTitle className="text-lg">הזמנות יבוא</CardTitle>
-          <div className="flex flex-wrap gap-3">
-            <Tabs value={scope} onValueChange={(v) => { setScope(v as typeof scope); setPage(0); }}>
-              <TabsList>
-                <TabsTrigger value="active">פעילות</TabsTrigger>
-                <TabsTrigger value="completed">הושלמו</TabsTrigger>
-                <TabsTrigger value="all">הכל</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      {dashboard.isLoading && (
+        <div className="flex items-center justify-center py-16 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin ml-2" />
+          טוען הזמנות יבוא…
+        </div>
+      )}
+
+      {dashboard.isError && (
+        <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4 text-sm">
+          לא ניתן לטעון את הזמנות היבוא. הרענון לא משנה נתונים.
+        </div>
+      )}
+
+      {!dashboard.isLoading && !dashboard.isError && (
+        <>
+          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <KpiCard
+              highlight
+              icon={<Ship className="h-7 w-7" strokeWidth={1.75} />}
+              label="הזמנות פעילות"
+              value={kpis.activeOrders.toLocaleString('he-IL')}
+              hint="בלי הושלמו ובלי בוטלו"
+            />
+            <KpiCard
+              icon={<TireMark className="h-7 w-7" />}
+              label="סה״כ צמיגים בהזמנות"
+              value={kpis.tireQuantity.toLocaleString('he-IL')}
+              hint="כמות שהוזמנה בהזמנות הפעילות"
+            />
+            <KpiCard
+              icon={<Coins className="h-7 w-7" strokeWidth={1.75} />}
+              label="שווי הזמנות כולל"
+              value={kpis.valueByCurrency.length === 0 ? '0' : moneyLines(kpis.valueByCurrency)}
+              hint={kpis.valueByCurrency.length === 0
+                ? 'אין הזמנות פעילות. סכומים לא מחוברים בין מטבעות.'
+                : kpis.valueByCurrency.some((row) => row.incomplete) ? 'יש הזמנות בלי מחיר ספק' : 'כל מטבע בנפרד'}
+            />
+            <KpiCard
+              icon={<CreditCard className="h-7 w-7" strokeWidth={1.75} />}
+              label="שולם עד כה"
+              value={kpis.paidByCurrency.length === 0 ? '0' : paidLines(kpis.paidByCurrency)}
+              hint="תשלום לספק באותו מטבע בלבד"
+            />
+            <KpiCard
+              icon={<Warehouse className="h-7 w-7" strokeWidth={1.75} />}
+              label="צפויות לקליטה"
+              value={kpis.approachingReceipt.toLocaleString('he-IL')}
+              hint="הגעה צפויה בשבעת הימים הקרובים"
+            />
+          </section>
+
+          <section className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-[minmax(240px,1.5fr)_1fr_1fr_1fr_auto]">
+            <div className="relative md:col-span-2 xl:col-span-1">
+              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[hsl(var(--v2-muted))]" strokeWidth={1.75} />
               <Input
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-                placeholder="חיפוש לפי מספר יבוא או ספק"
-                className="pr-9"
+                className="h-12 rounded-xl border-[hsl(var(--v2-border))] bg-white pr-9 text-base text-[hsl(var(--v2-navy))]"
+                placeholder="חיפוש לפי מספר הזמנה, ספק או דגם"
+                value={filters.search}
+                onChange={(event) => updateFilters({ search: event.target.value })}
               />
             </div>
-            <Select value={status} onValueChange={(v) => { setStatus(v); setPage(0); }}>
-              <SelectTrigger className="w-[190px]">
-                <SelectValue placeholder="כל הסטטוסים" />
-              </SelectTrigger>
+            <Select value={filters.status || 'all'} onValueChange={(value) => updateFilters({ status: value === 'all' ? '' : value })}>
+              <SelectTrigger className="h-12 rounded-xl border-[hsl(var(--v2-border))] bg-white text-base text-[hsl(var(--v2-navy))]"><SelectValue placeholder="סטטוס" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all__">כל הסטטוסים</SelectItem>
-                {IMPORT_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>{IMPORT_STATUS_LABELS[s]}</SelectItem>
+                <SelectItem value="all">כל הסטטוסים</SelectItem>
+                {Object.entries(IMPORT_STATUS_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : rows.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Ship className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p>לא נמצאו הזמנות יבוא</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-right">מספר יבוא</TableHead>
-                    <TableHead className="text-right">ספק</TableHead>
-                    <TableHead className="text-right">סוג רכישה</TableHead>
-                    <TableHead className="text-right">סטטוס</TableHead>
-                    <TableHead className="text-right">תאריך הזמנה</TableHead>
-                    <TableHead className="text-right">הגעה משוערת</TableHead>
-                    <TableHead className="text-right">יחידות</TableHead>
-                    <TableHead className="text-right">עלות סחורה</TableHead>
-                    <TableHead className="text-right">עלות כוללת משוערת</TableHead>
-                    <TableHead className="text-right">שולם</TableHead>
-                    <TableHead className="text-right">יתרה</TableHead>
-                    <TableHead className="text-right">פעולות</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      className="cursor-pointer"
-                      onClick={() => navigate(`/import/${row.id}`)}
-                    >
-                      <TableCell className="font-medium">{row.import_number}</TableCell>
-                      <TableCell>{row.supplier_name ?? '—'}</TableCell>
-                      <TableCell>{PURCHASE_TYPE_LABELS[row.purchase_type] ?? row.purchase_type}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={statusVariant(row.status)}>
-                            {journeyMilestone(row.status)
-                              ? `${journeyMilestone(row.status)!.icon} ${journeyMilestone(row.status)!.label}`
-                              : IMPORT_STATUS_LABELS[row.status] ?? row.status}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">{journeyProgress(row.status)}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{row.order_date}</TableCell>
-                      <TableCell>{row.estimated_arrival_date ?? '—'}</TableCell>
-                      <TableCell>{row.ordered_units}</TableCell>
-                      <TableCell>{formatCurrency(Number(row.goods_cost_ils))}</TableCell>
-                      <TableCell>{formatCurrency(Number(row.estimated_total_cost_ils))}</TableCell>
-                      <TableCell>{formatCurrency(Number(row.paid_ils))}</TableCell>
-                      <TableCell>{formatCurrency(Number(row.remaining_payment_ils))}</TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`מחיקת הזמנה ${row.import_number}`}
-                          onClick={() =>
-                            setDeleteTarget({ id: row.id, import_number: row.import_number })
-                          }
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-
-          {totalCount > IMPORT_PAGE_SIZE && (
-            <div className="flex items-center justify-between pt-4">
-              <span className="text-sm text-muted-foreground">
-                עמוד {page + 1} מתוך {totalPages} · {totalCount} הזמנות
-              </span>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-                  הקודם
+            <Select value={filters.supplierId || 'all'} onValueChange={(value) => updateFilters({ supplierId: value === 'all' ? '' : value })}>
+              <SelectTrigger className="h-12 rounded-xl border-[hsl(var(--v2-border))] bg-white text-base text-[hsl(var(--v2-navy))]"><SelectValue placeholder="ספק" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">כל הספקים</SelectItem>
+                {suppliers.map(([id, name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filters.period} onValueChange={(value) => updateFilters({ period: value as DashboardFilters['period'] })}>
+              <SelectTrigger className="h-12 rounded-xl border-[hsl(var(--v2-border))] bg-white text-base text-[hsl(var(--v2-navy))]"><SelectValue placeholder="תקופה" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">כל התקופות</SelectItem>
+                <SelectItem value="30">30 הימים האחרונים</SelectItem>
+                <SelectItem value="90">90 הימים האחרונים</SelectItem>
+                <SelectItem value="year">השנה</SelectItem>
+              </SelectContent>
+            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="h-12 w-12 rounded-xl border-[hsl(var(--v2-border))] bg-white text-[hsl(var(--v2-navy))] shadow-none" aria-label="סינון נוסף">
+                  <Filter className="h-5 w-5" strokeWidth={1.75} />
                 </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-80 space-y-3" dir="rtl">
+                <p className="text-sm font-semibold">סינון ההזמנות</p>
+                <p className="text-xs text-muted-foreground">אלה הסינונים הנתמכים. אין שכבת סינון נוספת.</p>
                 <Button
                   variant="outline"
-                  size="sm"
-                  disabled={page + 1 >= totalPages}
-                  onClick={() => setPage((p) => p + 1)}
+                  className="h-10 w-full"
+                  onClick={() => updateFilters({ search: '', status: '', supplierId: '', period: 'all' })}
                 >
-                  הבא
+                  נקה סינון
                 </Button>
-              </div>
+              </PopoverContent>
+            </Popover>
+          </section>
+
+          {closedInView > 0 && kpis.activeOrders === 0 && (
+            <p className="text-sm text-muted-foreground">
+              המדדים הם אפס כי ההזמנות ברשימה הושלמו או בוטלו. הכרטיסים נשארים, והם לא נספרים כהזמנות פעילות.
+            </p>
+          )}
+
+          {view === 'empty' ? (
+            <div className="rounded-2xl border border-dashed bg-card p-8 md:p-12 text-center space-y-3">
+              <h2 className="text-xl font-semibold">עדיין לא נפתחו הזמנות יבוא</h2>
+              <p className="text-sm text-muted-foreground max-w-xl mx-auto">
+                צור את הזמנת היבוא הראשונה כדי להתחיל לנהל ספקים, משלוחים, תשלומים וקליטת סחורה.
+              </p>
+              <Button className="h-12 gap-2 rounded-xl bg-[hsl(var(--v2-green))] text-white hover:bg-[hsl(141_90%_24%)]" onClick={() => setCreateOpen(true)}>
+                הזמנה חדשה
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : view === 'filtered-empty' ? (
+            <div className="rounded-2xl border border-dashed p-10 text-center text-muted-foreground">
+              אין הזמנות שמתאימות לסינון.
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {visible.map((card) => (
+                <ImportOrderCard
+                  key={card.order.id}
+                  card={card}
+                  onDelete={() => setDeleteTarget({ id: card.order.id, importNumber: card.order.importNumber })}
+                />
+              ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </>
+      )}
 
       <CreateImportOrderDialog open={createOpen} onOpenChange={setCreateOpen} />
-
       <DeleteImportOrderDialog
         open={!!deleteTarget}
-        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
-        importNumber={deleteTarget?.import_number}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        importNumber={deleteTarget?.importNumber}
         isDeleting={deleteOrder.isPending}
         onConfirm={(pin) => {
           if (!deleteTarget) return;
           deleteOrder.mutate(
             { orderId: deleteTarget.id, pin },
-            { onSuccess: () => setDeleteTarget(null) }
+            { onSuccess: () => setDeleteTarget(null) },
           );
         }}
       />
     </div>
   );
 };
+
+const KpiCard: React.FC<{ highlight?: boolean; icon: React.ReactNode; label: string; value: React.ReactNode; hint: string }> = ({
+  highlight, icon, label, value, hint,
+}) => (
+  <article className={`flex min-h-[108px] flex-col justify-between rounded-2xl border px-4 py-3 shadow-[var(--v2-shadow)] ${highlight ? 'border-[hsl(var(--v2-green-soft))] bg-[hsl(var(--v2-green-soft))]' : 'border-[hsl(var(--v2-border))] bg-white'}`}>
+    <div className="flex items-start justify-between gap-2">
+      <span className="text-sm text-[hsl(var(--v2-muted))]">{label}</span>
+      <span className="shrink-0 text-[hsl(var(--v2-green))]">{icon}</span>
+    </div>
+    <div>
+      <div className="text-3xl font-bold leading-none text-[hsl(var(--v2-navy))]">{value}</div>
+      <p className="mt-1.5 text-xs leading-snug text-[hsl(var(--v2-muted))]">{hint}</p>
+    </div>
+  </article>
+);
+
+function moneyLines(rows: { currency: string; amount: number; incomplete: boolean }[]) {
+  if (rows.length === 0) return '0';
+  return (
+    <span className="block space-y-1">
+      {rows.map((row) => (
+        <span key={row.currency} className="block text-xl">
+          {formatMoney(row.amount, row.currency)}
+          {row.incomplete ? ' +' : ''}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function paidLines(rows: { currency: string; paid: number; percent: number | null }[]) {
+  if (rows.length === 0) return '0';
+  return (
+    <span className="block space-y-1">
+      {rows.map((row) => (
+        <span key={row.currency} className="block text-xl">
+          {formatMoney(row.paid, row.currency)}
+          <span className="mr-2 text-sm font-semibold text-[hsl(var(--v2-green))]">
+            {row.percent == null ? '' : `${row.percent}%`}
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function TireMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M12 4.5v2.2M12 17.3v2.2M4.5 12h2.2M17.3 12h2.2M6.6 6.6l1.6 1.6M15.8 15.8l1.6 1.6M17.4 6.6l-1.6 1.6M8.2 15.8l-1.6 1.6" />
+    </svg>
+  );
+}
 
 export const ImportCenter: React.FC = () => (
   <ImportPinGate>

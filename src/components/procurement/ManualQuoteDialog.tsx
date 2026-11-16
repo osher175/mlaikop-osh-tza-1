@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { useSupplierQuotes } from '@/hooks/useSupplierQuotes';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { fetchBusinessSuppliers } from '@/hooks/useSuppliers';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 
 interface ManualQuoteDialogProps {
@@ -28,14 +28,10 @@ export const ManualQuoteDialog: React.FC<ManualQuoteDialogProps> = ({ requestId 
   const { businessContext } = useBusinessAccess();
 
   const { data: suppliers = [] } = useQuery({
-    queryKey: ['suppliers-for-quote', businessContext?.business_id],
+    queryKey: ['suppliers-for-quote', businessContext?.business_id, 'local'],
     queryFn: async () => {
       if (!businessContext?.business_id) return [];
-      const { data } = await supabase
-        .from('suppliers')
-        .select('id, name')
-        .eq('business_id', businessContext.business_id);
-      return data || [];
+      return fetchBusinessSuppliers(businessContext.business_id, 'local');
     },
     enabled: !!businessContext?.business_id && open,
   });

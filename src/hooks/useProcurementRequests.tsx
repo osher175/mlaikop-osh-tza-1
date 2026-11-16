@@ -36,7 +36,7 @@ export const useProcurementRequests = (statusFilter?: string, searchTerm?: strin
   const queryClient = useQueryClient();
   const businessId = businessContext?.business_id;
 
-  const { data: requests = [], isLoading } = useQuery({
+  const { data: requests = [], isLoading, isError } = useQuery({
     queryKey: ['procurement-requests', businessId, statusFilter],
     queryFn: async () => {
       if (!businessId) return [];
@@ -46,7 +46,7 @@ export const useProcurementRequests = (statusFilter?: string, searchTerm?: strin
         .select(`
           *,
           products(name, barcode, quantity, product_category_id),
-          supplier_quotes(id)
+          supplier_quotes!supplier_quotes_procurement_request_id_fkey(id)
         `)
         .eq('business_id', businessId)
         .order('created_at', { ascending: false });
@@ -180,6 +180,7 @@ export const useProcurementRequests = (statusFilter?: string, searchTerm?: strin
   return {
     requests: filteredRequests,
     isLoading,
+    isError,
     createManualRequest,
     cancelRequest,
   };

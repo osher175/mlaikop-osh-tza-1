@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveBusiness } from '@/hooks/useActiveBusiness';
 import { useToast } from '@/hooks/use-toast';
+import type { WizardOrderPayload } from '@/lib/v2/importOrderWizard';
 
 export const IMPORT_STATUSES = [
   'ordered',
@@ -91,41 +92,34 @@ export const useImportOrdersPage = ({ scope, search, status, page }: PageArgs) =
   });
 };
 
-export interface CreateImportOrderInput {
-  supplier_id: string | null;
-  purchase_type: 'direct_import' | 'parallel_import';
-  supplier_country?: string | null;
-  currency_code: string;
-  working_exchange_rate_to_ils?: number | null;
-  order_date: string;
-  estimated_arrival_date?: string | null;
-  supplier_order_reference?: string | null;
-  notes?: string | null;
-}
-
 export const useCreateImportOrder = () => {
   const { requireBusinessId } = useActiveBusiness();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (input: CreateImportOrderInput) => {
+    mutationFn: async (input: WizardOrderPayload) => {
       const businessId = requireBusinessId();
       if (!businessId) throw new Error('missing business');
-      // `import_number` is assigned server-side by the numbering trigger, so it
-      // is intentionally omitted from the payload (the generated Insert type
-      // still marks it required).
-      const { data, error } = await supabase
-        .from('import_orders')
-        .insert({ ...input, business_id: businessId } as never)
-        .select('id, import_number')
-        .single();
+      if (!input.lines?.length) throw new Error('חסרה שורת מוצר');
+      // Commit goes through import_wizard_commit. That function is not applied yet.
+      // A missing function fails the whole request, so no header or stock write happens.
+      const { data, error } = await supabase.rpc('import_wizard_commit' as never, {
+        p_payload: { ...input, business_id: businessId },
+      } as never);
       if (error) throw error;
-      return data;
+      const row = data as { id?: string } | null;
+      if (!row?.id) throw new Error('השרת לא החזיר מזהה רשומה');
+      return row;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['import-orders-page'] });
-      toast({ title: 'הזמנת יבוא נוצרה', description: data.import_number });
+      queryClient.invalidateQueries({ queryKey: ['import-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-products-page'] });
+      queryClient.invalidateQueries({ queryKey: ['import-incoming-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['import-in-transit'] });
+      toast({ title: 'הזמנת היבוא נשמרה' });
     },
     onError: (error: any) => {
       toast({ title: 'שגיאה ביצירת הזמנה', description: error.message, variant: 'destructive' });
@@ -152,6 +146,7 @@ export const useDeleteImportOrder = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['import-orders-page'] });
+      queryClient.invalidateQueries({ queryKey: ['import-dashboard'] });
       toast({ title: 'הזמנת היבוא נמחקה' });
     },
     onError: (error: any) => {

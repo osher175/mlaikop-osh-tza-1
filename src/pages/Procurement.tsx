@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,9 +22,31 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useQueryClient } from '@tanstack/react-query';
+import { useV2UiEnabled } from '@/lib/v2/uiFlag';
+import { PurchaseOrdersV2 } from '@/components/v2/procurement/PurchaseOrdersV2';
+import { ShortagesV2 } from '@/components/v2/procurement/ShortagesV2';
+import { ListPager } from '@/components/v2/procurement/ListPager';
+import { pageSlice, type PageSize } from '@/lib/v2/listPage';
+import { procurementTab } from '@/lib/v2/procurementTab';
 
 export const Procurement: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('shortages');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const v2 = useV2UiEnabled();
+  const activeTab = procurementTab(v2, searchParams.get('tab'));
+  const selectTab = (next: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('tab', next);
+    setSearchParams(params, { replace: true });
+  };
+  useEffect(() => {
+    const requested = searchParams.get('tab');
+    if (!requested) return;
+    const resolved = procurementTab(v2, requested);
+    if (requested === resolved) return;
+    const params = new URLSearchParams(searchParams);
+    params.set('tab', resolved);
+    setSearchParams(params, { replace: true });
+  }, [v2, searchParams, setSearchParams]);
   const [statusFilter, setStatusFilter] = useState('active');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -38,10 +61,17 @@ export const Procurement: React.FC = () => {
   const queryClient = useQueryClient();
 
   const businessId = businessContext?.business_id;
-  const { requests = [], isLoading: requestsLoading } = useProcurementRequests(statusFilter, searchTerm);
-  const { products: rawLowStockProducts, isLoading: lowStockLoading } = useLowStockProducts();
+  const ordersFocus = v2 && activeTab === 'orders';
+  const { requests = [], isLoading: requestsLoading, isError: requestsError } = useProcurementRequests(statusFilter, searchTerm);
+  const { products: rawLowStockProducts, isLoading: lowStockLoading, isError: lowStockError } = useLowStockProducts();
   const lowStockProducts = rawLowStockProducts ?? [];
   const { updateStatus, approveRequest } = useProcurementActions();
+  const [requestPage, setRequestPage] = useState(1);
+  const [requestPageSize, setRequestPageSize] = useState<PageSize>(25);
+  useEffect(() => { setRequestPage(1); }, [statusFilter, searchTerm]);
+  const requestView = pageSlice(requests, requestPage, requestPageSize);
+  useEffect(() => { if (requestView.page !== requestPage) setRequestPage(requestView.page); }, [requestView.page, requestPage]);
+  const visibleRequests = v2 ? requestView.items : requests;
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' });
@@ -151,26 +181,26 @@ export const Procurement: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-6" dir="rtl">
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className={v2 ? 'space-y-4 font-[Heebo]' : 'space-y-6'} dir="rtl">
+        {/* Header. The orders view carries its own mockup header. */}
+        {!ordersFocus && <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
             <ShoppingCart className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">רכש חכם</h1>
-              <p className="text-muted-foreground text-sm">ניהול בקשות רכש והצעות מחיר</p>
+              <h1 className={v2 ? 'font-[Heebo] text-[26px] font-extrabold md:text-[30px]' : 'text-2xl md:text-3xl font-bold text-foreground'}>{v2 ? 'רכש' : 'רכש חכם'}</h1>
+              <p className="text-muted-foreground text-sm">{v2 ? 'חוסרים, בקשות רכש, הזמנות וקליטת סחורה. בקשה אינה הזמנה ואינה קליטת מלאי.' : 'ניהול בקשות רכש והצעות מחיר'}</p>
             </div>
           </div>
           <Button onClick={handleScanLowStock} disabled={scanning}>
             <ScanLine className="h-4 w-4 ml-2" />
             {scanning ? 'סורק...' : 'סרוק חוסרים ופתח בקשות'}
           </Button>
-        </div>
+        </div>}
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="shortages">
+        <Tabs value={activeTab} onValueChange={selectTab}>
+          {!ordersFocus && <TabsList className="h-auto max-w-full justify-start overflow-x-auto">
+            <TabsTrigger value="shortages" className="shrink-0">
               <AlertTriangle className="h-4 w-4 ml-1" />
               חוסרים
               {lowStockProducts.length > 0 && (
@@ -179,19 +209,27 @@ export const Procurement: React.FC = () => {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="requests">
+            <TabsTrigger value="requests" className="shrink-0">
               <Package className="h-4 w-4 ml-1" />
               בקשות רכש
             </TabsTrigger>
-            <TabsTrigger value="settings">
+            {v2 && (
+              <TabsTrigger value="orders" className="shrink-0">
+                <Truck className="h-4 w-4 ml-1" />
+                הזמנות רכש
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="settings" className="shrink-0">
               <Settings className="h-4 w-4 ml-1" />
               הגדרות רכש
             </TabsTrigger>
-          </TabsList>
+          </TabsList>}
 
           {/* Tab: Shortages */}
           <TabsContent value="shortages" className="mt-4">
-            {lowStockLoading ? (
+            {v2 ? (
+              <ShortagesV2 products={lowStockProducts} isLoading={lowStockLoading} isError={lowStockError} />
+            ) : lowStockLoading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
               </div>
@@ -244,11 +282,16 @@ export const Procurement: React.FC = () => {
           </TabsContent>
 
           {/* Tab: Requests */}
-          <TabsContent value="requests" className="mt-4 space-y-4">
-            {/* Filters */}
-            <div className="flex flex-wrap gap-3">
+          <TabsContent value="requests" className="mt-4 space-y-3">
+            {v2 && (
+              <header>
+                <h2 className="text-xl font-extrabold">בקשות רכש</h2>
+                <p className="mt-1 text-sm text-v2-muted">בקשה אינה הזמנת ספק ואינה קליטת מלאי. יצירה נשארת דרך הסריקה או הפעולות הקיימות.</p>
+              </header>
+            )}
+            <div className={v2 ? 'flex flex-col gap-2 sm:flex-row' : 'flex flex-wrap gap-3'}>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className={v2 ? 'h-11 w-full rounded-[14px] sm:w-64' : 'w-48'}>
                   <SelectValue placeholder="סנן לפי סטטוס" />
                 </SelectTrigger>
                 <SelectContent>
@@ -263,36 +306,41 @@ export const Procurement: React.FC = () => {
                   <SelectItem value="recommended">מומלץ</SelectItem>
                 </SelectContent>
               </Select>
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="relative min-w-0 flex-1">
+                <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="חיפוש לפי שם מוצר או ברקוד..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="pr-10"
+                  className={v2 ? 'h-11 rounded-[14px] pr-10' : 'pr-10'}
                 />
               </div>
             </div>
 
             {/* Table */}
             {requestsLoading ? (
-              <div className="flex items-center justify-center py-12">
+              <div className="flex items-center justify-center rounded-[18px] border border-[#e6eef6] bg-white py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
               </div>
+            ) : requestsError ? (
+              <p className="rounded-[18px] border border-[#fecdd3] bg-[#fff1f2] px-4 py-8 text-center text-sm font-bold text-destructive" role="alert">בקשות הרכש לא נטענו.</p>
             ) : requests.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Package className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground text-lg">אין בקשות רכש עדיין</p>
-                  <Button variant="outline" className="mt-3" onClick={handleScanLowStock} disabled={scanning}>
-                    <ScanLine className="h-4 w-4 ml-2" />
-                    סרוק חוסרים ופתח בקשות
-                  </Button>
+              <Card className={v2 ? 'rounded-[18px] border-[#e6eef6] shadow-none' : undefined}>
+                <CardContent className="flex flex-col items-center justify-center py-10">
+                  <Package className="mb-3 h-8 w-8 text-muted-foreground" />
+                  <p className="text-base font-bold">{searchTerm ? 'אין בקשה שמתאימה לחיפוש' : 'אין בקשות רכש'}</p>
+                  <p className="mt-1 text-center text-sm text-muted-foreground">בקשה נפתחת מהסריקה. היא אינה הופכת להזמנת ספק.</p>
+                  {!searchTerm && (
+                    <Button variant="outline" className="mt-3" onClick={handleScanLowStock} disabled={scanning}>
+                      <ScanLine className="h-4 w-4 ml-2" />
+                      סרוק חוסרים ופתח בקשות
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ) : isMobile ? (
               <div className="space-y-3">
-                {requests.map(req => (
+                {visibleRequests.map(req => (
                   <Card key={req.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => openDrawer(req)}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-2">
@@ -313,11 +361,11 @@ export const Procurement: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <Card>
+              <Card className={v2 ? 'overflow-hidden rounded-[18px] border-[#e6eef6] shadow-none' : undefined}>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-muted/50">
+                      <thead className={v2 ? 'bg-[#f6f8fb]' : 'bg-muted/50'}>
                         <tr className="border-b">
                           <th className="text-right p-3 font-medium text-sm">מוצר</th>
                           <th className="text-right p-3 font-medium text-sm">כמות</th>
@@ -329,7 +377,7 @@ export const Procurement: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {requests.map(req => (
+                        {visibleRequests.map(req => (
                           <tr
                             key={req.id}
                             className="border-b hover:bg-muted/30 transition-colors cursor-pointer"
@@ -382,7 +430,31 @@ export const Procurement: React.FC = () => {
                 </CardContent>
               </Card>
             )}
+            {v2 && !requestsLoading && !requestsError && requests.length > 0 && (
+              <ListPager
+                from={requestView.from}
+                to={requestView.to}
+                total={requestView.total}
+                page={requestView.page}
+                pages={requestView.pages}
+                size={requestPageSize}
+                onPage={setRequestPage}
+                onSize={(next) => { setRequestPageSize(next); setRequestPage(1); }}
+              />
+            )}
           </TabsContent>
+
+          {v2 && (
+            <TabsContent value="orders" className="mt-0">
+              <PurchaseOrdersV2
+                scanning={scanning}
+                onScanShortages={handleScanLowStock}
+                onOpenShortages={() => selectTab('shortages')}
+                onOpenRequests={() => selectTab('requests')}
+                onOpenSettings={() => selectTab('settings')}
+              />
+            </TabsContent>
+          )}
 
           {/* Tab: Settings */}
           <TabsContent value="settings" className="mt-4">

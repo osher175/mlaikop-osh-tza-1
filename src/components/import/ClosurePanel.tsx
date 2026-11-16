@@ -300,7 +300,7 @@ export const ClosurePanel: React.FC<ClosurePanelProps> = ({ orderId }) => {
             <div><p className="text-muted-foreground text-xs">תקורה ליחידה</p>{formatCurrency(Number(s.overhead_per_unit_ils ?? 0))}</div>
             <div><p className="text-muted-foreground text-xs">שווי מכירה מתוכנן</p>{formatCurrency(Number(s.planned_sales_value_ils ?? 0))}</div>
             <div><p className="text-muted-foreground text-xs">שולם</p>{formatCurrency(Number(s.payments_paid_ils ?? 0))}</div>
-            <div><p className="text-muted-foreground text-xs">יתרה לתשלום</p>{formatCurrency(Number(s.payments_outstanding_ils ?? 0))}</div>
+            <div><p className="text-muted-foreground text-xs">שורות תשלום שטרם שולמו</p>{formatCurrency(Number(s.payments_outstanding_ils ?? 0))}</div>
             <div><p className="text-muted-foreground text-xs">הוטמע במלאי</p>{formatCurrency(Number(s.adjustment_applied_ils ?? 0))}</div>
             <div><p className="text-muted-foreground text-xs">תאריך סגירה</p>
               {s.closed_at ? new Date(s.closed_at).toLocaleDateString('he-IL') : '—'}

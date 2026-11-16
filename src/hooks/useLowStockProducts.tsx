@@ -6,6 +6,7 @@ import { OPEN_STATUSES } from '@/constants/procurement';
 export interface LowStockProduct {
   product_id: string;
   product_name: string;
+  barcode: string | null;
   quantity: number;
   low_stock_threshold: number;
   open_request_id: string | null;
@@ -16,14 +17,14 @@ export const useLowStockProducts = () => {
   const { businessContext } = useBusinessAccess();
   const businessId = businessContext?.business_id;
 
-  const { data: products = [], isLoading } = useQuery({
+  const { data: products = [], isLoading, isError } = useQuery({
     queryKey: ['low-stock-products', businessId],
     queryFn: async () => {
       if (!businessId) return [];
 
       const { data: thresholds, error: thError } = await supabase
         .from('product_thresholds')
-        .select('product_id, low_stock_threshold, products:products!product_thresholds_product_id_fkey(id, name, quantity)')
+        .select('product_id, low_stock_threshold, products:products!product_thresholds_product_id_fkey(id, name, quantity, barcode)')
         .eq('business_id', businessId);
 
       if (thError) throw thError;
@@ -55,6 +56,7 @@ export const useLowStockProducts = () => {
         return {
           product_id: pt.product_id,
           product_name: pt.products.name,
+          barcode: pt.products.barcode ?? null,
           quantity: pt.products.quantity,
           low_stock_threshold: pt.low_stock_threshold,
           open_request_id: req?.id || null,
@@ -65,5 +67,5 @@ export const useLowStockProducts = () => {
     enabled: !!businessId,
   });
 
-  return { products, isLoading };
+  return { products, isLoading, isError };
 };

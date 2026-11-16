@@ -15,19 +15,19 @@ const NavRow: React.FC<{ item: V2NavItem; collapsed?: boolean; active: boolean; 
 }) => {
   const Icon = item.icon;
   const base = cn(
-    'relative flex items-center h-12 rounded-v2-control font-semibold text-[15px] transition-colors duration-300',
-    collapsed ? 'justify-center px-0' : 'gap-3 px-4',
+    'relative flex items-center h-11 rounded-[14px] font-semibold text-[15px] transition-colors duration-300',
+    collapsed ? 'justify-center px-0' : 'gap-3 px-3.5',
   );
   const content = (
     <>
       <Icon className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
       {collapsed ? <span className="sr-only">{item.label}</span> : <span className="truncate">{item.label}</span>}
-      {!collapsed && !item.to && <span className="ms-auto text-[11px] font-medium text-v2-muted">בקרוב</span>}
+      {!item.to && <span className="sr-only">עדיין לא זמין</span>}
     </>
   );
   if (!item.to) {
     return (
-      <div aria-disabled="true" title={`${item.label} — עדיין לא זמין`} className={cn(base, 'text-v2-muted/70 cursor-not-allowed')}>
+      <div aria-disabled="true" title={`${item.label} — עדיין לא זמין`} className={cn(base, 'text-v2-muted/60 cursor-not-allowed')}>
         {content}
       </div>
     );
@@ -41,7 +41,7 @@ const NavRow: React.FC<{ item: V2NavItem; collapsed?: boolean; active: boolean; 
       className={cn(
         base,
         active
-          ? 'bg-v2-primary-soft text-v2-primary-dark before:absolute before:right-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-v2-primary'
+          ? 'bg-v2-primary text-white shadow-[0_8px_18px_rgba(13,148,136,0.28)]'
           : 'text-v2-navy hover:bg-v2-table-head',
       )}
     >
@@ -57,8 +57,15 @@ export const SidebarV2: React.FC<Props> = ({ collapsed, onNavigate }) => {
 
   return (
     <div className="h-full flex flex-col bg-v2-surface">
-      <div className={cn('flex items-center justify-center border-b border-v2-border shrink-0', collapsed ? 'h-[60px] px-2' : 'h-24 px-4')}>
-        <img src={mlaikoLogo} alt="Mlaiko" className="max-h-full max-w-full object-contain py-2" />
+      <div className={cn('flex items-center border-b border-v2-border shrink-0', collapsed ? 'h-[76px] justify-center px-2' : 'min-h-[88px] gap-3 px-4 py-3')}>
+        <img
+          src={mlaikoLogo}
+          alt={collapsed ? 'Mlaiko' : ''}
+          className={cn('object-contain shrink-0', collapsed ? 'h-14 w-14' : 'h-16 w-16')}
+        />
+        {!collapsed && (
+          <span className="text-[18px] font-extrabold tracking-tight text-[#1f2a44]">Mlaiko</span>
+        )}
       </div>
       <nav aria-label="ניווט ראשי" className="flex-1 overflow-y-auto overscroll-contain p-2 space-y-1">
         {primary.map((item) => (
@@ -74,7 +81,7 @@ export const SidebarV2: React.FC<Props> = ({ collapsed, onNavigate }) => {
           </>
         )}
       </nav>
-      {!collapsed && <div className="p-4 text-center text-xs text-v2-muted border-t border-v2-border">Mlaiko © {new Date().getFullYear()}</div>}
+      {!collapsed && <div className="p-4 text-center text-[12px] text-v2-muted border-t border-v2-border">Mlaiko {new Date().getFullYear()} ©</div>}
     </div>
   );
 };

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { BillingReadOnlyBanner } from '@/components/billing/BillingReadOnlyBanner';
-import { BusinessDiagnosticPanel } from '@/components/dev/BusinessDiagnosticPanel';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile, useIsSidebarDrawer } from '@/hooks/use-mobile';
 import { useMediaQuery } from './useMediaQuery';
@@ -15,10 +15,13 @@ import mlaikoLogo from '@/assets/mlaiko-logo-full.png';
  * only the chrome changes. ≥1440: 232px sidebar · 1024–1439: 76px rail · 768–1023: drawer · <768: bottom nav.
  */
 export const AppShellV2: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { pathname } = useLocation();
   const isMobile = useIsMobile();
   const isDrawer = useIsSidebarDrawer();
   const isWide = useMediaQuery('(min-width: 1440px)');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // On the wide dashboard the page title row owns the single user-control cluster.
+  const dashboardOwnsHeader = pathname === '/dashboard' && !isDrawer;
 
   const sidebarWidth = isDrawer ? 0 : isWide ? 232 : 76;
   const padding = isMobile ? 16 : isWide ? 24 : 20;
@@ -31,8 +34,9 @@ export const AppShellV2: React.FC<{ children: React.ReactNode }> = ({ children }
         </aside>
       )}
 
-      <div className="flex flex-col min-h-screen min-w-0" style={{ marginRight: sidebarWidth }}>
+      <div className="relative flex flex-col min-h-screen min-w-0" style={{ marginRight: sidebarWidth }}>
         <BillingReadOnlyBanner />
+        {!dashboardOwnsHeader && (
         <header className="sticky top-0 z-20 h-[60px] bg-v2-surface border-b border-v2-border flex items-center gap-2 px-4">
           {isDrawer && !isMobile && (
             <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
@@ -52,11 +56,12 @@ export const AppShellV2: React.FC<{ children: React.ReactNode }> = ({ children }
               </SheetContent>
             </Sheet>
           )}
-          {isDrawer && <img src={mlaikoLogo} alt="Mlaiko" className="h-8 object-contain" />}
+          {isDrawer && <img src={mlaikoLogo} alt="Mlaiko" className="h-10 w-10 object-contain shrink-0" />}
           <div className="ms-auto">
-            <Header />
+            <Header variant="inline" />
           </div>
         </header>
+        )}
 
         <main
           className="flex-1 w-full min-w-0 overflow-x-hidden"
@@ -67,7 +72,6 @@ export const AppShellV2: React.FC<{ children: React.ReactNode }> = ({ children }
       </div>
 
       {isMobile && <MobileBottomNav />}
-      <BusinessDiagnosticPanel />
     </div>
   );
 };

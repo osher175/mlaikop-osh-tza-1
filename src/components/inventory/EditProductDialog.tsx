@@ -17,6 +17,7 @@ import { SaleModal, SaleData } from '@/components/inventory/SaleModal';
 import { PurchaseModal, PurchaseData } from '@/components/inventory/PurchaseModal';
 import { rememberReversibleAction } from '@/hooks/useReversibleAction';
 import { EDITOR_OPERATION, planLegacyProductSave, readLedgerActionId } from '@/lib/v2/legacyInventoryWrite';
+import { ProductAgingNote } from '@/components/v2/reports/ProductAgingNote';
 import { Plus, Scan } from 'lucide-react';
 import { useCategories } from '@/hooks/useCategories';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,6 +42,7 @@ interface EditProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onProductUpdated: () => void;
+  showAgingSection?: boolean;
 }
 
 export const EditProductDialog: React.FC<EditProductDialogProps> = ({
@@ -48,6 +50,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   open,
   onOpenChange,
   onProductUpdated,
+  showAgingSection = false,
 }) => {
   const { toast } = useToast();
   const { business } = useBusiness();
@@ -567,6 +570,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
               </div>
             </div>
 
+            {showAgingSection && <ProductAgingNote />}
             <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
               <BillingLockedButton
                 type="submit"

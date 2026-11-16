@@ -18,21 +18,29 @@ export const ProductImageViewer: React.FC<ProductImageViewerProps> = ({
   open,
   onOpenChange,
 }) => {
+  const [failed, setFailed] = React.useState(false);
+  const image = product?.image?.trim() || null;
+
+  React.useEffect(() => {
+    setFailed(false);
+  }, [product?.id, image]);
+
   if (!product) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl" dir="rtl">
-        <DialogHeader>
+      <DialogContent className="z-[60] max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-4xl overflow-y-auto p-4 sm:p-6" dir="rtl">
+        <DialogHeader className="pe-10">
           <DialogTitle>תמונת המוצר - {product.name}</DialogTitle>
         </DialogHeader>
         
-        <div className="flex justify-center items-center min-h-[400px]">
-          {product.image ? (
+        <div className="flex min-h-0 items-center justify-center">
+          {image && !failed ? (
             <img
-              src={product.image}
+              src={image}
               alt={product.name}
-              className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+              className="max-h-[calc(100dvh-8rem)] max-w-full object-contain rounded-lg shadow-lg"
+              onError={() => setFailed(true)}
             />
           ) : (
             <div className="flex flex-col items-center justify-center text-gray-500">

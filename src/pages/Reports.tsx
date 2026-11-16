@@ -17,6 +17,8 @@ import { InsightsTabs } from '@/components/reports/InsightsTabs';
 import { TopProductsRanking } from '@/components/reports/TopProductsRanking';
 import { useBusinessInsights } from '@/features/reports/businessInsights/useBusinessInsights';
 import { BusinessInsightsSection } from '@/features/reports/components/BusinessInsightsSection';
+import { useV2UiEnabled } from '@/lib/v2/uiFlag';
+import { ReportsV2 } from '@/components/v2/reports/ReportsV2';
 
 const ErrorFallback = ({ error, retry }: { error: Error; retry: () => void }) => (
   <Card className="border-destructive/50 bg-destructive/10">
@@ -31,7 +33,7 @@ const ErrorFallback = ({ error, retry }: { error: Error; retry: () => void }) =>
   </Card>
 );
 
-export const Reports: React.FC = () => {
+const LegacyReports: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const navigate = useNavigate();
 
@@ -161,4 +163,18 @@ export const Reports: React.FC = () => {
       </div>
     </MainLayout>
   );
+};
+
+export const Reports: React.FC = () => {
+  const v2 = useV2UiEnabled();
+  const { permissions } = useUserRole();
+  if (permissions.isPlatformAdmin) return <LegacyReports />;
+  if (v2) {
+    return (
+      <MainLayout>
+        <ReportsV2 />
+      </MainLayout>
+    );
+  }
+  return <LegacyReports />;
 };

@@ -14,6 +14,12 @@ import { composeDescription, itemBrand, itemModel, itemSize, itemTitle } from '.
 
 const CURRENCIES = ['ILS', 'USD', 'EUR', 'CNY', 'GBP', 'JPY', 'TRY'];
 
+interface LandedLine {
+  item_id: string;
+  expected_landed_unit_cost_ils?: number | null;
+  overhead_per_unit_ils?: number | null;
+}
+
 interface Props {
   order: any;
   items: any[];
@@ -24,7 +30,8 @@ interface Props {
   linkProduct: any;
   createAndLinkProduct?: any;
   isReadOnly?: boolean;
-  onNext: () => void;
+  onNext?: () => void;
+  landed?: LandedLine[] | null;
 }
 
 const emptyItem = {
@@ -39,7 +46,7 @@ const emptyItem = {
 
 /** STEP 1 — order header + "מה הזמנתי?" lines. Nothing here touches stock. */
 export const StepOrderDetails: React.FC<Props> = ({
-  order, items, updateOrder, addItem, updateItem, deleteItem, linkProduct, createAndLinkProduct, isReadOnly, onNext,
+  order, items, updateOrder, addItem, updateItem, deleteItem, linkProduct, createAndLinkProduct, isReadOnly, onNext, landed,
 }) => {
   const { suppliers = [] } = useSuppliers() as any;
   const [header, setHeader] = React.useState({
@@ -56,17 +63,14 @@ export const StepOrderDetails: React.FC<Props> = ({
   const [form, setForm] = React.useState(emptyItem);
   const [editing, setEditing] = React.useState<string | null>(null);
   const [linkItem, setLinkItem] = React.useState<any | null>(null);
+  const [editorOpen, setEditorOpen] = React.useState(items.length === 0);
 
-  const rate = Number(header.working_exchange_rate_to_ils) || Number(order.working_exchange_rate_to_ils) || 0;
+  const rateKnown = header.currency_code === 'ILS' || Number(header.working_exchange_rate_to_ils) > 0;
+  const landedById = new Map((landed ?? []).map((row) => [row.item_id, row]));
   const lines = items.length;
   const units = items.reduce((s, i) => s + Number(i.ordered_quantity ?? 0), 0);
   const foreignValue = items.reduce(
     (s, i) => s + Number(i.ordered_quantity ?? 0) * Number(i.supplier_unit_cost ?? 0), 0
-  );
-  const ilsValue = items.reduce(
-    (s, i) => s + Number(i.ordered_quantity ?? 0) *
-      (i.expected_unit_cost_ils != null ? Number(i.expected_unit_cost_ils) : Number(i.supplier_unit_cost ?? 0) * rate),
-    0
   );
 
   const saveHeader = () =>
@@ -118,6 +122,60 @@ export const StepOrderDetails: React.FC<Props> = ({
 
   return (
     <div className="space-y-4" dir="rtl">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-semibold">מוצרים בהזמנה</h3>
+        <Button type="button" variant="outline" className="min-h-[44px]" onClick={() => setEditorOpen((open) => !open)}>
+          {editorOpen ? 'סגירת עריכה' : 'עריכת פרטים ושורות'}
+        </Button>
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border bg-card">
+        <table className="w-full min-w-[860px] text-sm">
+          <thead className="bg-muted/50 text-muted-foreground">
+            <tr className="text-right">
+              <th className="px-3 py-2 font-medium">מוצר</th>
+              <th className="px-3 py-2 font-medium">מק״ט</th>
+              <th className="px-3 py-2 font-medium">כמות שהוזמנה</th>
+              <th className="px-3 py-2 font-medium">מחיר ספק</th>
+              <th className="px-3 py-2 font-medium">סה״כ ספק</th>
+              <th className="px-3 py-2 font-medium">תוספת ליחידה</th>
+              <th className="px-3 py-2 font-medium">עלות נחיתה ליחידה</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((it) => {
+              const qty = Number(it.ordered_quantity ?? 0);
+              const unit = it.supplier_unit_cost == null ? null : Number(it.supplier_unit_cost);
+              const lineTotal = unit == null ? null : qty * unit;
+              const landedLine = landedById.get(it.id);
+              const overhead = rateKnown ? landedLine?.overhead_per_unit_ils : null;
+              const landedUnit = rateKnown ? landedLine?.expected_landed_unit_cost_ils : null;
+              const money = (amount: number) => `${amount.toLocaleString('he-IL')} ${it.currency_code || header.currency_code}`;
+              return (
+                <tr key={it.id} className="border-t">
+                  <td className="px-3 py-2 font-medium">{itemTitle(it)}</td>
+                  <td className="px-3 py-2">{it.supplier_sku || 'לא צוין'}</td>
+                  <td className="px-3 py-2">{qty.toLocaleString('he-IL')}</td>
+                  <td className="px-3 py-2">{unit == null ? 'לא ידוע' : money(unit)}</td>
+                  <td className="px-3 py-2">{lineTotal == null ? 'לא ידוע' : money(lineTotal)}</td>
+                  <td className="px-3 py-2">{overhead == null ? 'לא ידוע' : formatCurrency(Number(overhead))}</td>
+                  <td className="px-3 py-2">{landedUnit == null ? 'לא ידוע' : formatCurrency(Number(landedUnit))}</td>
+                </tr>
+              );
+            })}
+            {items.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">טרם נוספו פריטים להזמנה</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        עלות הנחיתה מוצגת רק כשיש שער המרה שמור או שההזמנה בשקלים. שער חסר לא מוצג כאפס.
+      </p>
+
+      {editorOpen && (<>
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-base">פרטי ההזמנה</CardTitle></CardHeader>
         <CardContent className="space-y-4">
@@ -236,8 +294,8 @@ export const StepOrderDetails: React.FC<Props> = ({
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <Summary label="שורות מוצר" value={String(lines)} />
             <Summary label="סה״כ יחידות" value={String(units)} />
-            <Summary label="ערך סחורה במטבע זר" value={`${foreignValue.toFixed(2)} ${header.currency_code}`} />
-            <Summary label="ערך סחורה משוער בש״ח" value={formatCurrency(ilsValue)} />
+            <Summary label="ערך סחורה במטבע ההזמנה" value={`${foreignValue.toFixed(2)} ${header.currency_code}`} />
+            <Summary label="ערך בש״ח" value={rateKnown ? 'מחושב רק עם שער שמור, בשורות שלמעלה' : 'לא ידוע'} />
           </div>
 
           <div className="space-y-2">
@@ -285,11 +343,12 @@ export const StepOrderDetails: React.FC<Props> = ({
           </div>
         </CardContent>
       </Card>
+      </>)}
 
       <div className="flex justify-start">
-        <Button className="min-h-[44px]" onClick={() => { if (!isReadOnly) saveHeader(); onNext(); }}>
-          שמור והמשך למעקב יבוא
-          <ArrowLeft className="h-4 w-4 mr-2" />
+        <Button className="min-h-[44px]" onClick={() => { if (!isReadOnly) saveHeader(); onNext?.(); }}>
+          {onNext ? 'שמור והמשך למעקב יבוא' : 'שמירת פרטי הזמנה'}
+          {onNext && <ArrowLeft className="h-4 w-4 mr-2" />}
         </Button>
       </div>
 

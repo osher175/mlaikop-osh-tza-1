@@ -4,32 +4,39 @@ import { supabase } from '@/integrations/supabase/client';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
+import { classificationColumn, missingClassificationColumn, type SupplierListRole } from '@/lib/v2/supplierClassification';
 
 type Supplier = Database['public']['Tables']['suppliers']['Row'];
 type CreateSupplierParams = Database['public']['Tables']['suppliers']['Insert'];
 
-export const useSuppliers = () => {
+export async function fetchBusinessSuppliers(businessId: string, role: SupplierListRole = 'all') {
+  const base = () => supabase.from('suppliers').select('*').eq('business_id', businessId);
+  if (role === 'all') {
+    const { data, error } = await base().order('name');
+    if (error) throw error;
+    return data ?? [];
+  }
+  const column = classificationColumn(role);
+  const filtered = await base().filter(column, 'eq', true).order('name');
+  if (filtered.error && missingClassificationColumn(filtered.error) && role === 'local') {
+    const fallback = await base().order('name');
+    if (fallback.error) throw fallback.error;
+    return fallback.data ?? [];
+  }
+  if (filtered.error) throw filtered.error;
+  return filtered.data ?? [];
+}
+
+export const useSuppliers = (role: SupplierListRole = 'all') => {
   const { businessContext } = useBusinessAccess();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: suppliers = [], isLoading, error } = useQuery({
-    queryKey: ['suppliers', businessContext?.business_id],
+    queryKey: ['suppliers', businessContext?.business_id, role],
     queryFn: async () => {
       if (!businessContext?.business_id) return [];
-      
-      const { data, error } = await supabase
-        .from('suppliers')
-        .select('*')
-        .eq('business_id', businessContext.business_id)
-        .order('name');
-      
-      if (error) {
-        console.error('Error fetching suppliers:', error);
-        throw error;
-      }
-      
-      return data;
+      return fetchBusinessSuppliers(businessContext.business_id, role);
     },
     enabled: !!businessContext?.business_id,
     staleTime: 5 * 60 * 1000,

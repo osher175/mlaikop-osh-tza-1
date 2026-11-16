@@ -27,7 +27,7 @@ export const SupplierPairDialog: React.FC<SupplierPairDialogProps> = ({
   onOpenChange,
   request,
 }) => {
-  const { suppliers } = useSuppliers();
+  const { suppliers } = useSuppliers('local');
   const { upsertPair } = useSupplierPairs();
   const { updateSupplierPair } = useProcurementActions();
 

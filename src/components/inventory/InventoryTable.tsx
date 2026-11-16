@@ -14,7 +14,8 @@ import { StockApprovalDialog } from '@/components/inventory/StockApprovalDialog'
 import { useStockApprovals } from '@/hooks/useStockApprovals';
 import { useBusinessAccess } from '@/hooks/useBusinessAccess';
 import { useCostVisibility } from '@/hooks/useCostVisibility';
-import { useInTransitQuantities } from '@/hooks/useInTransitQuantities';
+import { useInTransitQuantities, useIncomingSummaries } from '@/hooks/useInTransitQuantities';
+import { catalogStockView, incomingForCatalog } from '@/lib/v2/importIncoming';
 
 import type { Database } from '@/integrations/supabase/types';
 
@@ -30,6 +31,17 @@ interface InventoryTableProps {
   onDeleteProduct: (product: Product) => void;
   onViewProductImage: (product: Product) => void;
   activeStockFilter: 'all' | 'inStock' | 'lowStock' | 'outOfStock';
+}
+
+function CatalogQuantity({ product, view }: { product: { quantity: number }; view: ReturnType<typeof catalogStockView> }) {
+  return (
+    <div>
+      {view.showQuantity && <span className="font-medium">{product.quantity}</span>}
+      {view.incomingLabel && <div className="text-xs font-normal text-[hsl(var(--v2-green))]">{view.incomingLabel}</div>}
+      {view.arrivalLabel && <div className="text-xs font-normal text-gray-500">{view.arrivalLabel}</div>}
+      {view.incomingUnknown && <div className="text-xs font-normal text-gray-500">בדרך לא נטען</div>}
+    </div>
+  );
 }
 
 export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
@@ -54,7 +66,17 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
   // current page are aggregated server side — no full-catalog scan.
   const productIds = React.useMemo(() => products.map((p) => p.id), [products]);
   const inTransitByProduct = useInTransitQuantities(productIds);
-  const getInTransit = (productId: string) => inTransitByProduct.get(productId) ?? 0;
+  const incomingSummaries = useIncomingSummaries(productIds);
+  const stockView = (product: Product) => {
+    const summary = incomingSummaries.status === 'ok' ? incomingSummaries.data.get(product.id) ?? null : null;
+    const incoming = incomingForCatalog(
+      incomingSummaries.status === 'ok' ? { status: 'ok', summary } : { status: 'unavailable' },
+      inTransitByProduct.status === 'ok'
+        ? { status: 'ok', quantity: inTransitByProduct.data.get(product.id) ?? 0 }
+        : { status: 'unavailable' },
+    );
+    return catalogStockView({ quantity: product.quantity, incoming });
+  };
 
 
 
@@ -94,6 +116,9 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
     const quantity = product.quantity;
     const threshold = product.product_thresholds?.low_stock_threshold || 5;
     
+    if (quantity === 0 && stockView(product).incomingLabel) {
+      return <Badge className="bg-[hsl(var(--v2-green))] text-white text-xs">בדרך</Badge>;
+    }
     if (quantity === 0) {
       return <Badge className="bg-red-500 text-white text-xs">אזל</Badge>;
     } else if (quantity <= threshold && quantity > 0) {
@@ -197,12 +222,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                     <div className="grid grid-cols-2 gap-1 md:gap-2 text-xs md:text-sm mb-2 md:mb-3">
                       <div className="truncate">
                         <span className="text-gray-600">כמות: </span>
-                        <span className="font-medium">{product.quantity}</span>
-                        {getInTransit(product.id) > 0 && (
-                          <span className="text-blue-600 mr-1" title="כמות בדרך מהזמנות יבוא פתוחות">
-                            (בדרך: {getInTransit(product.id)})
-                          </span>
-                        )}
+                        <CatalogQuantity product={product} view={stockView(product)} />
                       </div>
 
                       <div className="truncate">
@@ -349,12 +369,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
                     <td className="p-3 text-gray-600 text-sm max-w-[100px] min-w-[120px] truncate hidden md:table-cell">{product.barcode || '-'}</td>
                     <td className="p-3 text-gray-600 text-sm max-w-[100px] min-w-[120px] truncate">{getCategoryName(product)}</td>
                     <td className="p-3 font-medium text-sm min-w-[80px]">
-                      {product.quantity}
-                      {getInTransit(product.id) > 0 && (
-                        <div className="text-xs font-normal text-blue-600" title="כמות בדרך מהזמנות יבוא פתוחות">
-                          בדרך: {getInTransit(product.id)}
-                        </div>
-                      )}
+                      <CatalogQuantity product={product} view={stockView(product)} />
                     </td>
 
                     <td className="p-3 text-sm min-w-[100px]">₪{product.price || '-'}</td>
