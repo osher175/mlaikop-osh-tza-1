@@ -49,6 +49,8 @@ export function planLegacyProductSave(input: {
   costSnapshotIls: number;
   sale: { saleTotalIls: number; notes?: string } | null;
   purchase: { purchaseUnitIls: number; purchaseTotalIls: number; supplierId?: string | null; notes?: string } | null;
+  /** A count correction is an adjust transaction. The reason is stored on the ledger row. */
+  correctionReason?: string | null;
 }): PlannedLegacySave {
   const empty = (error: string): PlannedLegacySave => ({
     businessId: input.businessId,
@@ -69,6 +71,22 @@ export function planLegacyProductSave(input: {
       businessId: input.businessId,
       productId: input.productId,
       stock: null,
+      metadataOmitsQuantity: true,
+      metadataOmitsCost: false,
+      error: null,
+    };
+  }
+
+  const correctionReason = input.correctionReason?.trim() ?? '';
+  if (!input.sale && !input.purchase && correctionReason) {
+    return {
+      businessId: input.businessId,
+      productId: input.productId,
+      stock: {
+        actionType: 'adjust',
+        quantityChanged,
+        notes: correctionReason,
+      },
       metadataOmitsQuantity: true,
       metadataOmitsCost: false,
       error: null,

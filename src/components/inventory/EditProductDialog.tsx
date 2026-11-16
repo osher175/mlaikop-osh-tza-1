@@ -57,6 +57,8 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   const saveInFlight = useRef(false);
   const saleOperation = useRef<{ signature: string; key: string } | null>(null);
   const purchaseOperation = useRef<{ signature: string; key: string } | null>(null);
+  const correctionOperation = useRef<{ signature: string; key: string } | null>(null);
+  const [correctionReason, setCorrectionReason] = useState('');
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   
@@ -102,6 +104,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
           low_stock_threshold: thresholdData?.low_stock_threshold || 5,
           enable_whatsapp_supplier_notification: product.enable_whatsapp_supplier_notification || false,
         });
+        setCorrectionReason('');
       };
 
       fetchThreshold();
@@ -142,7 +145,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     await saveProduct();
   };
 
-  const saveProduct = async (saleData?: SaleData, purchaseData?: PurchaseData) => {
+  const saveProduct = async (saleData?: SaleData, purchaseData?: PurchaseData, correctionReasonText?: string) => {
     if (!product || !business?.id || !user?.id) return;
     if (saveInFlight.current) return;
     saveInFlight.current = true;
@@ -184,12 +187,11 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
               notes: purchaseData.notes,
             }
           : null,
+        correctionReason: correctionReasonText,
       });
-      if (plan.error || plan.stock?.actionType === 'adjust') {
-        throw new Error(plan.error || 'quantity change needs a sale or a purchase');
-      }
+      if (plan.error) throw new Error(plan.error);
 
-      let stockPosted: 'remove' | 'add' | null = null;
+      let stockPosted: 'remove' | 'add' | 'adjust' | null = null;
       if (plan.stock) {
         const stock = plan.stock;
         const signature = JSON.stringify({
@@ -201,7 +203,11 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
           supplierId: stock.supplierId ?? null,
           notes: stock.notes,
         });
-        const slot = stock.actionType === 'remove' ? saleOperation : purchaseOperation;
+        const slot = stock.actionType === 'remove'
+          ? saleOperation
+          : stock.actionType === 'add'
+            ? purchaseOperation
+            : correctionOperation;
         const operation = sameOperationKey(slot.current, signature);
         slot.current = operation;
         const { data: ledger, error: stockError } = await supabase.rpc('execute_inventory_transaction', {
@@ -268,6 +274,15 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
           onProductUpdated();
           return;
         }
+        if (stockPosted === 'adjust') {
+          toast({
+            title: 'התיקון נרשם',
+            description: 'פרטי המוצר לא נשמרו. המלאי והתנועה כבר עודכנו.',
+            variant: 'destructive',
+          });
+          onProductUpdated();
+          return;
+        }
         throw productError;
       }
 
@@ -296,12 +311,15 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
       toast({
         title: "מוצר עודכן בהצלחה",
-        description: quantityDiff !== 0 
+        description: stockPosted === 'adjust'
+          ? 'נרשם תיקון מלאי'
+          : quantityDiff !== 0 
           ? quantityDiff < 0 
             ? `נרשמה מכירה של ${Math.abs(quantityDiff)} יחידות`
             : `נרשמה קנייה של ${quantityDiff} יחידות`
           : "הפרטים נשמרו במערכת",
       });
+      if (stockPosted === 'adjust') setCorrectionReason('');
 
       onProductUpdated();
       onOpenChange(false);
@@ -442,6 +460,28 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                     />
                   </div>
                 </div>
+
+                {product && formData.quantity !== (product.quantity || 0) && (
+                  <div className="space-y-2">
+                    <Label htmlFor="correction_reason" className="text-sm font-medium">סיבת תיקון מלאי</Label>
+                    <Input
+                      id="correction_reason"
+                      value={correctionReason}
+                      onChange={(e) => setCorrectionReason(e.target.value)}
+                      className="h-10"
+                      placeholder="חובה כשהשינוי אינו מכירה או קנייה"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10"
+                      disabled={loading || correctionReason.trim().length === 0}
+                      onClick={() => { void saveProduct(undefined, undefined, correctionReason.trim()); }}
+                    >
+                      רשום תיקון מלאי
+                    </Button>
+                  </div>
+                )}
 
                 <div>
                   <Label htmlFor="location" className="text-sm font-medium">מיקום</Label>
