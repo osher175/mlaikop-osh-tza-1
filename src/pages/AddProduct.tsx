@@ -18,6 +18,7 @@ import { AddProductCategoryDialog } from '@/components/inventory/AddProductCateg
 import { AddSupplierDialog } from '@/components/suppliers/AddSupplierDialog';
 import { Plus, Scan, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { purchaseCostFromInput } from '@/lib/v2/legacyInventoryWrite';
 
 export const AddProduct: React.FC = () => {
   const { toast } = useToast();
@@ -34,7 +35,7 @@ export const AddProduct: React.FC = () => {
     barcode: '',
     quantity: 0,
     price: 0,
-    cost: 0,
+    cost: null as number | null,
     location: '',
     expiration_date: '',
     image: '',
@@ -62,7 +63,7 @@ export const AddProduct: React.FC = () => {
         barcode: formData.barcode || null,
         quantity: formData.quantity,
         price: formData.price || null,
-        cost: formData.cost || null,
+        cost: formData.cost,
         location: formData.location || null,
         expiration_date: formData.expiration_date || null,
         image: formData.image || null,
@@ -78,7 +79,7 @@ export const AddProduct: React.FC = () => {
         barcode: '',
         quantity: 0,
         price: 0,
-        cost: 0,
+        cost: null,
         location: '',
         expiration_date: '',
         image: '',
@@ -271,8 +272,12 @@ export const AddProduct: React.FC = () => {
                         type="number"
                         min="0"
                         step="0.01"
-                        value={formData.cost}
-                        onChange={(e) => setFormData({ ...formData, cost: Number(e.target.value) })}
+                        value={formData.cost ?? ''}
+                        onChange={(e) => {
+                          const cost = purchaseCostFromInput(e.target.value);
+                          if (Number.isNaN(cost)) return;
+                          setFormData({ ...formData, cost });
+                        }}
                         className="mt-1"
                         placeholder="0.00"
                       />

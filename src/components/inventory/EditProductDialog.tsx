@@ -16,7 +16,7 @@ import { AddProductCategoryDialog } from '@/components/inventory/AddProductCateg
 import { SaleModal, SaleData } from '@/components/inventory/SaleModal';
 import { PurchaseModal, PurchaseData } from '@/components/inventory/PurchaseModal';
 import { rememberReversibleAction } from '@/hooks/useReversibleAction';
-import { EDITOR_OPERATION, planLegacyProductSave, readLedgerActionId } from '@/lib/v2/legacyInventoryWrite';
+import { EDITOR_OPERATION, explicitPurchaseCost, planLegacyProductSave, purchaseCostFromInput, readLedgerActionId } from '@/lib/v2/legacyInventoryWrite';
 import { ProductAgingNote } from '@/components/v2/reports/ProductAgingNote';
 import { Plus, Scan } from 'lucide-react';
 import { useCategories } from '@/hooks/useCategories';
@@ -75,7 +75,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     barcode: product?.barcode || '',
     quantity: product?.quantity || 0,
     price: product?.price || 0,
-    cost: product?.cost || 0,
+    cost: product?.cost ?? null,
     location: product?.location || '',
     expiration_date: product?.expiration_date || '',
     image: product?.image || '',
@@ -99,7 +99,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
           barcode: product.barcode || '',
           quantity: product.quantity || 0,
           price: product.price || 0,
-          cost: product.cost || 0,
+          cost: product.cost ?? null,
           location: product.location || '',
           expiration_date: product.expiration_date || '',
           image: product.image || '',
@@ -165,7 +165,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         name: formData.name,
         barcode: formData.barcode || null,
         price: formData.price || null,
-        cost: formData.cost || null,
+        cost: explicitPurchaseCost(formData.cost, product.cost ?? null),
         location: formData.location || null,
         expiration_date: formData.expiration_date || null,
         image: formData.image || null,
@@ -180,7 +180,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         oldQuantity,
         newQuantity,
         listUnitIls: product.price == null ? null : Number(product.price),
-        costSnapshotIls: Number(product.cost) || 0,
+        costSnapshotIls: product.cost == null ? null : Number(product.cost),
         sale: saleData ? { saleTotalIls: saleData.saleTotalIls, notes: saleData.notes } : null,
         purchase: purchaseData
           ? {
@@ -505,8 +505,12 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                       type="number"
                       min="0"
                       step="0.01"
-                      value={formData.cost}
-                      onChange={(e) => setFormData({ ...formData, cost: Number(e.target.value) })}
+                      value={formData.cost ?? ''}
+                      onChange={(e) => {
+                        const cost = purchaseCostFromInput(e.target.value);
+                        if (Number.isNaN(cost)) return;
+                        setFormData({ ...formData, cost });
+                      }}
                       className="mt-1 h-10"
                     />
                   </div>

@@ -14,6 +14,7 @@ import {
 } from '@/lib/v2/saleDraft';
 import { quoteDraft } from '@/lib/v2/saleQuote';
 import { completeQuickSale } from '@/lib/v2/quickSaleWrite';
+import { UNKNOWN_COST_SALE_MESSAGE } from '@/lib/v2/legacyInventoryWrite';
 import { reverseQuickSale } from '@/lib/v2/quickSaleReverse';
 import { snapshotSaleDiscount } from '@/lib/v2/saleDiscount';
 import { sizeFromName } from '@/components/v2/inventory/InventoryV2';
@@ -80,7 +81,7 @@ export const QuickSaleV2: React.FC = () => {
       return;
     }
     if (!quote.costComplete) {
-      setSaveError('אי אפשר להשלים מכירה בלי עלות רכישה ידועה. עלות חסרה אינה אפס, והמלאי לא השתנה.');
+      setSaveError(UNKNOWN_COST_SALE_MESSAGE);
       return;
     }
     if (!QUICK_SALE_PERSISTENCE_READY || savingRef.current) return;
@@ -268,7 +269,7 @@ export const QuickSaleV2: React.FC = () => {
           <textarea className="mt-1 w-full min-h-16 rounded-v2-control border border-v2-border p-2 font-normal" maxLength={500} placeholder="הערה לעסקה" value={draft.notes} onChange={(event) => setDraftNotes(businessId, event.target.value)} />
         </label>
         <div className="flex flex-col gap-2 lg:w-64">
-          {quote.unknownCostLines > 0 && <p className="text-sm text-v2-red">אי אפשר לאשר מכירה בלי עלות רכישה ידועה. עלות חסרה אינה אפס, והמלאי לא ישתנה.</p>}
+          {quote.unknownCostLines > 0 && <p className="text-sm text-v2-red">{UNKNOWN_COST_SALE_MESSAGE}</p>}
           <button type="button" className={`${v2Button.primary} w-full`} disabled={!QUICK_SALE_PERSISTENCE_READY || saving || draft.lines.length === 0 || quote.missingPriceLines > 0 || !quote.costComplete || !draft.salespersonEmployeeId} onClick={confirmSale}>{saving ? 'שומר…' : 'אישור מכירה'}</button>
           <button type="button" className={v2Button.secondary} onClick={() => clearSaleDraft(businessId)}>ניקוי טיוטה</button>
           <button

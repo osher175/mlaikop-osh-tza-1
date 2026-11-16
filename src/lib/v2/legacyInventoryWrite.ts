@@ -1,5 +1,23 @@
 import { snapshotSaleDiscount } from '@/lib/v2/saleDiscount';
 
+export const UNKNOWN_COST_SALE_MESSAGE =
+  'אי אפשר להשלים מכירה בלי עלות רכישה ידועה. עלות חסרה אינה אפס, והמלאי לא השתנה.';
+
+/** An empty field stays unknown. The number 0 is an explicit known cost. */
+export function purchaseCostFromInput(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === '') return null;
+  const value = Number(trimmed);
+  if (!Number.isFinite(value) || value < 0) return Number.NaN;
+  return value;
+}
+
+/** A blank entry keeps the stored cost. An entered number, including 0, replaces it. */
+export function explicitPurchaseCost(entered: number | null, stored: number | null): number | null {
+  if (entered === null || Number.isNaN(entered)) return stored;
+  return entered;
+}
+
 /**
  * Plans the legacy product editor and the new-product opening balance.
  * Quantity changes become one execute_inventory_transaction call.
@@ -16,7 +34,7 @@ export interface StockCommand {
   listUnitIls?: number | null;
   discountIls?: number | null;
   discountPercent?: number | null;
-  costSnapshotIls?: number;
+  costSnapshotIls?: number | null;
   purchaseUnitIls?: number;
   purchaseTotalIls?: number;
   supplierId?: string | null;
@@ -46,7 +64,7 @@ export function planLegacyProductSave(input: {
   oldQuantity: number;
   newQuantity: number;
   listUnitIls: number | null;
-  costSnapshotIls: number;
+  costSnapshotIls: number | null;
   sale: { saleTotalIls: number; notes?: string } | null;
   purchase: { purchaseUnitIls: number; purchaseTotalIls: number; supplierId?: string | null; notes?: string } | null;
   /** A count correction is an adjust transaction. The reason is stored on the ledger row. */
@@ -95,6 +113,7 @@ export function planLegacyProductSave(input: {
 
   if (quantityChanged < 0) {
     if (!input.sale || input.purchase) return empty('sale details required');
+    if (input.costSnapshotIls === null) return empty(UNKNOWN_COST_SALE_MESSAGE);
     const sold = Math.abs(quantityChanged);
     const priced = snapshotSaleDiscount(input.listUnitIls, input.sale.saleTotalIls, sold);
     return {

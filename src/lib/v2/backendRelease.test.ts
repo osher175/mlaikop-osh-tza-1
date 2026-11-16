@@ -12,6 +12,7 @@ import {
 } from '@/lib/v2/inventoryFlags';
 import { LEGACY_SALE_ATOMIC_READY } from '@/lib/v2/legacySaleAtomic';
 import { FIFO_AGING_READY, V2_REPORTS_SQL_READY } from '@/lib/v2/reportFlags';
+import { explicitPurchaseCost, planLegacyProductSave, purchaseCostFromInput, UNKNOWN_COST_SALE_MESSAGE } from '@/lib/v2/legacyInventoryWrite';
 import { quoteDraft } from '@/lib/v2/saleQuote';
 import { V2_UI_DEFAULT_ENABLED } from '@/lib/v2/uiFlag';
 import type { DraftLine } from '@/lib/v2/saleDraft';
@@ -42,6 +43,27 @@ const line = (unitCost: number | null): DraftLine => ({
   unitCost,
   axle: 'single',
 });
+
+assert.equal(purchaseCostFromInput(''), null);
+assert.equal(purchaseCostFromInput('0'), 0);
+assert.equal(purchaseCostFromInput('12.5'), 12.5);
+assert.equal(explicitPurchaseCost(null, 80), 80);
+assert.equal(explicitPurchaseCost(0, 80), 0);
+assert.equal(explicitPurchaseCost(null, null), null);
+const blockedSale = planLegacyProductSave({
+  businessId: 'b', productId: 'p', oldQuantity: 4, newQuantity: 3,
+  listUnitIls: 100, costSnapshotIls: null,
+  sale: { saleTotalIls: 100 }, purchase: null,
+});
+assert.equal(blockedSale.error, UNKNOWN_COST_SALE_MESSAGE);
+assert.equal(blockedSale.stock, null);
+const zeroCostSale = planLegacyProductSave({
+  businessId: 'b', productId: 'p', oldQuantity: 4, newQuantity: 3,
+  listUnitIls: 100, costSnapshotIls: 0,
+  sale: { saleTotalIls: 100 }, purchase: null,
+});
+assert.equal(zeroCostSale.error, null);
+assert.equal(zeroCostSale.stock?.costSnapshotIls, 0);
 
 assert.equal(quoteDraft([line(80), line(0)]).costComplete, true);
 assert.equal(quoteDraft([line(null)]).costComplete, false);
@@ -83,6 +105,22 @@ assert.match(isolatedLock, /production ref refused/);
 
 const bi = readFileSync('docs/v2/bi-insights-known-cost.UNAPPLIED.sql', 'utf8');
 assert.equal(bi.charCodeAt(0) === 0xfeff, false);
+const costFix = readFileSync('docs/v2/preserve-unknown-cost.UNAPPLIED.sql', 'utf8');
+assert.match(costFix, /SELECT quantity, cost/);
+assert.match(costFix, /v_current_cost IS NULL AND v_current_quantity > 0/);
+assert.match(costFix, /known cost is required/);
+assert.equal(costFix.includes('SELECT quantity, COALESCE(cost, 0)'), false);
+const importFix = readFileSync('docs/v2/import-receipt-shortage-event.UNAPPLIED.sql', 'utf8');
+assert.match(importFix, /receipt_shortage_recorded/);
+assert.match(importFix, /receipt_overage_recorded/);
+assert.match(importFix, /does not replace import_receipt_confirm/);
+const reversalFix = readFileSync('docs/v2/return-after-customer-return.UNAPPLIED.sql', 'utf8');
+assert.match(reversalFix, /reversal is closed after a customer return/);
+assert.equal(reversalFix.includes('CREATE OR REPLACE FUNCTION public.reverse_inventory_action'), false);
+const employeeReport = readFileSync('docs/v2/employee-sales-report.UNAPPLIED.sql', 'utf8');
+assert.match(employeeReport, /unit_cost IS NULL THEN NULL/);
+assert.match(employeeReport, /customer_return/);
+assert.match(employeeReport, /t.status = 'completed'/);
 const knownCost = readFileSync('docs/v2/sale-known-cost-required.UNAPPLIED.sql', 'utf8');
 assert.match(knownCost, /NEW\.unit_cost_ils IS NULL/);
 assert.match(knownCost, /BEFORE INSERT ON public\.sale_lines/);
