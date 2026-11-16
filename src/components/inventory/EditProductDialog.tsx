@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { BillingLockedButton } from '@/components/billing/BillingLockedButton';
@@ -16,6 +16,7 @@ import { AddProductCategoryDialog } from '@/components/inventory/AddProductCateg
 import { SaleModal, SaleData } from '@/components/inventory/SaleModal';
 import { PurchaseModal, PurchaseData } from '@/components/inventory/PurchaseModal';
 import { rememberReversibleAction } from '@/hooks/useReversibleAction';
+import { EDITOR_OPERATION, planLegacyProductSave, readLedgerActionId } from '@/lib/v2/legacyInventoryWrite';
 import { Plus, Scan } from 'lucide-react';
 import { useCategories } from '@/hooks/useCategories';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,6 +27,14 @@ type Product = Database['public']['Tables']['products']['Row'] & {
   product_categories?: { name: string } | null;
   product_thresholds?: { low_stock_threshold: number } | null;
 };
+
+function sameOperationKey(
+  current: { signature: string; key: string } | null,
+  signature: string,
+): { signature: string; key: string } {
+  if (current?.signature === signature) return current;
+  return { signature, key: crypto.randomUUID() };
+}
 
 interface EditProductDialogProps {
   product: Product | null;
@@ -45,6 +54,9 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   const { user } = useAuth();
   const { categories } = useCategories();
   const [loading, setLoading] = useState(false);
+  const saveInFlight = useRef(false);
+  const saleOperation = useRef<{ signature: string; key: string } | null>(null);
+  const purchaseOperation = useRef<{ signature: string; key: string } | null>(null);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   
@@ -132,6 +144,8 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
   const saveProduct = async (saleData?: SaleData, purchaseData?: PurchaseData) => {
     if (!product || !business?.id || !user?.id) return;
+    if (saveInFlight.current) return;
+    saveInFlight.current = true;
 
     setLoading(true);
     console.log('Starting product update with data:', formData);
@@ -141,11 +155,9 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       const newQuantity = formData.quantity;
       const quantityDiff = newQuantity - oldQuantity;
 
-      // Update product data
       const updateData: any = {
         name: formData.name,
         barcode: formData.barcode || null,
-        quantity: formData.quantity,
         price: formData.price || null,
         cost: formData.cost || null,
         location: formData.location || null,
@@ -156,22 +168,106 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         updated_at: new Date().toISOString(),
       };
 
-      // If purchase, update cost to new rolling average
-      if (purchaseData && quantityDiff > 0) {
-        const oldCost = Number(product.cost) || 0;
-        const newCost = ((oldQuantity * oldCost) + (quantityDiff * purchaseData.purchaseUnitIls)) / (oldQuantity + quantityDiff);
-        updateData.cost = newCost;
+      const plan = planLegacyProductSave({
+        businessId: business.id,
+        productId: product.id,
+        oldQuantity,
+        newQuantity,
+        listUnitIls: product.price == null ? null : Number(product.price),
+        costSnapshotIls: Number(product.cost) || 0,
+        sale: saleData ? { saleTotalIls: saleData.saleTotalIls, notes: saleData.notes } : null,
+        purchase: purchaseData
+          ? {
+              purchaseUnitIls: purchaseData.purchaseUnitIls,
+              purchaseTotalIls: purchaseData.purchaseTotalIls,
+              supplierId: purchaseData.supplierId ?? null,
+              notes: purchaseData.notes,
+            }
+          : null,
+      });
+      if (plan.error || plan.stock?.actionType === 'adjust') {
+        throw new Error(plan.error || 'quantity change needs a sale or a purchase');
       }
 
-      console.log('Updating product with data:', updateData);
+      let stockPosted: 'remove' | 'add' | null = null;
+      if (plan.stock) {
+        const stock = plan.stock;
+        const signature = JSON.stringify({
+          productId: plan.productId,
+          actionType: stock.actionType,
+          quantityChanged: stock.quantityChanged,
+          saleTotal: stock.saleTotalIls ?? null,
+          purchaseUnit: stock.purchaseUnitIls ?? null,
+          supplierId: stock.supplierId ?? null,
+          notes: stock.notes,
+        });
+        const slot = stock.actionType === 'remove' ? saleOperation : purchaseOperation;
+        const operation = sameOperationKey(slot.current, signature);
+        slot.current = operation;
+        const { data: ledger, error: stockError } = await supabase.rpc('execute_inventory_transaction', {
+          p_business_id: plan.businessId,
+          p_user_id: user.id,
+          p_product_id: plan.productId,
+          p_action_type: stock.actionType,
+          p_quantity_changed: stock.quantityChanged,
+          p_sale_total_ils: stock.saleTotalIls,
+          p_sale_unit_ils: stock.saleUnitIls,
+          p_list_unit_ils: stock.listUnitIls ?? undefined,
+          p_discount_ils: stock.discountIls ?? undefined,
+          p_discount_percent: stock.discountPercent ?? undefined,
+          p_cost_snapshot_ils: stock.costSnapshotIls,
+          p_purchase_unit_ils: stock.purchaseUnitIls,
+          p_purchase_total_ils: stock.purchaseTotalIls,
+          p_supplier_id: stock.supplierId ?? undefined,
+          p_notes: stock.notes,
+          p_source: 'legacy_product_editor',
+          p_reference_type: EDITOR_OPERATION,
+          p_reference_id: operation.key,
+        });
+        if (stockError) throw stockError;
+        stockPosted = stock.actionType;
+        const actionId = readLedgerActionId(ledger);
+        if (stock.actionType === 'remove' && actionId) {
+          rememberReversibleAction({
+            action_id: actionId,
+            product_name: product.name,
+            quantity: Math.abs(stock.quantityChanged),
+            action_type: 'sale',
+            created_at: new Date().toISOString(),
+          });
+        }
+      }
+
+      const metadata = { ...updateData };
+      if (plan.metadataOmitsCost) delete metadata.cost;
+      console.log('Updating product with data:', metadata);
 
       const { error: productError } = await supabase
         .from('products')
-        .update(updateData)
-        .eq('id', product.id);
+        .update(metadata)
+        .eq('id', product.id)
+        .eq('business_id', business.id);
 
       if (productError) {
         console.error('Product update error:', productError);
+        if (stockPosted === 'remove') {
+          toast({
+            title: 'המכירה נרשמה',
+            description: 'פרטי המוצר לא נשמרו. המלאי והתנועה כבר עודכנו.',
+            variant: 'destructive',
+          });
+          onProductUpdated();
+          return;
+        }
+        if (stockPosted === 'add') {
+          toast({
+            title: 'הקליטה נרשמה',
+            description: 'פרטי המוצר לא נשמרו. המלאי והתנועה כבר עודכנו.',
+            variant: 'destructive',
+          });
+          onProductUpdated();
+          return;
+        }
         throw productError;
       }
 
@@ -198,77 +294,6 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         });
       }
 
-      // Log inventory action with financial data
-      if (quantityDiff !== 0) {
-        if (saleData && quantityDiff < 0) {
-          // Sale action
-          const absQuantity = Math.abs(quantityDiff);
-          const listUnitPrice = Number(product.price) || 0;
-          const costSnapshot = Number(product.cost) || 0;
-          const listTotal = listUnitPrice * absQuantity;
-          const discountIls = listTotal - saleData.saleTotalIls;
-          const discountPercent = listTotal > 0 ? (discountIls / listTotal) * 100 : 0;
-
-          const { data: insertedAction, error: actionError } = await supabase
-            .from('inventory_actions')
-            .insert({
-              business_id: business.id,
-              user_id: user.id,
-              product_id: product.id,
-              action_type: 'sale',
-              quantity_changed: quantityDiff, // negative
-              currency: 'ILS',
-              sale_total_ils: saleData.saleTotalIls,
-              sale_unit_ils: saleData.saleTotalIls / absQuantity,
-              list_unit_ils: listUnitPrice,
-              cost_snapshot_ils: costSnapshot,
-              discount_ils: discountIls > 0 ? discountIls : 0,
-              discount_percent: discountPercent > 0 ? discountPercent : 0,
-              notes: saleData.notes || `מכירה של ${absQuantity} יחידות`,
-              timestamp: new Date().toISOString(),
-            })
-            .select('id')
-            .single();
-
-          if (actionError) {
-            console.error('Error logging sale action:', actionError);
-            throw actionError;
-          }
-
-          if (insertedAction?.id) {
-            rememberReversibleAction({
-              action_id: insertedAction.id,
-              product_name: product.name,
-              quantity: absQuantity,
-              action_type: 'sale',
-              created_at: new Date().toISOString(),
-            });
-          }
-        } else if (purchaseData && quantityDiff > 0) {
-          // Purchase action
-          const { error: actionError } = await supabase
-            .from('inventory_actions')
-            .insert({
-              business_id: business.id,
-              user_id: user.id,
-              product_id: product.id,
-              action_type: 'purchase',
-              quantity_changed: quantityDiff, // positive
-              currency: 'ILS',
-              purchase_unit_ils: purchaseData.purchaseUnitIls,
-              purchase_total_ils: purchaseData.purchaseTotalIls,
-              supplier_id: purchaseData.supplierId || null,
-              notes: purchaseData.notes || `קנייה של ${quantityDiff} יחידות`,
-              timestamp: new Date().toISOString(),
-            });
-
-          if (actionError) {
-            console.error('Error logging purchase action:', actionError);
-            throw actionError;
-          }
-        }
-      }
-
       toast({
         title: "מוצר עודכן בהצלחה",
         description: quantityDiff !== 0 
@@ -288,6 +313,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         variant: "destructive",
       });
     } finally {
+      saveInFlight.current = false;
       setLoading(false);
     }
   };

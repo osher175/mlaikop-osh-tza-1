@@ -1,21 +1,50 @@
+import { useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useBusinessAccess } from './useBusinessAccess';
 import { useToast } from '@/hooks/use-toast';
-import { useInventoryLogger } from './useInventoryLogger';
+import {
+  EDITOR_OPERATION,
+  openingAttemptSignature,
+  planOpeningStock,
+  resumeOpeningAttempt,
+  rpcIsMissing,
+  type OpeningAttempt,
+} from '@/lib/v2/legacyInventoryWrite';
 import type { Database } from '@/integrations/supabase/types';
 
 type Product = Database['public']['Tables']['products']['Row'];
 type ProductInsert = Database['public']['Tables']['products']['Insert'];
-type ProductUpdate = Database['public']['Tables']['products']['Update'];
+
+const openingStorageKey = (businessId: string) => `mlaiko.product-opening.${businessId}`;
+
+function readOpeningAttempt(key: string): OpeningAttempt | null {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as OpeningAttempt;
+    if (!parsed?.signature || !parsed.operationId) return null;
+    return { signature: parsed.signature, operationId: parsed.operationId, productId: parsed.productId ?? null };
+  } catch {
+    return null;
+  }
+}
+
+function writeOpeningAttempt(key: string, attempt: OpeningAttempt) {
+  sessionStorage.setItem(key, JSON.stringify(attempt));
+}
+
+function clearOpeningAttempt(key: string) {
+  sessionStorage.removeItem(key);
+}
 
 export const useProducts = () => {
   const { user } = useAuth();
   const { businessContext } = useBusinessAccess();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { logInventoryAction } = useInventoryLogger();
+  const createInFlight = useRef(false);
 
   const { data: products = [], isLoading, error, refetch } = useQuery({
     queryKey: ['products', businessContext?.business_id],
@@ -51,64 +80,119 @@ export const useProducts = () => {
         throw new Error('User or business not found');
       }
       
+      if (createInFlight.current) throw new Error('השמירה כבר רצה');
+      createInFlight.current = true;
+      try {
       const { low_stock_threshold, ...productFields } = productData;
-      
+      const opening = planOpeningStock({
+        quantity: productData.quantity ?? 0,
+        unitCost: productData.cost ?? null,
+        supplierId: productData.supplier_id ?? null,
+      });
+      if (opening.error) throw new Error(opening.error);
+
+      const signature = openingAttemptSignature({
+        businessId: businessContext.business_id,
+        name: productData.name ?? '',
+        barcode: productData.barcode ?? null,
+        quantity: productData.quantity ?? 0,
+        unitCost: productData.cost ?? null,
+      });
+      const storageKey = openingStorageKey(businessContext.business_id);
+      const pending = readOpeningAttempt(storageKey);
+      const attempt = resumeOpeningAttempt(pending, signature, crypto.randomUUID());
+      writeOpeningAttempt(storageKey, attempt);
+
+      const atomic = await (supabase.rpc as unknown as (
+        fn: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ data: { product_id?: string } | null; error: { code?: string; message: string } | null }>)(
+        'create_product_with_opening_stock',
+        {
+          p_operation_id: attempt.operationId,
+          p_business_id: businessContext.business_id,
+          p_name: productData.name,
+          p_barcode: productData.barcode ?? null,
+          p_price: productData.price ?? null,
+          p_cost: productData.cost ?? null,
+          p_location: productData.location ?? null,
+          p_expiration_date: productData.expiration_date ?? null,
+          p_image: productData.image ?? null,
+          p_product_category_id: productData.product_category_id ?? null,
+          p_supplier_id: productData.supplier_id ?? null,
+          p_quantity: productData.quantity ?? 0,
+          p_low_stock_threshold: low_stock_threshold ?? null,
+          p_enable_whatsapp_supplier_notification: productData.enable_whatsapp_supplier_notification ?? false,
+        },
+      );
+      if (!atomic.error) {
+        if (!atomic.data?.product_id) throw new Error('הפעולה נכשלה. לא התקבל אישור מהשרת.');
+        clearOpeningAttempt(storageKey);
+        return { id: atomic.data.product_id } as Product;
+      }
+      if (!rpcIsMissing(atomic.error)) throw atomic.error;
+
       console.log('Creating product with threshold:', low_stock_threshold);
-      
-      const { data, error } = await supabase
-        .from('products')
-        .insert({
-          ...productFields,
-          business_id: businessContext.business_id,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Error creating product:', error);
-        throw error;
+
+      let productId = attempt.productId;
+      let created = null as Product | null;
+      if (!productId) {
+        const { data, error } = await supabase
+          .from('products')
+          .insert({
+            ...productFields,
+            quantity: 0,
+            business_id: businessContext.business_id,
+            created_by: user.id,
+          })
+          .select()
+          .single();
+        if (error) {
+          console.error('Error creating product:', error);
+          throw error;
+        }
+        productId = data.id;
+        created = data;
+        writeOpeningAttempt(storageKey, { ...attempt, productId });
       }
 
-      // Insert threshold if provided
-      if (low_stock_threshold !== undefined) {
-        console.log('Inserting threshold for product:', data.id, 'with threshold:', low_stock_threshold);
-        
+      if (opening.stock && productId) {
+        const stock = opening.stock;
+        const { error: stockError } = await supabase.rpc('execute_inventory_transaction', {
+          p_business_id: businessContext.business_id,
+          p_user_id: user.id,
+          p_product_id: productId,
+          p_action_type: stock.actionType,
+          p_quantity_changed: stock.quantityChanged,
+          p_purchase_unit_ils: stock.purchaseUnitIls,
+          p_purchase_total_ils: stock.purchaseTotalIls,
+          p_supplier_id: stock.supplierId ?? undefined,
+          p_notes: stock.notes,
+          p_source: 'product_opening',
+          p_reference_type: EDITOR_OPERATION,
+          p_reference_id: attempt.operationId,
+        });
+        if (stockError) {
+          throw new Error(`המוצר נוצר ללא מלאי ראשוני. אותה בקשה לא תיצור מוצר שני. ${stockError.message}`);
+        }
+      }
+
+      if (low_stock_threshold !== undefined && productId) {
         const { error: thresholdError } = await supabase
           .from('product_thresholds')
-          .insert({
-            product_id: data.id,
+          .upsert({
+            product_id: productId,
             business_id: businessContext.business_id,
             low_stock_threshold,
-          });
-          
-        if (thresholdError) {
-          console.error('Error inserting threshold:', thresholdError);
-          // Don't fail the entire operation for threshold error
-        }
+          }, { onConflict: 'product_id' });
+        if (thresholdError) console.error('Error inserting threshold:', thresholdError);
       }
 
-      // Log inventory action for initial stock
-      if (productData.quantity && productData.quantity > 0) {
-        const financialData: { purchase_unit_ils?: number; purchase_total_ils?: number; supplier_id?: string } = {};
-        if (productData.cost) {
-          financialData.purchase_unit_ils = productData.cost;
-          financialData.purchase_total_ils = productData.cost * productData.quantity;
-        }
-        if (productData.supplier_id) {
-          financialData.supplier_id = productData.supplier_id;
-        }
-        
-        await logInventoryAction(
-          data.id, 
-          'add', 
-          productData.quantity,
-          `הוספת מוצר חדש עם ${productData.quantity} יחידות ראשוניות`,
-          Object.keys(financialData).length > 0 ? financialData : undefined
-        );
+      clearOpeningAttempt(storageKey);
+      return created ?? ({ id: productId } as Product);
+      } finally {
+        createInFlight.current = false;
       }
-      
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -126,63 +210,6 @@ export const useProducts = () => {
         variant: "destructive",
       });
       console.error('Error creating product:', error);
-    },
-  });
-
-  const updateProduct = useMutation({
-    mutationFn: async ({ id, ...productData }: ProductUpdate & { id: string }) => {
-      if (!user?.id) throw new Error('User not authenticated');
-      
-      console.log('Updating product:', id, 'with data:', productData);
-      
-      // Get current product data to compare quantities
-      const { data: currentProduct } = await supabase
-        .from('products')
-        .select('quantity')
-        .eq('id', id)
-        .single();
-      
-      const { data, error } = await supabase
-        .from('products')
-        .update(productData)
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Error updating product:', error);
-        throw error;
-      }
-
-      // Log inventory action if quantity changed
-      if (currentProduct && productData.quantity !== undefined && productData.quantity !== currentProduct.quantity) {
-        const quantityDiff = productData.quantity - currentProduct.quantity;
-        const actionType = quantityDiff > 0 ? 'add' : 'remove';
-        const notes = quantityDiff > 0 
-          ? `הוספת ${Math.abs(quantityDiff)} יחידות למלאי`
-          : `הפחתת ${Math.abs(quantityDiff)} יחידות מהמלאי`;
-        
-        await logInventoryAction(id, actionType, Math.abs(quantityDiff), notes);
-      }
-      
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['recent-activity'] });
-      queryClient.invalidateQueries({ queryKey: ['bi-analytics'] });
-      toast({
-        title: "מוצר עודכן בהצלחה",
-        description: "השינויים נשמרו במערכת",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "שגיאה",
-        description: error.message || "שגיאה בעדכון המוצר",
-        variant: "destructive",
-      });
-      console.error('Error updating product:', error);
     },
   });
 
@@ -225,7 +252,6 @@ export const useProducts = () => {
     error,
     refetch,
     createProduct,
-    updateProduct,
     deleteProduct,
   };
 };
