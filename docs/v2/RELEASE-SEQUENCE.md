@@ -33,7 +33,7 @@ Do not run these again:
 7. `docs/v2/sale-known-cost-required.UNAPPLIED.sql` before `V2_SALES_STACK_READY`.
 8. `docs/v2/sale-profit-reporting.UNAPPLIED.sql`, then `docs/v2/bi-insights-known-cost.UNAPPLIED.sql`.
 9. `docs/v2/inventory-lifecycle.UNAPPLIED.sql`. Turn purchase, adjustment, supplier-return, and customer-return flags on one at a time only after their function is the one the deployed client calls.
-10. `docs/v2/return-reversal-guard.UNAPPLIED.sql` before `CUSTOMER_RETURN_READY`.
+10. Do not apply `docs/v2/return-reversal-guard.UNAPPLIED.sql` as written. Its `reverse_inventory_action` replacement drops the hardened authorization and negative-stock checks. Customer returns can be posted by `record_customer_return` without that file. A reversal after a customer return still needs a separate patch that adds only the customer-return check to the hardened function.
 11. `docs/v2/purchase-order-receipts.UNAPPLIED.sql` before `PURCHASE_ORDERS_READY`. Do not also post the same receipt through `record_purchase_receipt`.
 12. `docs/v2/supplier-return-dispatch.UNAPPLIED.sql` before `SUPPLIER_RETURN_DISPATCH_READY`. This path deducts once and does not reserve.
 13. `docs/v2/supplier-return-reservation.UNAPPLIED.sql` after the quantity lock. `SUPPLIER_RETURN_RESERVATION_READY` stays false until sale writers are rejecting reserved units, which this file enforces with `quantity_reserved <= GREATEST(quantity, 0)`. Dispatch of a reservation is `dispatch_reserved_supplier_return` and must not be combined with step 12 for the same units.
