@@ -81,6 +81,8 @@ assert.equal(productionLock.includes("IS DISTINCT FROM 'zijzwvkpjaxvdbvpcfow'"),
 const isolatedLock = readFileSync('docs/v2/products-quantity-update-lock.UNAPPLIED.sql', 'utf8');
 assert.match(isolatedLock, /production ref refused/);
 
+const bi = readFileSync('docs/v2/bi-insights-known-cost.UNAPPLIED.sql', 'utf8');
+assert.equal(bi.charCodeAt(0) === 0xfeff, false);
 const knownCost = readFileSync('docs/v2/sale-known-cost-required.UNAPPLIED.sql', 'utf8');
 assert.match(knownCost, /NEW\.unit_cost_ils IS NULL/);
 assert.match(knownCost, /BEFORE INSERT ON public\.sale_lines/);

@@ -1,4 +1,4 @@
-﻿-- UNAPPLIED. DO NOT EXECUTE until a separate approval.
+-- UNAPPLIED. DO NOT EXECUTE until a separate approval.
 -- Intentionally outside supabase/migrations.
 -- Does not update stored rows.
 --
