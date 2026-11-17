@@ -1,17 +1,15 @@
 // Mlaiko V2 UI flag — frontend-only, presentation only. It never grants permissions.
-// Default: legacy UI. Enable per browser with `?ui=v2`, disable with `?ui=legacy`.
+// Default: V2. A browser can return to the legacy UI with `?ui=legacy`.
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 const STORAGE_KEY = 'mlaiko.ui.v2';
 
 /**
- * Stays false. The activation runbook changes this only after the published
- * bundle is selling through the atomic sale, with one active salesperson,
- * and the core stock writers are the functions that bundle calls.
- * `?ui=v2` remains the opt-in until that separate change.
+ * V2 is the default. `?ui=legacy` remains the per-browser way back.
+ * The flag does not grant permissions.
  */
-export const V2_UI_DEFAULT_ENABLED = false;
+export const V2_UI_DEFAULT_ENABLED = true;
 
 /** The default switch may be edited only when every one of these is already true in the deployed bundle. */
 export function v2DefaultSwitchReady(input: {

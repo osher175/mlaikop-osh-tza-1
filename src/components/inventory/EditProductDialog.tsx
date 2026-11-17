@@ -18,6 +18,8 @@ import { PurchaseModal, PurchaseData } from '@/components/inventory/PurchaseModa
 import { rememberReversibleAction } from '@/hooks/useReversibleAction';
 import { LEGACY_SALE_ATTRIBUTION_READY } from '@/lib/v2/employeeAttribution';
 import { EDITOR_OPERATION, explicitPurchaseCost, planLegacyProductSave, purchaseCostFromInput, readLedgerActionId } from '@/lib/v2/legacyInventoryWrite';
+import { STOCK_ADJUSTMENT_RPC_READY } from '@/lib/v2/inventoryFlags';
+import { recordStockAdjustment } from '@/lib/v2/inventoryLifecycle';
 import { LEGACY_SALE_ATOMIC_READY, legacySaleError, recordLegacySaleAtomic, resolveLegacySaleWrite } from '@/lib/v2/legacySaleAtomic';
 import { ProductAgingNote } from '@/components/v2/reports/ProductAgingNote';
 import { Plus, Scan } from 'lucide-react';
@@ -251,6 +253,16 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
             });
           }
         }
+        if (stockPosted === null && stock.actionType === 'adjust' && STOCK_ADJUSTMENT_RPC_READY) {
+          await recordStockAdjustment({
+            businessId: plan.businessId,
+            productId: plan.productId,
+            quantityChanged: stock.quantityChanged,
+            idempotencyKey: operation.key,
+            reason: stock.notes ?? '',
+          });
+          stockPosted = 'adjust';
+        }
         if (stockPosted === null) {
         const { data: ledger, error: stockError } = await supabase.rpc('execute_inventory_transaction', {
           p_business_id: plan.businessId,
@@ -371,7 +383,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       const message = error instanceof Error ? error.message : '';
       toast({
         title: "שגיאה בעדכון המוצר",
-        description: /[\u0590-\u05FF]/.test(message) ? message : "אנא נסה שוב",
+        description: /[\u0590-\u05FF]/.test(message) ? message : legacySaleError(error),
         variant: "destructive",
       });
     } finally {

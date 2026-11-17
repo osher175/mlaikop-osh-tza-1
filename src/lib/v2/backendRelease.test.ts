@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { QUICK_SALE_PERSISTENCE_READY, V2_SALES_STACK_READY } from '@/lib/v2/employeeAttribution';
+import { LEGACY_SALE_ATTRIBUTION_READY, QUICK_SALE_PERSISTENCE_READY, V2_SALES_STACK_READY } from '@/lib/v2/employeeAttribution';
 import {
   CUSTOMER_RETURN_READY,
   PURCHASE_ORDERS_READY,
@@ -19,7 +19,7 @@ import { readEmployeeSalesReport } from '@/lib/v2/employeeSalesReport';
 import { V2_UI_DEFAULT_ENABLED, v2DefaultSwitchReady } from '@/lib/v2/uiFlag';
 import type { DraftLine } from '@/lib/v2/saleDraft';
 
-assert.equal(V2_UI_DEFAULT_ENABLED, false);
+assert.equal(V2_UI_DEFAULT_ENABLED, true);
 assert.equal(v2DefaultSwitchReady({ legacySaleAtomic: false, legacyAttribution: false, quickSale: false }), false);
 assert.equal(v2DefaultSwitchReady({ legacySaleAtomic: true, legacyAttribution: true, quickSale: true }), true);
 assert.equal(resolveLegacySaleWrite({ atomicReady: false, attributionReady: false, salespersonEmployeeId: 'e' }).mode, 'inventory_transaction');
@@ -29,12 +29,13 @@ const blockedMissing = resolveLegacySaleWrite({ atomicReady: true, attributionRe
 assert.equal(blockedMissing.mode, 'blocked');
 assert.deepEqual(resolveLegacySaleWrite({ atomicReady: true, attributionReady: true, salespersonEmployeeId: 'e' }), { mode: 'atomic', salespersonEmployeeId: 'e' });
 assert.deepEqual(resolveLegacySaleWrite({ atomicReady: true, attributionReady: false, salespersonEmployeeId: 'e' }), { mode: 'atomic', salespersonEmployeeId: null });
-assert.equal(V2_SALES_STACK_READY, false);
-assert.equal(QUICK_SALE_PERSISTENCE_READY, false);
-assert.equal(LEGACY_SALE_ATOMIC_READY, false);
-assert.equal(PURCHASE_ORDERS_READY, false);
-assert.equal(PURCHASE_RECEIPT_ATOMIC_READY, false);
-assert.equal(STOCK_ADJUSTMENT_RPC_READY, false);
+assert.equal(V2_SALES_STACK_READY, true);
+assert.equal(QUICK_SALE_PERSISTENCE_READY, true);
+assert.equal(LEGACY_SALE_ATTRIBUTION_READY, true);
+assert.equal(LEGACY_SALE_ATOMIC_READY, true);
+assert.equal(PURCHASE_ORDERS_READY, true);
+assert.equal(PURCHASE_RECEIPT_ATOMIC_READY, true);
+assert.equal(STOCK_ADJUSTMENT_RPC_READY, true);
 assert.equal(SUPPLIER_RETURN_READY, false);
 assert.equal(SUPPLIER_RETURN_RESERVATION_READY, false);
 assert.equal(SUPPLIER_RETURN_AUTHORITY, 'confirm_supplier_return_dispatch');
@@ -52,9 +53,9 @@ const historyReport = readEmployeeSalesReport({
 assert.equal(historyReport?.unattributed.grossProfit, null);
 assert.equal(historyReport?.unattributed.revenueGross, 118);
 assert.equal(readEmployeeSalesReport({ revenue_gross: 1, gross_profit: 0, vat: 0, unknown_cost_revenue: 0, units: 1, transactions: 1, customer_return_units: 0, employees: [] }), null);
-assert.equal(SUPPLIER_RETURN_DISPATCH_READY, false);
-assert.equal(CUSTOMER_RETURN_READY, false);
-assert.equal(V2_REPORTS_SQL_READY, false);
+assert.equal(SUPPLIER_RETURN_DISPATCH_READY, true);
+assert.equal(CUSTOMER_RETURN_READY, true);
+assert.equal(V2_REPORTS_SQL_READY, true);
 assert.equal(FIFO_AGING_READY, false);
 
 const line = (unitCost: number | null): DraftLine => ({
@@ -148,6 +149,8 @@ const saleRoute = editor.indexOf('resolveLegacySaleWrite({');
 const atomicSale = editor.indexOf('await recordLegacySaleAtomic');
 const inventorySale = editor.indexOf("supabase.rpc('execute_inventory_transaction'");
 assert.equal(saleRoute > -1 && saleRoute < atomicSale && atomicSale < inventorySale, true);
+const adjustment = editor.indexOf("stock.actionType === 'adjust' && STOCK_ADJUSTMENT_RPC_READY");
+assert.equal(adjustment > atomicSale && adjustment < inventorySale, true);
 assert.match(editor, /salespersonEmployeeId: route\.salespersonEmployeeId/);
 assert.equal(editor.includes('quantity: formData.quantity') || editor.includes('quantity: newQuantity'), false);
 const employeeReport = readFileSync('docs/v2/employee-sales-report.UNAPPLIED.sql', 'utf8');

@@ -75,6 +75,17 @@ export const InventoryV2: React.FC = () => {
   const canEdit = !!permissions.canEditProducts;
   const hideOutOfStock = availableOnly && stockFilter === 'all';
 
+  if (businessContext === null) {
+    return (
+      <div dir="rtl" className="font-[Heebo] py-16 text-center">
+        <Package className="mx-auto mb-4 h-16 w-16 text-v2-muted" aria-hidden />
+        <h2 className="text-xl font-bold">לא נמצא עסק מקושר</h2>
+        <p className="mt-2 text-v2-muted">אנא וודא שהצטרפת לעסק או יצרת עסק חדש</p>
+        <button type="button" className={`${v2Button.primary} mt-6`} onClick={() => navigate('/onboarding')}>חזור להגדרת העסק</button>
+      </div>
+    );
+  }
+
   const update = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params);
     for (const [key, value] of Object.entries(patch)) {

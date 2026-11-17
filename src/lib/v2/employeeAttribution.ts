@@ -31,7 +31,7 @@
  * Apply legacy-sale-atomic before enabling quick sales: the live
  * check_sale_data rule rejects a quick-sale stock row.
  */
-export const V2_SALES_STACK_READY = false;
+export const V2_SALES_STACK_READY = true;
 
 /** Owner employee management. Independent of quick-sale writes. */
 export const EMPLOYEES_DIRECTORY_READY = true;
@@ -49,7 +49,7 @@ export const EMPLOYEE_SALES_ATTRIBUTION_READY = V2_SALES_STACK_READY;
  * When true, SaleModal requires one employee and the insert includes
  * salesperson_employee_id. Older bundles keep the flag false and still omit it.
  */
-export const LEGACY_SALE_ATTRIBUTION_READY = false;
+export const LEGACY_SALE_ATTRIBUTION_READY = true;
 
 /**
  * Reports may show a stored salesperson after either sales gate is on.

@@ -196,6 +196,8 @@ export const useProducts = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-products-page'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-stock-counts'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activity'] });
       queryClient.invalidateQueries({ queryKey: ['bi-analytics'] });
       toast({
@@ -229,6 +231,8 @@ export const useProducts = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-products-page'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-stock-counts'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activity'] });
       queryClient.invalidateQueries({ queryKey: ['bi-analytics'] });
       toast({

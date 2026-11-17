@@ -28,6 +28,7 @@ import { Employees } from "@/pages/Employees";
 import { Movements } from "@/pages/Movements";
 import { Subscriptions } from "@/pages/Subscriptions";
 import { Subscribe } from "@/pages/Subscribe";
+import { OnboardingDecision } from "@/pages/OnboardingDecision";
 
 /* Lazy: heavy / infrequently visited screens. Route paths, guards and
    authorization are unchanged — only the module load is deferred. */
@@ -104,6 +105,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
                     <Subscribe />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/onboarding"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'OWNER', 'smart_master_user', 'elite_pilot_user', 'pro_starter_user', 'free_user']}>
+                    <OnboardingDecision />
                   </ProtectedRoute>
                 }
               />

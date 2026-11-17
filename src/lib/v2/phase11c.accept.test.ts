@@ -184,16 +184,16 @@ assert.equal(mixedProducts.shapes.mixed, 1);
 assert.equal(mixedProducts.shapes.set, 0);
 
 assert.equal(EMPLOYEES_DIRECTORY_READY, true);
-assert.equal(V2_SALES_STACK_READY, false);
-assert.equal(QUICK_SALE_PERSISTENCE_READY, false);
-assert.equal(EMPLOYEE_SALES_ATTRIBUTION_READY, false);
-assert.equal(LEGACY_SALE_ATTRIBUTION_READY, false);
-assert.equal(SALESPERSON_REPORT_READY, false);
-assert.match(readFileSync('src/lib/v2/legacySaleAtomic.ts', 'utf8'), /export const LEGACY_SALE_ATOMIC_READY = false/);
-assert.equal(PURCHASE_RECEIPT_ATOMIC_READY, false);
-assert.equal(STOCK_ADJUSTMENT_RPC_READY, false);
+assert.equal(V2_SALES_STACK_READY, true);
+assert.equal(QUICK_SALE_PERSISTENCE_READY, true);
+assert.equal(EMPLOYEE_SALES_ATTRIBUTION_READY, true);
+assert.equal(LEGACY_SALE_ATTRIBUTION_READY, true);
+assert.equal(SALESPERSON_REPORT_READY, true);
+assert.match(readFileSync('src/lib/v2/legacySaleAtomic.ts', 'utf8'), /export const LEGACY_SALE_ATOMIC_READY = true/);
+assert.equal(PURCHASE_RECEIPT_ATOMIC_READY, true);
+assert.equal(STOCK_ADJUSTMENT_RPC_READY, true);
 assert.equal(SUPPLIER_RETURN_READY, false);
-assert.equal(CUSTOMER_RETURN_READY, false);
+assert.equal(CUSTOMER_RETURN_READY, true);
 
 const screens = [
   'src/components/v2/inventory/InventoryV2.tsx',

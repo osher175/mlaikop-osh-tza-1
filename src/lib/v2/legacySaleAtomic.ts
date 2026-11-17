@@ -6,7 +6,7 @@ import type { Json } from '@/integrations/supabase/types';
  * calls it. The dialog does not take this branch while the flag is false.
  * Turning the flag on without the deployed function does not make a sale atomic.
  */
-export const LEGACY_SALE_ATOMIC_READY = false;
+export const LEGACY_SALE_ATOMIC_READY = true;
 
 export type LegacySaleWrite =
   | { mode: 'inventory_transaction' }
