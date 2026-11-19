@@ -8,11 +8,8 @@ import {
   Infinity as InfinityIcon,
   LayoutDashboard,
   Menu,
-  Shield,
-  ShoppingCart,
   Truck,
   UserPlus,
-  Users,
   X,
   Zap,
 } from 'lucide-react';
@@ -37,21 +34,18 @@ const NAV = [
   { href: '#about', label: 'על המערכת' },
   { href: '#capabilities', label: 'יכולות' },
   { href: '#audience', label: 'למי זה מתאים' },
-  { href: '#security', label: 'אבטחה ופרטיות' },
 ];
 
 const CAPABILITIES = [
-  { icon: Boxes, title: 'ניהול מלאי', text: 'בקרה, עדכונים ותיקונים' },
-  { icon: ShoppingCart, title: 'מכירות', text: 'רגילות, מהירות ומשויכות לעובדים' },
-  { icon: Truck, title: 'רכש וקליטת סחורה', text: 'הזמנות, קליטות והחזרות ספק' },
-  { icon: Users, title: 'ניהול עובדים', text: 'ביצועים, מכירות ויעדים' },
-  { icon: BarChart3, title: 'דוחות וניתוחים', text: 'תובנות עסקיות בזמן אמת' },
+  { icon: Boxes, title: 'ניהול מלאי בזמן אמת', text: 'מעקב אחר כמויות, תנועות מלאי, קליטת סחורה וזמינות מוצרים.' },
+  { icon: BarChart3, title: 'סקירות וסטטיסטיקות עסקיות', text: 'ניתוח מכירות, הכנסות, רווחיות וביצועי עובדים באמצעות דוחות ונתונים מרוכזים.' },
+  { icon: Truck, title: 'ניהול רכש והזמנות', text: 'מעקב אחר הזמנות מספקים, תהליכי יבוא וקליטת סחורה.' },
+  { icon: Cpu, title: 'חיזוי מלאי — בפיתוח', text: 'תכנון עתידי של זיהוי חוסרים צפויים לפי קצב המכירות, כדי להקדים הזמנות ולצמצם מצבי חוסר.' },
 ];
 
 const BRAND_VALUES = [
   { icon: Cpu, label: 'טכנולוגיה מתקדמת' },
   { icon: LayoutDashboard, label: 'מערכות עסקיות מותאמות' },
-  { icon: Shield, label: 'אבטחת מידע ברמה גבוהה' },
   { icon: InfinityIcon, label: 'ליווי ותמיכה מקצועית' },
 ];
 
@@ -116,13 +110,11 @@ export function PublicLanding({ onSignIn, onSignUp }: LandingProps) {
                 A <span className="font-semibold text-[#0EB5A5]">TriggeX</span> Product
               </p>
               <h1 className="mt-4 text-[30px] font-extrabold leading-[1.08] tracking-tight sm:text-[40px] xl:text-[46px]">
-                ניהול מלאי ותפעול עסקי
-                <span className="mt-1.5 block text-[0.92em] leading-[1.08] text-[#0EB5A5]">בדיוק מרבי</span>
+                המלאי שלך. העסק שלך.
+                <span className="mt-1.5 block text-[0.92em] leading-[1.08] text-[#0EB5A5]">תמונה אחת ברורה.</span>
               </h1>
               <p className="mt-4 max-w-[460px] text-[15px] leading-7 text-[#63758A] sm:text-[17px] sm:leading-8">
-                מלאי, מכירות, רכש, עובדים וניתוחי ביצועים חכמים —
-                <br className="hidden sm:block" />
-                במערכת אחת מחוברת, פשוטה ועוצמתית.
+                מערכת חכמה לניהול מלאי, מכירות ורכש — עם נתונים, סקירות וסטטיסטיקות שעוזרים לך לקבל החלטות עסקיות מדויקות יותר.
               </p>
               <div dir="ltr" className="mt-6 flex flex-wrap gap-3">
                 <button type="button" onClick={onSignIn} className="inline-flex h-12 items-center gap-2 rounded-full bg-gradient-to-l from-[#0EB5A5] to-[#12C7C1] px-6 text-[15px] font-bold text-white shadow-[0_10px_24px_rgba(14,181,165,0.28)] transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B1933]">
@@ -137,7 +129,6 @@ export function PublicLanding({ onSignIn, onSignUp }: LandingProps) {
               <ul className="mt-4 flex flex-col gap-2 text-[12px] text-[#44556B] sm:text-[13px] lg:flex-row lg:flex-wrap lg:gap-x-4 lg:gap-y-2">
                 <li className="flex items-center gap-2"><Zap size={16} className="shrink-0 text-[#0EB5A5]" /> מהיר ויעיל — לתפעול יומיומי</li>
                 <li className="flex items-center gap-2"><Cloud size={16} className="shrink-0 text-[#0EB5A5]" /> זמין מכל מקום — מחשב, טאבלט ומובייל</li>
-                <li className="flex items-center gap-2"><Shield size={16} className="shrink-0 text-[#0EB5A5]" /> מאובטח — ברמה ארגונית</li>
               </ul>
             </div>
 
@@ -155,7 +146,7 @@ export function PublicLanding({ onSignIn, onSignUp }: LandingProps) {
         </section>
 
         <section id="capabilities" className="relative z-20 mx-auto max-w-[1580px] scroll-mt-[80px] px-4 pb-5 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {CAPABILITIES.map((item) => (
               <article key={item.title} className="flex min-h-[132px] flex-col items-center justify-center rounded-[24px] bg-white px-5 py-5 text-center shadow-[0_16px_40px_rgba(11,25,51,0.07)]">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F3FBFA]">
@@ -175,7 +166,7 @@ export function PublicLanding({ onSignIn, onSignUp }: LandingProps) {
               <h2 className="text-[26px] font-extrabold sm:text-[28px]">מבית <span className="text-[#12C7C1]">TriggeX</span></h2>
               <p className="mt-2 max-w-[460px] text-sm leading-7 text-white/75">פתרונות טכנולוגיים חכמים לעסקים, עם דגש על יציבות, יעילות, אמינות וצמיחה עסקית.</p>
             </div>
-            <ul dir="rtl" className="grid grid-cols-2 gap-x-3 gap-y-4 text-sm sm:grid-cols-4">
+            <ul dir="rtl" className="grid grid-cols-2 gap-x-3 gap-y-4 text-sm sm:grid-cols-3">
               {BRAND_VALUES.map((item) => (
                 <li key={item.label} className="flex flex-col items-center gap-2 text-center lg:border-r lg:border-white/15 lg:px-2">
                   <item.icon size={22} className="text-[#12C7C1]" />
@@ -186,14 +177,10 @@ export function PublicLanding({ onSignIn, onSignUp }: LandingProps) {
           </div>
         </section>
 
-        <section className="mx-auto grid max-w-[1100px] gap-4 px-5 py-8 sm:px-8 md:grid-cols-2">
-          <article id="audience" className="scroll-mt-[80px] rounded-[22px] bg-white p-5 shadow-[0_10px_28px_rgba(11,25,51,0.05)]">
+        <section className="mx-auto max-w-[1100px] px-5 py-8 sm:px-8">
+          <article id="audience" className="max-w-[540px] scroll-mt-[80px] rounded-[22px] bg-white p-5 shadow-[0_10px_28px_rgba(11,25,51,0.05)]">
             <h2 className="text-lg font-extrabold">למי זה מתאים</h2>
             <p className="mt-2 text-sm leading-7 text-[#63758A]">לעסקים שמנהלים מלאי, מכירות, רכש ועובדים ורוצים תמונה אחת של מה שקורה היום.</p>
-          </article>
-          <article id="security" className="scroll-mt-[80px] rounded-[22px] bg-white p-5 shadow-[0_10px_28px_rgba(11,25,51,0.05)]">
-            <h2 className="text-lg font-extrabold">אבטחה ופרטיות</h2>
-            <p className="mt-2 text-sm leading-7 text-[#63758A]">הגישה למערכת דורשת חשבון. כל עסק רואה את הנתונים שלו, והתצוגה הציבורית כאן מציגה נתוני הדגמה בלבד.</p>
           </article>
         </section>
       </main>
