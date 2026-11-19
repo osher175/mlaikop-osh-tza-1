@@ -29,6 +29,10 @@ export interface JournalAction {
   source: string | null;
   user_id: string;
   reference_meta: { [key: string]: unknown } | null;
+  /** Display only. Copied from the linked sale. Not written to inventory_actions. */
+  display_salesperson_employee_id?: string | null;
+  /** Display only. One linked sale line. Not written to sale_total_ils. */
+  display_line_revenue_gross_ils?: number | null;
 }
 
 const QUICK_SALE_REFERENCE = 'sale_transaction';
@@ -105,8 +109,83 @@ export const knownUnitCost = (row: Pick<JournalAction, 'cost_snapshot_ils' | 're
 export const movementTotal = (row: JournalAction): number | null => {
   if (isLegacySale(row)) return row.sale_total_ils;
   if (isPurchaseReceipt(row)) return row.purchase_total_ils;
+  if (isQuickSaleStockMove(row)) return row.display_line_revenue_gross_ils ?? null;
   return null;
 };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export interface QuickSaleLink {
+  id: string;
+  businessId: string;
+  salespersonEmployeeId: string | null;
+}
+
+export interface QuickSaleLineLink {
+  inventoryActionId: string;
+  transactionId: string;
+  businessId: string;
+  lineRevenueGrossIls: number | null;
+}
+
+export type EmployeeScope =
+  | { mode: 'all' }
+  | { mode: 'unattributed'; orGroup: string | null }
+  | { mode: 'employee'; orGroup: string };
+
+const one = <T>(items: T[]): T | null => (items.length === 1 ? items[0] : null);
+
+/**
+ * Quick-sale rows keep a null movement employee and a null sale_total_ils.
+ * The employee comes from the one sale in this business. The amount comes
+ * from the one sale line linked to this movement. Any other shape stays
+ * unavailable. sale_total_ils is left untouched.
+ */
+export function attachQuickSaleDisplay(
+  businessId: string,
+  rows: JournalAction[],
+  sales: readonly QuickSaleLink[],
+  lines: readonly QuickSaleLineLink[],
+): JournalAction[] {
+  return rows.map((row) => {
+    if (!isQuickSaleStockMove(row)) return row;
+    const sale = one(sales.filter((item) => item.businessId === businessId && item.id === row.reference_id));
+    const line = one(lines.filter((item) =>
+      item.businessId === businessId
+      && item.inventoryActionId === row.id
+      && item.transactionId === row.reference_id));
+    const amount = line && typeof line.lineRevenueGrossIls === 'number' && Number.isFinite(line.lineRevenueGrossIls)
+      ? line.lineRevenueGrossIls
+      : null;
+    return {
+      ...row,
+      display_salesperson_employee_id: sale ? sale.salespersonEmployeeId : null,
+      display_line_revenue_gross_ils: amount,
+    };
+  });
+}
+
+export const movementEmployeeId = (row: JournalAction): string | null => {
+  if (isQuickSaleStockMove(row)) return row.display_salesperson_employee_id ?? null;
+  return row.salesperson_employee_id;
+};
+
+/** PostgREST fragment. Ids are limited to UUIDs already loaded for one business. */
+export function employeeScope(employeeId: string, quickSaleTransactionIds: readonly string[]): EmployeeScope {
+  const ids = [...new Set(quickSaleTransactionIds.filter((id) => UUID.test(id)))];
+  if (employeeId === 'all') return { mode: 'all' };
+  if (employeeId === 'unattributed') {
+    return {
+      mode: 'unattributed',
+      orGroup: ids.length
+        ? `reference_type.is.null,reference_type.neq.sale_transaction,reference_id.is.null,reference_id.not.in.(${ids.join(',')})`
+        : null,
+    };
+  }
+  if (!UUID.test(employeeId)) return { mode: 'employee', orGroup: 'id.eq.00000000-0000-0000-0000-000000000000' };
+  const quick = ids.length ? `,and(reference_type.eq.sale_transaction,reference_id.in.(${ids.join(',')}))` : '';
+  return { mode: 'employee', orGroup: `salesperson_employee_id.eq.${employeeId}${quick}` };
+}
 
 /** Stored only on movements that wrote both numbers. Missing keys stay unavailable. */
 export const movementBalance = (row: Pick<JournalAction, 'reference_meta'>): { before: number | null; after: number | null } => {

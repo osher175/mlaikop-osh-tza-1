@@ -125,6 +125,13 @@ assert.match(productionLock, /mlaiko\.apply_quantity_lock/);
 assert.match(productionLock, /gtakgctmtayalcbpnryg/);
 assert.match(productionLock, /isolated project refused/);
 assert.match(productionLock, /a\.attname <> 'quantity_reserved'/);
+assert.match(productionLock, /post_purchase_receipt product insert is not literal quantity 0/);
+assert.match(productionLock, /p\.proname <> 'post_purchase_receipt'/);
+const salespersonEnforcement = readFileSync('docs/v2/salesperson-required-b.enforcement.sql', 'utf8');
+assert.match(salespersonEnforcement, /salesperson is required/);
+assert.match(salespersonEnforcement, /complete_quick_sale stays as deployed/);
+assert.equal(salespersonEnforcement.includes('CREATE OR REPLACE FUNCTION public.complete_quick_sale'), false);
+assert.equal(salespersonEnforcement.includes('UPDATE public.sale_transactions SET salesperson_employee_id'), false);
 assert.equal(productionLock.includes("IS DISTINCT FROM 'zijzwvkpjaxvdbvpcfow'"), false);
 
 const isolatedLock = readFileSync('docs/v2/products-quantity-update-lock.UNAPPLIED.sql', 'utf8');

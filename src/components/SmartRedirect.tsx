@@ -1,10 +1,11 @@
 import { Navigate } from "react-router-dom";
+import { SessionRecovery } from "@/components/auth/SessionRecovery";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Loader2 } from "lucide-react";
 
 export const SmartRedirect = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, authError } = useAuth();
   const { userRole, isLoading } = useUserRole();
 
   if (loading || isLoading) {
@@ -16,6 +17,10 @@ export const SmartRedirect = () => {
         </div>
       </div>
     );
+  }
+
+  if (authError && !user) {
+    return <SessionRecovery />;
   }
 
   if (!user) {

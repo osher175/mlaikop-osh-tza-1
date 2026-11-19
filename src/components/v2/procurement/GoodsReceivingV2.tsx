@@ -5,9 +5,10 @@ import { ArrowRight, Boxes, CalendarDays, CheckCircle2, Package, Truck } from 'l
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveBusiness } from '@/hooks/useActiveBusiness';
 import { useEmployees } from '@/hooks/v2/useEmployees';
+import { usePurchaseOrders } from '@/hooks/v2/usePurchaseOrders';
 import { receiptPostingAvailable } from '@/lib/v2/goodsReceipt';
-import { canReceive, ordersWritable } from '@/lib/v2/purchaseOrder';
-import { postPurchaseReceipt } from '@/lib/v2/purchaseReceiptWrite';
+import { canReceive, ordersWritable, receivablePurchaseOrders } from '@/lib/v2/purchaseOrder';
+import { explainPurchaseReceiptError, postPurchaseReceipt, receiptErrorText } from '@/lib/v2/purchaseReceiptWrite';
 
 const LINE_COLUMNS = ['מוצר', 'מידה', 'הוזמן', 'נקלט קודם', 'יתרה', 'לקליטה עכשיו', 'עלות ליחידה', 'סה״כ שורה'];
 
@@ -134,6 +135,8 @@ const OpenReceiving: React.FC = () => {
   const [params] = useSearchParams();
   const orderId = params.get('order');
   const { activeBusinessId } = useActiveBusiness();
+  const ledger = usePurchaseOrders();
+  const eligible = receivablePurchaseOrders(ledger.orders);
   const employees = useEmployees(true);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -178,7 +181,7 @@ const OpenReceiving: React.FC = () => {
       setMessage(result.replayed ? 'הקליטה כבר נרשמה. המלאי לא הוגדל שוב.' : 'הקליטה נרשמה והמלאי עודכן פעם אחת.');
       void order.refetch();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'הקליטה לא הושלמה. המלאי לא השתנה.');
+      setMessage(explainPurchaseReceiptError(receiptErrorText(error)));
     } finally {
       setPending(false);
     }
@@ -190,7 +193,23 @@ const OpenReceiving: React.FC = () => {
         <h1 className="text-[26px] font-extrabold">קליטת סחורה</h1>
         <Link to="/procurement" className="inline-flex h-11 items-center gap-2 rounded-[14px] border px-4 font-bold"><ArrowRight className="h-4 w-4" />חזרה להזמנות</Link>
       </header>
-      {!orderId && <p role="status">אין הזמנה לקליטה.</p>}
+      {!orderId && (
+        <section className="space-y-3" aria-label="הזמנות שממתינות לקליטה">
+          {ledger.isLoading && <p>טוען הזמנות שממתינות לקליטה…</p>}
+          {ledger.isError && <p role="alert">לא הצלחנו לטעון את ההזמנות הפתוחות. המלאי לא השתנה.</p>}
+          {!ledger.isLoading && !ledger.isError && eligible.length === 0 && (
+            <p role="status">אין הזמנה לקליטה. בוחרים הזמנה שממתינה לאספקה או באספקה חלקית. טיוטה, הזמנה שהושלמה והזמנה שבוטלה אינן נפתחות לקליטה.</p>
+          )}
+          {eligible.map((candidate) => {
+            const open = candidate.lines.reduce((sum, line) => sum + Math.max(0, line.quantity - line.receivedQty), 0);
+            return (
+              <Link key={candidate.id} to={`/procurement/receiving?order=${candidate.id}`} className="block rounded-[16px] border px-4 py-3 font-bold">
+                {candidate.number ?? 'הזמנה'} · {candidate.supplierName} · יתרה {open}
+              </Link>
+            );
+          })}
+        </section>
+      )}
       {order.isLoading && <p>טוען את ההזמנה…</p>}
       {order.isError && <p role="alert">לא הצלחנו לטעון את ההזמנה. המלאי לא השתנה.</p>}
       {order.data && !receivable && <p role="status">ההזמנה אינה ממתינה לקליטה. המלאי לא השתנה.</p>}
@@ -217,7 +236,7 @@ const OpenReceiving: React.FC = () => {
           })}
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={updateCost} onChange={(event) => setUpdateCost(event.target.checked)} />עדכון עלות הרכש הנוכחית. עלות חסרה נשארת חסרה.</label>
           <button type="button" disabled={pending || !employeeId} onClick={() => { void confirm(); }} className="h-12 rounded-[14px] bg-[#12b981] px-5 font-extrabold text-white disabled:opacity-50">אישור קליטה</button>
-          {message && <p role="status">{message}</p>}
+          {message && <p role={message.includes('נרשמה') ? 'status' : 'alert'}>{message}</p>}
         </section>
       )}
     </div>

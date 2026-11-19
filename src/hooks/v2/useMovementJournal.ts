@@ -4,7 +4,8 @@ import { useActiveBusiness } from '@/hooks/useActiveBusiness';
 import { rangeToUtc, type DayRange } from '@/lib/v2/dashboardMetrics';
 import { asSaleRows, loadQuickSaleFacts } from '@/lib/v2/quickSaleRead';
 import {
-  isLegacySale, moneyFromSales, toSaleRow, type JournalAction, type JournalKind, type JournalMoney,
+  attachQuickSaleDisplay, employeeScope, isLegacySale, moneyFromSales, movementEmployeeId, toSaleRow,
+  type EmployeeScope, type JournalAction, type JournalKind, type JournalMoney, type QuickSaleLineLink, type QuickSaleLink,
 } from '@/lib/v2/movementJournal';
 
 const PAGE_SIZE = 25;
@@ -52,12 +53,11 @@ function withOr(query: Filtered, groups: string[]): Filtered {
   return query.or(`and(${groups.map((group) => `or(${group})`).join(',')})`);
 }
 
-function applyScope(query: Filtered, businessId: string, filters: JournalFilters, productIds: string[]): Filtered {
+function applyScope(query: Filtered, businessId: string, filters: JournalFilters, productIds: string[], scope: EmployeeScope): Filtered {
   const { start, endExclusive } = rangeToUtc(filters.range);
   let next = query.eq('business_id', businessId).gte('timestamp', start).lt('timestamp', endExclusive);
   if (filters.supplierId) next = next.eq('supplier_id', filters.supplierId);
-  if (filters.employeeId === 'unattributed') next = next.is('salesperson_employee_id', null);
-  else if (filters.employeeId !== 'all') next = next.eq('salesperson_employee_id', filters.employeeId);
+  if (scope.mode === 'unattributed') next = next.is('salesperson_employee_id', null);
 
   const groups: string[] = [];
   if (filters.kind === 'reversal') next = next.eq('is_reversal', true);
@@ -79,6 +79,8 @@ function applyScope(query: Filtered, businessId: string, filters: JournalFilters
     next = next.eq('is_reversal', false).not('action_type', 'in', '(add,remove,purchase,sale,adjust)');
     groups.push('reference_type.is.null,reference_type.not.in.(supplier_return,customer_return,purchase_receipt,stock_adjustment)');
   }
+  if (scope.mode === 'unattributed' && scope.orGroup) groups.push(scope.orGroup);
+  if (scope.mode === 'employee') groups.push(scope.orGroup);
 
   const term = safeTerm(filters.search);
   if (term) {
@@ -109,8 +111,56 @@ async function matchingProductIds(businessId: string, search: string): Promise<{
   return { ids: [], incomplete: true };
 }
 
-async function countKind(businessId: string, filters: JournalFilters, kind: JournalKind, productIds: string[]) {
-  const query = applyScope(listed('id', { count: 'exact', head: true }), businessId, { ...filters, kind }, productIds);
+const SALE_ID_LIMIT = 2000;
+
+async function quickSaleIds(businessId: string, employeeId: string): Promise<string[]> {
+  if (employeeId === 'all') return [];
+  const ids: string[] = [];
+  for (let offset = 0; offset <= SALE_ID_LIMIT; offset += 1000) {
+    let request = supabase.from('sale_transactions').select('id').eq('business_id', businessId).order('id', { ascending: true });
+    request = employeeId === 'unattributed'
+      ? request.not('salesperson_employee_id', 'is', null)
+      : request.eq('salesperson_employee_id', employeeId);
+    const { data, error } = await request.range(offset, offset + 999);
+    if (error) throw error;
+    const batch = data ?? [];
+    ids.push(...batch.map((row) => row.id));
+    if (ids.length > SALE_ID_LIMIT) throw new Error('employee attribution filter is incomplete');
+    if (batch.length < 1000) return ids;
+  }
+  throw new Error('employee attribution filter is incomplete');
+}
+
+async function linkedQuickSales(businessId: string, rows: JournalAction[]): Promise<JournalAction[]> {
+  const quick = rows.filter((row) => row.reference_type === 'sale_transaction' && row.sale_total_ils === null);
+  const transactionIds = [...new Set(quick.flatMap((row) => row.reference_id ? [row.reference_id] : []))];
+  const actionIds = quick.map((row) => row.id);
+  const [sales, lines] = await Promise.all([
+    transactionIds.length
+      ? supabase.from('sale_transactions').select('id, business_id, salesperson_employee_id').eq('business_id', businessId).in('id', transactionIds)
+      : Promise.resolve({ data: [], error: null }),
+    actionIds.length
+      ? supabase.from('sale_lines').select('inventory_action_id, transaction_id, business_id, line_revenue_gross_ils').eq('business_id', businessId).in('inventory_action_id', actionIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (sales.error) throw sales.error;
+  if (lines.error) throw lines.error;
+  const saleLinks: QuickSaleLink[] = (sales.data ?? []).map((row) => ({
+    id: row.id,
+    businessId: row.business_id,
+    salespersonEmployeeId: row.salesperson_employee_id,
+  }));
+  const lineLinks: QuickSaleLineLink[] = (lines.data ?? []).map((row) => ({
+    inventoryActionId: row.inventory_action_id,
+    transactionId: row.transaction_id,
+    businessId: row.business_id,
+    lineRevenueGrossIls: row.line_revenue_gross_ils,
+  }));
+  return attachQuickSaleDisplay(businessId, rows, saleLinks, lineLinks);
+}
+
+async function countKind(businessId: string, filters: JournalFilters, kind: JournalKind, productIds: string[], scope: EmployeeScope) {
+  const query = applyScope(listed('id', { count: 'exact', head: true }), businessId, { ...filters, kind }, productIds, scope);
   const { count, error } = await query;
   if (error) throw error;
   return count ?? 0;
@@ -126,17 +176,21 @@ export function useMovementJournal(filters: JournalFilters) {
       const matched = await matchingProductIds(businessId, filters.search);
       if (matched.incomplete) return { rows: [], total: 0, searchIncomplete: true, names: { products: new Map(), suppliers: new Map(), employees: new Map() } };
       const productIds = matched.ids;
+      const scope = employeeScope(filters.employeeId, await quickSaleIds(businessId, filters.employeeId));
       const from = (filters.page - 1) * PAGE_SIZE;
-      const listedPage = applyScope(listed(COLUMNS, { count: 'exact' }), businessId, filters, productIds)
+      const listedPage = applyScope(listed(COLUMNS, { count: 'exact' }), businessId, filters, productIds, scope)
         .order('timestamp', { ascending: false })
         .order('id', { ascending: false })
         .range(from, from + PAGE_SIZE - 1);
       const { data, error, count } = await listedPage;
       if (error) throw error;
-      const rows = (data ?? []) as JournalAction[];
+      const rows = await linkedQuickSales(businessId, (data ?? []) as JournalAction[]);
       const productSet = [...new Set(rows.map((row) => row.product_id))];
       const supplierSet = [...new Set(rows.flatMap((row) => row.supplier_id ? [row.supplier_id] : []))];
-      const employeeSet = [...new Set(rows.flatMap((row) => row.salesperson_employee_id ? [row.salesperson_employee_id] : []))];
+      const employeeSet = [...new Set(rows.flatMap((row) => {
+        const employee = movementEmployeeId(row);
+        return employee ? [employee] : [];
+      }))];
       const [products, suppliers, employees] = await Promise.all([
         productSet.length ? supabase.from('products').select('id, name').eq('business_id', businessId).in('id', productSet) : Promise.resolve({ data: [], error: null }),
         supplierSet.length ? supabase.from('suppliers').select('id, name').eq('business_id', businessId).in('id', supplierSet) : Promise.resolve({ data: [], error: null }),
@@ -165,11 +219,12 @@ export function useMovementJournal(filters: JournalFilters) {
       const matched = await matchingProductIds(businessId, filters.search);
       if (matched.incomplete) return { total: 0, adjustments: 0, purchases: 0, supplierReturns: 0, searchIncomplete: true };
       const productIds = matched.ids;
+      const scope = employeeScope(filters.employeeId, await quickSaleIds(businessId, filters.employeeId));
       const [total, adjustments, purchases, supplierReturns] = await Promise.all([
-        countKind(businessId, filters, filters.kind, productIds),
-        filters.kind === 'all' || filters.kind === 'adjustment' ? countKind(businessId, filters, 'adjustment', productIds) : Promise.resolve(0),
-        filters.kind === 'all' || filters.kind === 'purchase' ? countKind(businessId, filters, 'purchase', productIds) : Promise.resolve(0),
-        filters.kind === 'all' || filters.kind === 'supplier_return' ? countKind(businessId, filters, 'supplier_return', productIds) : Promise.resolve(0),
+        countKind(businessId, filters, filters.kind, productIds, scope),
+        filters.kind === 'all' || filters.kind === 'adjustment' ? countKind(businessId, filters, 'adjustment', productIds, scope) : Promise.resolve(0),
+        filters.kind === 'all' || filters.kind === 'purchase' ? countKind(businessId, filters, 'purchase', productIds, scope) : Promise.resolve(0),
+        filters.kind === 'all' || filters.kind === 'supplier_return' ? countKind(businessId, filters, 'supplier_return', productIds, scope) : Promise.resolve(0),
       ]);
       return { total, adjustments, purchases, supplierReturns, searchIncomplete: false };
     },
@@ -183,9 +238,10 @@ export function useMovementJournal(filters: JournalFilters) {
       const matched = await matchingProductIds(businessId, filters.search);
       if (matched.incomplete) return moneyFromSales([], true);
       const productIds = matched.ids;
+      const scope = employeeScope(filters.employeeId, await quickSaleIds(businessId, filters.employeeId));
       const rows: JournalAction[] = [];
       for (let offset = 0; offset < MONEY_MAX; offset += MONEY_PAGE) {
-        const query = applyScope(listed(COLUMNS), businessId, { ...filters, kind: 'sale' }, productIds)
+        const query = applyScope(listed(COLUMNS), businessId, { ...filters, kind: 'sale' }, productIds, scope)
           .order('timestamp', { ascending: true })
           .range(offset, offset + MONEY_PAGE - 1);
         const { data, error } = await query;
