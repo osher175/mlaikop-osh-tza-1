@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Eye, EyeOff, Mail, Lock, User, Package, Cpu, AlertTriangle, DollarSign, ArrowRight, X } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Mail, Lock, User, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Link, useNavigate } from 'react-router-dom';
-import mlaikoLogoHorizontal from '@/assets/mlaiko-logo-horizontal.png';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { PublicLanding } from '@/components/landing/PublicLanding';
 
 export const Auth = () => {
   const { signIn, signUp, user, loading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
@@ -23,6 +24,15 @@ export const Auth = () => {
   useEffect(() => {
     if (user && !loading) navigate('/');
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (loading || user) return;
+    const tab = (location.state as { authTab?: 'signin' | 'signup' } | null)?.authTab;
+    if (tab === 'signin' || tab === 'signup') {
+      setActiveTab(tab);
+      setIsAuthOpen(true);
+    }
+  }, [location.state, loading, user]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,104 +75,8 @@ export const Auth = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#F8FAFC' }}>
-      {/* ─── NAVBAR ─── */}
-      <nav
-        className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-6 lg:px-10"
-        style={{ height: '64px', background: 'rgba(248,250,252,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(15,23,42,0.06)' }}
-      >
-        <div />
-        <div className="flex items-center gap-5" dir="rtl">
-          <button onClick={() => openAuth('signin')} className="text-sm font-medium transition-colors" style={{ color: '#475569' }} onMouseEnter={(e) => (e.currentTarget.style.color = '#0F172A')} onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}>התחברות</button>
-          <button onClick={() => openAuth('signup')} className="text-sm font-medium px-4 py-2 rounded-lg transition-all" style={{ background: '#14B8A6', color: '#FFFFFF' }} onMouseEnter={(e) => (e.currentTarget.style.background = '#0D9488')} onMouseLeave={(e) => (e.currentTarget.style.background = '#14B8A6')}>הרשמה</button>
-        </div>
-      </nav>
-
-      {/* ─── HERO ─── */}
-      <main className="flex-1 flex items-center" style={{ paddingTop: '64px' }}>
-        <div className="max-w-[1200px] mx-auto px-6 lg:px-10 w-full flex flex-col-reverse lg:flex-row items-center gap-12 lg:gap-20 py-16 lg:py-0">
-          {/* LEFT: Dashboard Preview */}
-          <div className="w-full lg:w-[55%]" dir="ltr">
-            <div
-              className="w-full rounded-2xl p-5 lg:p-7"
-              style={{ background: '#FFFFFF', border: '1px solid rgba(15,23,42,0.06)', boxShadow: '0 8px 30px rgba(15,23,42,0.06)' }}
-            >
-              <div className="flex items-center mb-5">
-                <img src={mlaikoLogoHorizontal} alt="Mlaiko" className="h-[60px] w-auto object-contain" />
-                <div className="w-px h-4 mx-3" style={{ background: '#E2E8F0' }} />
-                <span className="text-sm font-medium" style={{ color: '#64748B' }}>Operations Center</span>
-                <div className="flex gap-1.5 ml-auto">
-                  <div className="w-2 h-2 rounded-full" style={{ background: '#E2E8F0' }} />
-                  <div className="w-2 h-2 rounded-full" style={{ background: '#E2E8F0' }} />
-                  <div className="w-2 h-2 rounded-full" style={{ background: '#14B8A6' }} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mb-5">
-                <MockStat icon={Package} label="Stock Health" value="94%" color="#14B8A6" bg="rgba(20,184,166,0.08)" />
-                <MockStat icon={Cpu} label="AI Procurement" value="Active" color="#8B5CF6" bg="rgba(139,92,246,0.08)" />
-                <MockStat icon={AlertTriangle} label="Alerts Today" value="2" color="#F59E0B" bg="rgba(245,158,11,0.08)" />
-                <MockStat icon={DollarSign} label="Revenue MTD" value="₪48.2K" color="#10B981" bg="rgba(16,185,129,0.08)" />
-              </div>
-
-              <div className="rounded-xl p-4" style={{ background: '#F8FAFC', border: '1px solid rgba(15,23,42,0.04)' }}>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-semibold" style={{ color: '#0F172A' }}>Weekly Inventory Flow</p>
-                  <p className="text-[10px] font-medium" style={{ color: '#14B8A6' }}>+12.4%</p>
-                </div>
-                <div className="flex items-end gap-1.5 h-11">
-                  {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
-                    <div key={i} className="flex-1 rounded" style={{ height: `${h}%`, background: i === 5 ? '#14B8A6' : 'rgba(20,184,166,0.15)' }} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT: Copy + CTA */}
-          <div className="w-full lg:w-[45%] flex flex-col items-start" dir="ltr">
-            
-            <h1 className="text-[2.5rem] lg:text-[3.25rem] leading-[1.1] tracking-[-0.03em]" style={{ color: '#0F172A', fontWeight: 800 }}>
-              Inventory Intelligence
-              <br />
-              Built for Operational
-              <br />
-              <span style={{ color: '#14B8A6' }}>Precision</span>
-            </h1>
-            <p className="mt-5 text-base lg:text-lg leading-relaxed max-w-[400px]" style={{ color: '#64748B' }}>
-              Real-time monitoring, automated procurement, and AI-powered insights — infrastructure for teams that scale.
-            </p>
-            <div className="mt-8 flex items-center gap-4">
-              <button
-                onClick={() => openAuth('signup')}
-                className="inline-flex items-center gap-2 text-sm font-semibold px-7 py-3.5 rounded-xl transition-all duration-200"
-                style={{ background: '#14B8A6', color: '#FFFFFF', boxShadow: '0 2px 10px rgba(20,184,166,0.25)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(20,184,166,0.3)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 10px rgba(20,184,166,0.25)'; }}
-              >
-                Get Started <ArrowRight size={15} strokeWidth={2} />
-              </button>
-              <button
-                onClick={() => openAuth('signin')}
-                className="text-sm font-medium transition-colors duration-150"
-                style={{ color: '#64748B' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#0F172A')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748B')}
-              >
-                Sign In →
-              </button>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* ─── FOOTER ─── */}
-      <footer className="py-6 flex justify-center border-t border-[#E2E8F0]">
-        <a href="https://www.triggex.net" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 transition-all duration-200 group" style={{ color: '#94A3B8' }} onMouseEnter={(e) => { e.currentTarget.style.color = '#475569'; }} onMouseLeave={(e) => { e.currentTarget.style.color = '#94A3B8'; }}>
-          <img src="/images/triggex-logo.png" alt="TriggeX" className="h-[32px] w-auto object-contain opacity-80 group-hover:opacity-100 transition-opacity duration-200" />
-          <span className="text-[11px] tracking-[0.08em] uppercase font-medium">TriggeX Technologies © 2026</span>
-        </a>
-      </footer>
+    <div>
+      <PublicLanding onSignIn={() => openAuth('signin')} onSignUp={() => openAuth('signup')} />
 
       {/* ─── AUTH MODAL OVERLAY ─── */}
       {isAuthOpen && (
@@ -216,19 +130,6 @@ export const Auth = () => {
     </div>
   );
 };
-
-/* ─── Mock Stat ─── */
-function MockStat({ icon: Icon, label, value, color, bg }: { icon: React.ElementType; label: string; value: string; color: string; bg: string }) {
-  return (
-    <div className="rounded-xl p-3.5" style={{ background: '#F8FAFC', border: '1px solid rgba(15,23,42,0.04)' }}>
-      <div className="flex items-center gap-2 mb-1.5">
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: bg }}><Icon size={13} style={{ color }} /></div>
-        <p className="text-[11px] font-medium" style={{ color: '#94A3B8' }}>{label}</p>
-      </div>
-      <p className="text-lg font-bold" style={{ color: '#0F172A' }}>{value}</p>
-    </div>
-  );
-}
 
 /* ─── Auth Input ─── */
 function AuthInput({ id, type, label, placeholder, icon, value, onChange, trailing, required = true }: { id: string; type: string; label: string; placeholder: string; icon: React.ReactNode; value: string; onChange: (v: string) => void; trailing?: React.ReactNode; required?: boolean }) {

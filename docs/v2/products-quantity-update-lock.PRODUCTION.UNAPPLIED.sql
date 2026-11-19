@@ -20,6 +20,13 @@
 -- Inspected writers, from the function bodies this preflight reads again:
 --   create_product_with_opening_stock inserts literal quantity 0, then calls
 --   execute_inventory_transaction, which UPDATEs quantity.
+--   post_purchase_receipt is the only other SECURITY DEFINER function that
+--   inserts public.products. That insert is literal quantity 0 for a new
+--   catalog row. The received quantity is a later UPDATE of that same row,
+--   scoped to the order's business. The previous file treated this insert as
+--   an unknown writer and rolled the transaction back before any grant changed.
+--   It is accepted only after the membership, write, zero-insert, business
+--   scope, and idempotency checks below. Being SECURITY DEFINER is not enough.
 --   reverse_inventory_action, import_receipt_confirm, and
 --   import_receipt_correct change quantity only through an UPDATE or through
 --   execute_inventory_transaction. None of them insert a nonzero quantity.
@@ -162,6 +169,48 @@ BEGIN
     END IF;
   END LOOP;
 
+  SELECT count(*) INTO v_count
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'post_purchase_receipt';
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'post_purchase_receipt overload count is %', v_count;
+  END IF;
+  SELECT p.prosecdef, r.rolname, r.rolsuper,
+         has_column_privilege(r.oid, 'public.products'::regclass, 'quantity'::name, 'UPDATE'),
+         pg_get_functiondef(p.oid)
+  INTO v_definer, v_owner, v_super, v_owner_can_update, v_def
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  JOIN pg_roles r ON r.oid = p.proowner
+  WHERE n.nspname = 'public' AND p.proname = 'post_purchase_receipt';
+  IF NOT v_definer THEN
+    RAISE EXCEPTION 'post_purchase_receipt is not SECURITY DEFINER';
+  END IF;
+  IF NOT v_super AND NOT v_owner_can_update THEN
+    RAISE EXCEPTION 'post_purchase_receipt owner % cannot update products.quantity', v_owner;
+  END IF;
+  IF position('is_business_member' IN v_def) = 0
+     OR position('can_business_write' IN v_def) = 0
+     OR position('auth.uid()' IN v_def) = 0 THEN
+    RAISE EXCEPTION 'post_purchase_receipt is missing membership or write authorization';
+  END IF;
+  IF position('idempotency_key' IN v_def) = 0 THEN
+    RAISE EXCEPTION 'post_purchase_receipt has no idempotency replay';
+  END IF;
+  v_start := position('INSERT INTO public.products' IN v_def);
+  IF v_start = 0 THEN
+    RAISE EXCEPTION 'post_purchase_receipt product insert was not found';
+  END IF;
+  v_insert := substring(v_def FROM v_start FOR 500);
+  IF position('auth.uid(), 0' IN v_insert) = 0 OR position('p_quantity' IN v_insert) > 0 THEN
+    RAISE EXCEPTION 'post_purchase_receipt product insert is not literal quantity 0';
+  END IF;
+  IF position('SET quantity = coalesce(quantity, 0) + v_qty' IN v_def) = 0
+     OR position('WHERE id = v_product AND business_id = p_business_id' IN v_def) = 0 THEN
+    RAISE EXCEPTION 'post_purchase_receipt quantity update is not limited to the business product';
+  END IF;
+
   IF EXISTS (
     SELECT 1
     FROM pg_proc p
@@ -169,6 +218,7 @@ BEGIN
     WHERE n.nspname = 'public'
       AND p.prosecdef
       AND p.proname <> ALL (v_names)
+      AND p.proname <> 'post_purchase_receipt'
       AND position('INSERT INTO public.products' IN pg_get_functiondef(p.oid)) > 0
   ) THEN
     RAISE EXCEPTION 'another SECURITY DEFINER function inserts products';

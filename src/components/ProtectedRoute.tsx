@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { SessionRecovery } from '@/components/auth/SessionRecovery';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,15 +22,20 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   allowedRoles 
 }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, authError } = useAuth();
   const { userRole, isLoading: roleLoading } = useUserRole();
   const { toast } = useToast();
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
 
   useEffect(() => {
+    let active = true;
+    const timeoutId = window.setTimeout(() => {
+      if (active) setIsCheckingStatus(false);
+    }, 12000);
+
     const checkUserStatus = async () => {
       if (!user) {
-        setIsCheckingStatus(false);
+        if (active) setIsCheckingStatus(false);
         return;
       }
 
@@ -40,34 +46,42 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           .eq('id', user.id)
           .single();
 
+        if (!active) return;
+
         if (error) {
-          console.error('Error checking user status in ProtectedRoute:', error);
+          console.error('Error checking user status in ProtectedRoute:', error.message);
           setIsCheckingStatus(false);
           return;
         }
 
         if (profile?.is_active === false) {
-          console.log('User account is disabled, redirecting to auth:', user.email);
+          console.log('User account is disabled, redirecting to auth');
           await supabase.auth.signOut();
-          
+
           toast({
             title: 'החשבון מושבת',
             description: 'החשבון שלך הושבת. פנה למנהל המערכת.',
             variant: 'destructive',
           });
-          
+
           window.location.href = '/auth';
           return;
         }
 
         setIsCheckingStatus(false);
       } catch (error) {
-        console.error('Error in checkUserStatus:', error);
-        setIsCheckingStatus(false);
+        console.error('Error in checkUserStatus:', error instanceof Error ? error.message : 'unknown');
+        if (active) setIsCheckingStatus(false);
+      } finally {
+        window.clearTimeout(timeoutId);
       }
     };
 
     checkUserStatus();
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
   }, [user, toast]);
 
   if (loading || isCheckingStatus || roleLoading) {
@@ -79,6 +93,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         </div>
       </div>
     );
+  }
+
+  if (authError && !user) {
+    return <SessionRecovery />;
   }
 
   if (!user) {

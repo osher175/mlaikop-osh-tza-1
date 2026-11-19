@@ -14,7 +14,7 @@ import { CUSTOMER_RETURN_READY, recordCustomerReturn, SUPPLIER_RETURN_READY, rec
 import { partialReturnQuantityValid, supplierReturnQuantityValid } from '@/lib/v2/quantityRules';
 import { defaultRange, isValidDay, VAT_RATE, type DayRange } from '@/lib/v2/dashboardMetrics';
 import {
-  classifyJournal, isLegacySale, isPurchaseReceipt, isQuickSaleStockMove, kindLabel, knownUnitCost, movementBalance, movementTotal, movementUnitPrice, type JournalAction, type JournalKind,
+  classifyJournal, isLegacySale, isPurchaseReceipt, isQuickSaleStockMove, kindLabel, knownUnitCost, movementBalance, movementEmployeeId, movementTotal, movementUnitPrice, type JournalAction, type JournalKind,
 } from '@/lib/v2/movementJournal';
 import { SearchInput, v2Button } from '@/components/v2/Controls';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -272,8 +272,9 @@ const Kpi: React.FC<{ label: string; value: string; unit: string; note?: string;
 
 const party = (row: JournalAction, names?: JournalPageNames) => row.supplier_id ? (names?.suppliers.get(row.supplier_id) ?? 'ספק לא זמין') : 'לקוח לא נשמר';
 const employeeName = (row: JournalAction, names?: JournalPageNames) => {
-  if (!row.salesperson_employee_id) return 'ללא שיוך';
-  return names?.employees.get(row.salesperson_employee_id) ?? 'שם לא זמין';
+  const employeeId = movementEmployeeId(row);
+  if (!employeeId) return 'ללא שיוך';
+  return names?.employees.get(employeeId) ?? 'שם לא זמין';
 };
 
 type JournalPageNames = { products: Map<string, string>; suppliers: Map<string, string>; employees: Map<string, string> };
@@ -378,7 +379,7 @@ const Detail: React.FC<{ row: JournalAction; names?: JournalPageNames; canFinanc
         <p className="rounded-2xl bg-[#f4fbf7] p-3"><span className="block text-xs text-[#64748b]">שיעור רווח על העלות הידועה</span><b>{profit.margin === null ? 'לא ידוע' : `${Math.round(profit.margin * 1000) / 10}%`}</b></p>
       </div>
     )}
-    <p className="text-xs text-v2-muted mt-3">המשתמש שרשם את התנועה אינו איש המכירות. שיוך העובד מוצג רק כשהוא נשמר במפורש. הרשומה הזו לא ניתנת לעריכה מכאן.</p>
+    <p className="text-xs text-v2-muted mt-3">המשתמש שרשם את התנועה אינו איש המכירות. במכירה מהירה העובד והסכום נקראים מהעסקה ומשורת המכירה שלה. תנועה בלי עובד שמור נשארת ללא שיוך. הרשומה הזו לא ניתנת לעריכה מכאן.</p>
     {canRecord && businessId && (isLegacySale(row) || isQuickSaleStockMove(row)) && !row.reversed_at && (
       <CustomerReturnForm row={row} businessId={businessId} />
     )}

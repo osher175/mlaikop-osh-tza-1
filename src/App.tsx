@@ -18,6 +18,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
    freeze — every billing/subscription route. These must never depend on an
    async chunk load. */
 import { Auth } from "@/pages/Auth";
+import { LandingPreview } from "@/pages/LandingPreview";
 import { ForgotPassword } from "@/pages/ForgotPassword";
 import { ResetPassword } from "@/pages/ResetPassword";
 import { Unauthorized } from "@/pages/Unauthorized";
@@ -76,6 +77,9 @@ function App() {
             <Routes>
               {/* Public routes */}
               <Route path="/auth" element={<Auth />} />
+              {import.meta.env.DEV && (
+                <Route path="/landing-preview" element={<LandingPreview />} />
+              )}
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />

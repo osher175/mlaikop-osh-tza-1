@@ -257,6 +257,11 @@ export function canReceive(status: OrderStatus): boolean {
   return status === 'awaiting_receipt' || status === 'partially_received';
 }
 
+/** Orders the receiving screen may open. Business scope stays in the list query. */
+export function receivablePurchaseOrders<T extends { status: OrderStatus }>(orders: T[]): T[] {
+  return orders.filter((order) => canReceive(order.status));
+}
+
 export function canCloseOpenBalance(status: OrderStatus): boolean {
   return status === 'partially_received';
 }

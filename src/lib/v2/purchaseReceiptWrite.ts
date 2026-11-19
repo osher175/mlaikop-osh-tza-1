@@ -22,6 +22,37 @@ const readResult = (value: Json | null): PostedPurchaseReceipt | null => {
   return { id, replayed };
 };
 
+/** PostgREST returns a plain object, not an Error, unless throwOnError is used. */
+export function receiptErrorText(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') return error.message;
+  return '';
+}
+
+/**
+ * Hebrew text for a failed receipt. The raw database message stays out of the UI.
+ * Callers keep that message in the console for diagnosis.
+ */
+export function explainPurchaseReceiptError(message: string): string {
+  if (message.includes('המלאי לא השתנה') || message.includes('המלאי לא הוגדל')) return message;
+  const text = message.toLowerCase();
+  if (text.includes('access denied') || text.includes('42501') || text.includes('permission denied')) {
+    return 'אין הרשאה לקלוט את ההזמנה הזו. המלאי לא השתנה.';
+  }
+  if (text.includes('receiving employee')) return 'יש לבחור עובד קולט פעיל בעסק הזה. המלאי לא השתנה.';
+  if (text.includes('order not found')) return 'ההזמנה לא נמצאה בעסק הזה. המלאי לא השתנה.';
+  if (text.includes('order cannot be received')) return 'ההזמנה אינה פתוחה לקליטה. המלאי לא השתנה.';
+  if (text.includes('quantity exceeds')) return 'אי אפשר לקלוט יותר מהיתרה הפתוחה. המלאי לא השתנה.';
+  if (text.includes('invalid quantity')) return 'כמות הקליטה אינה תקינה. המלאי לא השתנה.';
+  if (text.includes('cost difference')) return 'עלות הקליטה שונה מהמחיר שסוכם בהזמנה. המלאי לא השתנה.';
+  if (text.includes('not one catalog product')) return 'השורה אינה מקושרת למוצר אחד במלאי. המלאי לא השתנה.';
+  if (text.includes('supplier sku')) return 'מק״ט הספק שייך למוצר אחר. המלאי לא השתנה.';
+  if (text.includes('product not found')) return 'המוצר אינו שייך לעסק הזה. המלאי לא השתנה.';
+  if (text.includes('purchase_unit') || text.includes('check_purchase_data')) return 'לקליטה הזו חסרה עלות רכש. המלאי לא השתנה.';
+  if (text.includes('does not exist') || text.includes('inventory_lots')) return 'קליטת המלאי אינה מוכנה במערכת. המלאי לא השתנה.';
+  return 'הקליטה לא הושלמה. המלאי לא השתנה.';
+}
+
 /**
  * Posts one purchase-order receipt through post_purchase_receipt.
  * Refuses before any request while the order ledger or the receipt flag is off.
@@ -55,7 +86,11 @@ export async function postPurchaseReceipt(input: {
       cost_ack: false,
     })),
   });
-  if (error) throw error;
+  if (error) {
+    const technical = receiptErrorText(error);
+    console.error('post_purchase_receipt failed', technical);
+    throw new Error(explainPurchaseReceiptError(technical));
+  }
   const result = readResult(data);
   if (!result) throw new Error('הקליטה לא הושלמה. לא התקבל אישור מהשרת.');
   return result;
