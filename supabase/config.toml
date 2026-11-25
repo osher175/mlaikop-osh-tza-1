@@ -60,4 +60,7 @@ verify_jwt = true
 [functions.retail-iq-api]
 verify_jwt = false
 
+[functions.club-api]
+verify_jwt = false
+
 
