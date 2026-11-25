@@ -99,8 +99,8 @@ Deno.serve(async (req) => {
       }
       const expires_at = body.expires_at ? new Date(body.expires_at).toISOString() : null;
       const scopeIn = (body.scope as string | undefined) ?? "public";
-      if (!["public", "retail_iq"].includes(scopeIn)) {
-        return json({ error: "Invalid scope (public | retail_iq)" }, 400);
+      if (!["public", "retail_iq", "club"].includes(scopeIn)) {
+        return json({ error: "Invalid scope (public | retail_iq | club)" }, 400);
       }
       const rateLimit = Number.isFinite(body.rate_limit_per_min)
         ? Math.max(1, Math.min(6000, parseInt(body.rate_limit_per_min, 10)))
