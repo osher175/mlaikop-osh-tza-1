@@ -7,6 +7,95 @@ export interface PurchaseReceiptLine {
   quantity: number;
   /** Stored order cost. Null stays unknown. Zero stays zero. */
   agreedUnitCost: number | null;
+  /** Product already stored on the purchase-order line. It wins over a new choice. */
+  storedProductId?: string | null;
+  /**
+   * Explicit resolution for a line that has no stored product.
+   * `create` asks the server to create one product. A string is an existing product id.
+   * A name is never a choice.
+   */
+  choice?: 'create' | string | null;
+}
+
+const PRODUCT_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type ReceiptResolution =
+  | { kind: 'stored' }
+  | { kind: 'existing'; productId: string }
+  | { kind: 'create' }
+  | { kind: 'unresolved' };
+
+function assertProductUuid(value: string): void {
+  if (!PRODUCT_UUID.test(value)) throw new Error('מזהה המוצר אינו תקין. המלאי לא השתנה.');
+}
+
+function resolutionOf(line: PurchaseReceiptLine): ReceiptResolution {
+  if (line.storedProductId) return { kind: 'stored' };
+  if (line.choice === 'create') return { kind: 'create' };
+  if (typeof line.choice === 'string' && line.choice.length > 0) return { kind: 'existing', productId: line.choice };
+  return { kind: 'unresolved' };
+}
+
+/**
+ * The retry key changes when the selected product, an explicit create, the
+ * quantity, the receiving employee, or the cost update changes.
+ * A line that already has a stored product id keeps the same key if the picker changes.
+ */
+export function receiptAttemptSignature(input: {
+  orderId: string | null;
+  employeeId: string | null;
+  updateCurrentCost: boolean;
+  lines: PurchaseReceiptLine[];
+}): string {
+  const lines = input.lines
+    .filter((line) => line.quantity > 0)
+    .map((line) => {
+      const resolution = resolutionOf(line);
+      const link = resolution.kind === 'existing' ? resolution.productId : resolution.kind;
+      return { lineId: line.lineId, quantity: line.quantity, link };
+    })
+    .sort((left, right) => left.lineId.localeCompare(right.lineId));
+  return JSON.stringify({
+    orderId: input.orderId,
+    employeeId: input.employeeId,
+    updateCurrentCost: input.updateCurrentCost,
+    lines,
+  });
+}
+
+export interface PurchaseReceiptLinePayload {
+  line_id: string;
+  quantity: number;
+  actual_unit_cost: number | null;
+  cost_ack: false;
+  product_id?: string;
+  create_product?: true;
+}
+
+/** Payload for one receipt. The server still decides whether the product belongs to the business. */
+export function buildPurchaseReceiptLines(lines: PurchaseReceiptLine[]): PurchaseReceiptLinePayload[] {
+  const active = lines.filter((line) => line.quantity > 0);
+  if (active.length === 0) throw new Error('אין כמות לקליטה. המלאי לא השתנה.');
+  return active.map((line) => {
+    if (!Number.isInteger(line.quantity) || line.quantity <= 0) throw new Error('כמות הקליטה אינה תקינה. המלאי לא השתנה.');
+    const payload: PurchaseReceiptLinePayload = {
+      line_id: line.lineId,
+      quantity: line.quantity,
+      actual_unit_cost: line.agreedUnitCost,
+      cost_ack: false,
+    };
+    const resolution = resolutionOf(line);
+    if (resolution.kind === 'stored') assertProductUuid(line.storedProductId ?? '');
+    if (resolution.kind === 'unresolved') {
+      throw new Error('יש לבחור מוצר קיים או ליצור מוצר חדש לשורה שאינה מקושרת. המלאי לא השתנה.');
+    }
+    if (resolution.kind === 'existing') {
+      assertProductUuid(resolution.productId);
+      payload.product_id = resolution.productId;
+    }
+    if (resolution.kind === 'create') payload.create_product = true;
+    return payload;
+  });
 }
 
 export interface PostedPurchaseReceipt {
@@ -68,23 +157,14 @@ export async function postPurchaseReceipt(input: {
 }): Promise<PostedPurchaseReceipt> {
   if (!receiptPostingAvailable()) throw new Error('קליטת הרכש כבויה. המלאי לא השתנה.');
   if (!input.employeeId) throw new Error('יש לבחור עובד קולט לפני אישור הקליטה.');
-  const lines = input.lines.filter((line) => line.quantity > 0);
-  if (lines.length === 0) throw new Error('אין כמות לקליטה. המלאי לא השתנה.');
-  for (const line of lines) {
-    if (!Number.isInteger(line.quantity) || line.quantity <= 0) throw new Error('כמות הקליטה אינה תקינה. המלאי לא השתנה.');
-  }
+  const lines = buildPurchaseReceiptLines(input.lines);
   const { data, error } = await supabase.rpc('post_purchase_receipt', {
     p_business_id: input.businessId,
     p_order_id: input.orderId,
     p_idempotency_key: input.idempotencyKey,
     p_receiving_employee_id: input.employeeId,
     p_update_current_cost: input.updateCurrentCost,
-    p_lines: lines.map((line) => ({
-      line_id: line.lineId,
-      quantity: line.quantity,
-      actual_unit_cost: line.agreedUnitCost,
-      cost_ack: false,
-    })),
+    p_lines: lines as unknown as Json,
   });
   if (error) {
     const technical = receiptErrorText(error);

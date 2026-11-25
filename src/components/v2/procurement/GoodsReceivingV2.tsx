@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Boxes, CalendarDays, CheckCircle2, Package, Truck } from 'lucide-react';
@@ -8,7 +8,7 @@ import { useEmployees } from '@/hooks/v2/useEmployees';
 import { usePurchaseOrders } from '@/hooks/v2/usePurchaseOrders';
 import { receiptPostingAvailable } from '@/lib/v2/goodsReceipt';
 import { canReceive, ordersWritable, receivablePurchaseOrders } from '@/lib/v2/purchaseOrder';
-import { explainPurchaseReceiptError, postPurchaseReceipt, receiptErrorText } from '@/lib/v2/purchaseReceiptWrite';
+import { explainPurchaseReceiptError, postPurchaseReceipt, receiptAttemptSignature, receiptErrorText, type PurchaseReceiptLine } from '@/lib/v2/purchaseReceiptWrite';
 
 const LINE_COLUMNS = ['מוצר', 'מידה', 'הוזמן', 'נקלט קודם', 'יתרה', 'לקליטה עכשיו', 'עלות ליחידה', 'סה״כ שורה'];
 
@@ -131,6 +131,8 @@ const ClosedReceiving: React.FC = () => {
   );
 };
 
+type LineChoice = { kind: 'existing'; productId: string; label: string } | { kind: 'create' };
+
 const OpenReceiving: React.FC = () => {
   const [params] = useSearchParams();
   const orderId = params.get('order');
@@ -140,6 +142,9 @@ const OpenReceiving: React.FC = () => {
   const employees = useEmployees(true);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [resolutions, setResolutions] = useState<Record<string, LineChoice>>({});
+  const [searchLineId, setSearchLineId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const [updateCost, setUpdateCost] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -150,17 +155,38 @@ const OpenReceiving: React.FC = () => {
     queryFn: async () => {
       const header = await supabase.from('purchase_orders').select('id, order_number, status, ordered_on').eq('id', orderId!).eq('business_id', activeBusinessId!).maybeSingle();
       if (header.error) throw header.error;
-      const lines = await supabase.from('purchase_order_lines').select('id, brand, model, size_label, ordered_qty, received_qty, agreed_unit_cost').eq('purchase_order_id', orderId!).eq('business_id', activeBusinessId!);
+      const lines = await supabase.from('purchase_order_lines').select('id, brand, model, size_label, ordered_qty, received_qty, agreed_unit_cost, product_id').eq('purchase_order_id', orderId!).eq('business_id', activeBusinessId!);
       if (lines.error) throw lines.error;
       return { header: header.data, lines: lines.data ?? [] };
     },
   });
-  const signature = useMemo(() => JSON.stringify({ orderId, employeeId, updateCost, quantities }), [employeeId, orderId, quantities, updateCost]);
+  const catalog = useQuery({
+    queryKey: ['purchase-receipt-products', activeBusinessId, search],
+    enabled: !!activeBusinessId && !!searchLineId && search.trim().length >= 2,
+    queryFn: async () => {
+      const term = search.trim().replace(/%/g, '');
+      const { data, error } = await supabase.from('products').select('id, name, barcode').eq('business_id', activeBusinessId!).ilike('name', `%${term}%`).limit(12);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const receiptLines: PurchaseReceiptLine[] = (order.data?.lines ?? []).map((line) => {
+    const choice = resolutions[line.id];
+    return {
+      lineId: line.id,
+      quantity: quantities[line.id] ?? 0,
+      agreedUnitCost: line.agreed_unit_cost,
+      storedProductId: line.product_id,
+      choice: choice?.kind === 'create' ? 'create' : choice?.kind === 'existing' ? choice.productId : null,
+    };
+  });
+  const signature = receiptAttemptSignature({ orderId, employeeId, updateCurrentCost: updateCost, lines: receiptLines });
   const active = employees.employees.filter((employee) => employee.is_active);
   const receivable = order.data?.header && ['awaiting_receipt', 'partially_received'].includes(order.data.header.status);
+  const unresolved = receiptLines.some((line) => line.quantity > 0 && !line.storedProductId && line.choice == null);
 
   const confirm = async () => {
-    if (!activeBusinessId || !orderId || !employeeId || !order.data || pending) return;
+    if (!activeBusinessId || !orderId || !employeeId || !order.data || pending || unresolved) return;
     if (requestKey.current?.signature !== signature) requestKey.current = { signature, key: crypto.randomUUID() };
     const key = requestKey.current.key;
     setPending(true);
@@ -172,11 +198,7 @@ const OpenReceiving: React.FC = () => {
         employeeId,
         idempotencyKey: key,
         updateCurrentCost: updateCost,
-        lines: (order.data.lines ?? []).map((line) => ({
-          lineId: line.id,
-          quantity: quantities[line.id] ?? 0,
-          agreedUnitCost: line.agreed_unit_cost,
-        })),
+        lines: receiptLines,
       });
       setMessage(result.replayed ? 'הקליטה כבר נרשמה. המלאי לא הוגדל שוב.' : 'הקליטה נרשמה והמלאי עודכן פעם אחת.');
       void order.refetch();
@@ -223,19 +245,54 @@ const OpenReceiving: React.FC = () => {
           </div>
           {order.data.lines.map((line) => {
             const open = Math.max(0, line.ordered_qty - line.received_qty);
+            const choice = resolutions[line.id];
+            const quantity = quantities[line.id] ?? 0;
             return (
-              <label key={line.id} className="block rounded-[16px] border p-3">
+              <div key={line.id} className="rounded-[16px] border p-3">
                 <span className="font-bold">{[line.brand, line.model, line.size_label].filter(Boolean).join(' ') || 'שורה'}</span>
                 <span className="mx-2 text-sm text-v2-muted">יתרה {open}</span>
-                <input type="number" min={0} max={open} value={quantities[line.id] ?? 0} onChange={(event) => {
+                <input aria-label="כמות לקליטה" type="number" min={0} max={open} value={quantity} onChange={(event) => {
                   const next = Math.min(open, Math.max(0, Number(event.target.value) || 0));
                   setQuantities((current) => ({ ...current, [line.id]: next }));
                 }} className="mt-2 h-11 w-24 rounded-xl border px-2" />
-              </label>
+                {line.product_id ? (
+                  <p className="mt-2 text-sm text-v2-muted">מקושר למוצר במלאי. קליטה חלקית הבאה תשתמש באותו מזהה.</p>
+                ) : (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-sm text-v2-muted">השורה אינה מקושרת. בחרו מוצר קיים לפי מזהה, או צרו מוצר חדש במפורש.</p>
+                    <div className="flex flex-wrap gap-2" role="group" aria-label="קישור מוצר">
+                      <button type="button" aria-pressed={choice?.kind === 'existing'} className="h-10 rounded-xl border px-3 text-sm font-bold" onClick={() => { setSearchLineId(line.id); setSearch(''); setResolutions((current) => { const next = { ...current }; delete next[line.id]; return next; }); }}>מוצר קיים</button>
+                      <button type="button" aria-pressed={choice?.kind === 'create'} className="h-10 rounded-xl border px-3 text-sm font-bold" onClick={() => { setSearchLineId(null); setResolutions((current) => ({ ...current, [line.id]: { kind: 'create' } })); }}>יצירת מוצר חדש</button>
+                    </div>
+                    {choice?.kind === 'existing' && <p className="text-sm font-bold">נבחר: {choice.label}</p>}
+                    {choice?.kind === 'create' && <p className="text-sm font-bold">בקליטה ייווצר מוצר חדש מהמפרט, והקישור יישמר לשורה.</p>}
+                    {searchLineId === line.id && (
+                      <div>
+                        <input aria-label="חיפוש מוצר קיים" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="חיפוש לפי שם. הבחירה נשמרת לפי מזהה, ורק אחרי לחיצה." className="h-11 w-full rounded-xl border px-3" />
+                        {catalog.isError && <p className="mt-1 text-sm text-v2-red">רשימת המוצרים לא נטענה. לא נבחר מוצר.</p>}
+                        {search.trim().length >= 2 && !catalog.isLoading && (catalog.data ?? []).length === 0 && <p className="mt-1 text-sm">אין מוצר ברשימה. לא נבחרה התאמה.</p>}
+                        <ul className="mt-2 max-h-48 overflow-y-auto rounded-xl border">
+                          {(catalog.data ?? []).map((row) => (
+                            <li key={row.id} className="border-b last:border-0">
+                              <button type="button" className="w-full px-3 py-2 text-right text-sm font-bold" onClick={() => {
+                                setResolutions((current) => ({ ...current, [line.id]: { kind: 'existing', productId: row.id, label: row.name } }));
+                                setSearchLineId(null);
+                                setSearch('');
+                              }}>{row.name}{row.barcode ? ` · ${row.barcode}` : ''}</button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {quantity > 0 && !choice && <p className="text-sm font-semibold text-[#c2410c]">לפני הקליטה חסר מזהה מוצר לשורה הזו.</p>}
+                  </div>
+                )}
+              </div>
             );
           })}
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={updateCost} onChange={(event) => setUpdateCost(event.target.checked)} />עדכון עלות הרכש הנוכחית. עלות חסרה נשארת חסרה.</label>
-          <button type="button" disabled={pending || !employeeId} onClick={() => { void confirm(); }} className="h-12 rounded-[14px] bg-[#12b981] px-5 font-extrabold text-white disabled:opacity-50">אישור קליטה</button>
+          {unresolved && <p role="status">יש שורה לקליטה בלי מוצר. בחרו מוצר קיים או יצירה מפורשת. המלאי לא השתנה.</p>}
+          <button type="button" disabled={pending || !employeeId || unresolved} onClick={() => { void confirm(); }} className="h-12 rounded-[14px] bg-[#12b981] px-5 font-extrabold text-white disabled:opacity-50">אישור קליטה</button>
           {message && <p role={message.includes('נרשמה') ? 'status' : 'alert'}>{message}</p>}
         </section>
       )}
