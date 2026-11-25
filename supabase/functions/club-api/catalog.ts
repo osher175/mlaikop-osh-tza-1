@@ -3,8 +3,10 @@
  * physical_quantity is on-hand stock, not quantity available after reservations.
  * expected_on is a calendar date, not a timestamp and not a delivery promise.
  * Tire specs are unverified because the active schema has no product_tire_specs table.
- * Import orders have no draft status: `ordered` is the status of a newly stored order,
- * so the schema cannot separate a plan from a supplier order. Those rows are included.
+ * Logistics status has no planned value: its default is `ordered`.
+ * commercial_status allows draft or confirmed, and its default is confirmed.
+ * confirmed_at is not written by the current path, so neither column proves
+ * that a supplier received the order. `ordered` rows stay included.
  * `received_pending_costs` is excluded because that status means the goods were received.
  */
 

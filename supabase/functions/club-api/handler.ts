@@ -33,9 +33,16 @@ export class ClubSourceError extends Error {
   }
 }
 
+/** The club replaces its copy only after both collections and every page succeed. */
+const refresh = {
+  replace_local_copy: "only_after_both_collections_and_every_page",
+  on_failure: "keep_previous_copy",
+  status_when_incomplete: "not_updated",
+} as const;
+
 const failure = (code: string, status: number) => ({
   status,
-  body: { error: code, code },
+  body: { error: code, code, refresh },
 });
 
 export async function handleClubRequest(input: {
@@ -79,6 +86,7 @@ export async function handleClubRequest(input: {
           generated_at: generatedAt,
           collections: ["in_stock", "incoming"],
           endpoints: ["GET /in-stock", "GET /incoming"],
+          refresh,
         },
       };
     }
@@ -97,6 +105,7 @@ export async function handleClubRequest(input: {
           generated_at: generatedAt,
           quantity_meaning: "physical_on_hand",
           reservation_meaning: "not_available_to_reserve",
+          refresh,
           data: page.data,
           next_after: page.next_after,
           limit,
@@ -118,6 +127,7 @@ export async function handleClubRequest(input: {
           generated_at: generatedAt,
           quantity_meaning: "remaining_not_yet_received",
           expected_on_kind: "date",
+          refresh,
           data: page.data,
           next_after: page.next_after,
           limit,
